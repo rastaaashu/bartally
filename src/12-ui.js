@@ -93,15 +93,20 @@ const UI = (() => {
     cognac:    [10, 20, 14, 32, 44, 8, '#2A160A', 56, 22, .5],
     vermouth:  [10, 22, 8, 26, 56, 8, '#8A8A4A', 48, 28, .5],
   };
+  const HEX_OK = /^#[0-9a-fA-F]{6}$/;
   function art(item, cls) {
     const id = 'g' + (gradSeq++);
     const cat = Store.cat(item.catId);
-    const vig = cat ? cat.hex : '#F5A623';
-    const { g, l } = item.tint || { g: '#3B1420', l: '#E2D5BD' };
+    const vig = cat && HEX_OK.test(cat.hex) ? cat.hex : '#F5A623';
+    let { g, l } = item.tint || {};
+    if (!HEX_OK.test(g || '')) g = '#3B1420';
+    if (!HEX_OK.test(l || '')) l = '#E2D5BD';
     let inner = '';
     const spec = ART[item.art];
-    if (item.photo) {
-      return `<div class="itemart ${cls || ''}"><img src="${item.photo}" alt="${esc(item.name)}" loading="lazy"></div>`;
+    // photos only ever come from the in-app camera/gallery pipeline; anything else
+    // (e.g. a tampered backup file) is refused so it can't smuggle markup
+    if (item.photo && String(item.photo).startsWith('data:image/')) {
+      return `<div class="itemart ${cls || ''}"><img src="${esc(item.photo)}" alt="${esc(item.name)}" loading="lazy"></div>`;
     }
     if (spec) {
       const [nw, nh, sh, bw, bh, capH, capC, labelY, labelH, sq] = spec;
@@ -183,6 +188,7 @@ const UI = (() => {
 
   /* ---------- sheet / confirm ---------- */
   const sheetStack = [];
+  let suppressPop = 0; // programmatic history.back() must not close the next sheet
   function sheet(contentEl, opts = {}) {
     const wrap = el(`<div class="sheet-wrap"><div class="sheet-wrap__bg"></div><div class="sheet" role="dialog" aria-modal="true"><div class="sheet__grip"></div></div></div>`);
     const body = wrap.querySelector('.sheet');
@@ -196,7 +202,7 @@ const UI = (() => {
       sheetStack.splice(sheetStack.indexOf(close), 1);
       body.classList.add('is-closing'); wrap.querySelector('.sheet-wrap__bg').classList.add('is-closing');
       setTimeout(() => wrap.remove(), 210);
-      if (!viaPop && history.state?.sheet) history.back();
+      if (!viaPop && history.state?.sheet) { suppressPop++; history.back(); }
       opts.onClose && opts.onClose();
     };
     wrap.querySelector('.sheet-wrap__bg').addEventListener('click', () => close());
@@ -308,6 +314,8 @@ const UI = (() => {
     const sep = ';';
     const body = rows.map(r => r.map(v => {
       let s = String(v ?? '');
+      // Excel formula-injection guard: neutralize leading =,+,@ (and non-numeric -)
+      if (/^[=+@]/.test(s) || (/^-/.test(s) && !/^-?\d+([.,]\d+)?$/.test(s))) s = "'" + s;
       if (/[";\n]/.test(s)) s = '"' + s.replaceAll('"', '""') + '"';
       return s;
     }).join(sep)).join('\r\n');
@@ -360,8 +368,9 @@ const UI = (() => {
       ? [['dashboard', 'home', 'tab.home'], ['sell', 'sell', 'tab.sell'], ['count', 'count', 'tab.count'], ['inventory', 'stock', 'tab.stock'], ['more', 'more', 'tab.more']]
       : [['sell', 'sell', 'tab.sell']];
     if (!owner) return; // staff: single screen, no tab chrome
+    const lit = ['restock', 'waste', 'reports', 'insights', 'settings'].includes(current) ? 'more' : current;
     const bar = el(`<nav class="tabbar" aria-label="Navigation">${tabs.map(([id, ic, key]) =>
-      `<button class="tabbar__btn ${current === id ? 'is-on' : ''}" data-go="${id}">${icon(ic)}<span>${esc(t(key))}</span></button>`).join('')}</nav>`);
+      `<button class="tabbar__btn ${lit === id ? 'is-on' : ''}" data-go="${id}">${icon(ic)}<span>${esc(t(key))}</span></button>`).join('')}</nav>`);
     bar.addEventListener('click', e => {
       const b = e.target.closest('[data-go]'); if (!b) return;
       haptic('light'); go(b.dataset.go);
@@ -369,6 +378,7 @@ const UI = (() => {
     root.appendChild(bar);
   }
   window.addEventListener('popstate', () => {
+    if (suppressPop > 0) { suppressPop--; return; }
     if (sheetStack.length) { sheetStack[sheetStack.length - 1](true); }
   });
 

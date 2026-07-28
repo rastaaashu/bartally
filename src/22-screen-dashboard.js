@@ -157,6 +157,8 @@
 
       const today = Store.todayBd();
       const name = (Store.me && Store.me.name) || t('g.owner');
+      const h = new Date().getHours();
+      const evening = (h >= 17 || h < 6);
 
       /* today's numbers (non-void sales) */
       const todaySales = Store.state.sales.filter(s => s.bd === today && !s.voidedAt);
@@ -287,12 +289,12 @@
       </section>`;
 
       el.innerHTML =
-        UI.header(t('dash.hello', { name }), UI.fmtDate(today, { weekday: 'long', day: 'numeric', month: 'long' }), bell) +
+        UI.header(t(evening ? 'dash.hello' : 'dash.helloDay', { name }), UI.fmtDate(today, { weekday: 'long', day: 'numeric', month: 'long' }), bell) +
         hero + statsHtml + spark + lowCard + lcCard + qaCard + feedCard;
 
       el.addEventListener('click', e => {
         const go = e.target.closest('[data-go]');
-        if (go) { UI.haptic('light'); return UI.go(go.dataset.go); }
+        if (go) { UI.haptic('light'); return UI.go(go.dataset.go, (go.dataset.go === 'restock' || go.dataset.go === 'waste') ? { from: 'dashboard' } : undefined); }
         if (e.target.closest('[data-a=bell]')) return openNotifs();
         if (e.target.closest('[data-a=low]')) { UI.haptic('light'); return UI.go('inventory'); }
         const lcEl = e.target.closest('[data-a=lastcount]');

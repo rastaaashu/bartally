@@ -69,5 +69,29 @@ eq(Engine.velocity(st2, 'A', '2026-07-28', 14), 1, 'velocity = 14 units / 14 day
 eq(Engine.daysUntilStockout(10, 1), 10, 'days until stockout');
 eq(Engine.daysUntilStockout(10, 0), null, 'no velocity → no estimate');
 
+/* per-line count timestamps: sales after an item was counted (but before close) hit the NEXT day */
+const D3 = '2026-07-23', D4 = '2026-07-24';
+st.counts.pop(); // drop open count c2
+st.counts.push({ id: 'c3', bd: D2, status: 'closed', closedAt: '2026-07-23T04:40:00.000Z', lines: [
+  { itemId: 'A', expected: 7, counted: 7, variance: 0, at: '2026-07-23T04:10:00.000Z' },
+] });
+// sale logged 04:20, same bd D2, AFTER A was counted (04:10) but BEFORE close (04:40)
+st.sales.push({ id: 's6', itemId: 'A', qty: 1, bd: D2, at: '2026-07-23T04:20:00.000Z', voidedAt: null });
+eq(Engine.expected(st, 'A', D3), 6, 'sale after per-line count time is NOT swallowed');
+// sale logged 04:05, same bd D2, BEFORE A was counted → already in the counted observation
+st.sales.push({ id: 's7', itemId: 'A', qty: 2, bd: D2, at: '2026-07-23T04:05:00.000Z', voidedAt: null });
+eq(Engine.expected(st, 'A', D3), 6, 'sale before per-line count time stays absorbed by counted');
+
+/* velocity: young bar divides by days actually traded, today's partial day excluded */
+const st3 = {
+  counts: [{ id: 'o', bd: '2026-07-25', status: 'closed', isOpening: true, closedAt: 'x', lines: [] }],
+  sales: [
+    { itemId: 'A', qty: 2, bd: '2026-07-26', voidedAt: null },
+    { itemId: 'A', qty: 4, bd: '2026-07-27', voidedAt: null },
+    { itemId: 'A', qty: 9, bd: '2026-07-28', voidedAt: null }, // today — excluded
+  ],
+};
+eq(Engine.velocity(st3, 'A', '2026-07-28', 14), 3, 'young bar: 6 units / 2 traded days, today excluded');
+
 console.log(fails ? `\n${fails} FAILURES` : '\nALL ENGINE TESTS PASS');
 process.exit(fails ? 1 : 0);

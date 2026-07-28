@@ -24,6 +24,8 @@
     restock: { q: '', cat: 'all' },
     waste: { q: '', cat: 'all' },
   };
+  /* origin screen per mode — remembered across re-renders for back navigation */
+  const FROM = { restock: null, waste: null };
   const QUICK = [1, 6, 12, 24];
 
   const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -94,6 +96,9 @@
     const item = Store.item(itemId);
     if (!item || !Store.isOwner) return;
     const isWaste = mode === 'waste';
+    const dec = !!item.allowDecimal;
+    const min = dec ? 0.5 : 1;
+    const quicks = dec ? [0.5, ...QUICK] : QUICK;
     let qty = 1;
     const c = UI.el(`<div>
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
@@ -109,7 +114,7 @@
         <button type="button" class="stepper__btn" data-a="plus" aria-label="+1">+</button>
       </div>
       <div style="display:flex;gap:8px;justify-content:center;margin-top:14px">
-        ${QUICK.map(n => `<button type="button" class="chip num" data-q="${n}" style="min-width:52px;justify-content:center">${n}</button>`).join('')}
+        ${quicks.map(n => `<button type="button" class="chip num" data-q="${n}" style="min-width:52px;justify-content:center">${UI.fmtQty(n)}</button>`).join('')}
       </div>
       ${isWaste ? `
       <div class="field" style="margin-top:20px;margin-bottom:0">
@@ -130,7 +135,7 @@
     const blocked = () => isWaste && !reasonInp.value.trim();
     function sync() {
       vEl.textContent = UI.fmtQty(qty);
-      minusBtn.style.opacity = qty <= 1 ? '.4' : '';
+      minusBtn.style.opacity = qty <= min ? '.4' : '';
       chips.forEach(ch => ch.classList.toggle('is-on', Number(ch.dataset.q) === qty));
       okBtn.textContent = t(isWaste ? 'waste.confirmBtn' : 'restock.confirmBtn', { qty: UI.fmtQty(qty) });
       okBtn.style.opacity = blocked() ? '.55' : '';
@@ -165,8 +170,8 @@
     c.addEventListener('click', e => {
       const b = e.target.closest('button');
       if (!b) return;
-      if (b.dataset.a === 'minus') { if (qty > 1) { qty -= 1; UI.haptic('light'); sync(); } return; }
-      if (b.dataset.a === 'plus') { if (qty < 999) { qty += 1; UI.haptic('light'); sync(); } return; }
+      if (b.dataset.a === 'minus') { if (qty > min) { qty = qty <= 1 ? min : qty - 1; UI.haptic('light'); sync(); } return; }
+      if (b.dataset.a === 'plus') { if (qty < 999) { qty = dec && qty === 0.5 ? 1 : qty + 1; UI.haptic('light'); sync(); } return; }
       if (b.dataset.q) { qty = Number(b.dataset.q); UI.haptic('light'); sync(); return; }
       if (b.dataset.a === 'ok') confirm();
     });
@@ -180,8 +185,9 @@
   }
 
   /* ---- shared screen renderer ---- */
-  function renderScreen(mode, el) {
+  function renderScreen(mode, el, params) {
     if (!Store.isOwner) { UI.go(Store.state.session ? 'sell' : 'login'); return; }
+    if (params && params.from) FROM[mode] = params.from;
     const st = ST[mode];
     const cats = Store.state.categories.slice().sort((a, b) => a.sort - b.sort);
     el.innerHTML = `
@@ -239,12 +245,12 @@
       updateGrid();
     });
     el.addEventListener('click', e => {
-      if (e.target.closest('[data-a=back]')) { UI.haptic('light'); UI.go('more'); return; }
+      if (e.target.closest('[data-a=back]')) { UI.haptic('light'); UI.go(FROM[mode] || 'more'); return; }
       const card = e.target.closest('[data-item]');
       if (card) openQtySheet(mode, card.dataset.item);
     });
   }
 
-  UI.registerScreen({ id: 'restock', render(el) { renderScreen('restock', el); } });
-  UI.registerScreen({ id: 'waste', render(el) { renderScreen('waste', el); } });
+  UI.registerScreen({ id: 'restock', render(el, params) { renderScreen('restock', el, params); } });
+  UI.registerScreen({ id: 'waste', render(el, params) { renderScreen('waste', el, params); } });
 })();

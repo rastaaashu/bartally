@@ -7,7 +7,11 @@ const I18N = (() => {
     if (params) for (const [k, v] of Object.entries(params)) s = s.replaceAll('{' + k + '}', v);
     return s;
   }
-  function plural(key, n, params) { return t(key + (Math.abs(n) === 1 || Math.abs(n) === 0.5 ? '_one' : '_many'), { n, ...params }); }
+  // FR uses the singular for 0 <= n < 2 ("0 jour", "1,5 unité"); EN only for exactly 1
+  function plural(key, n, params) {
+    const one = lang === 'fr' ? Math.abs(n) < 2 : Math.abs(n) === 1;
+    return t(key + (one ? '_one' : '_many'), { n, ...params });
+  }
   return {
     t, plural,
     get lang() { return lang; },
@@ -78,6 +82,8 @@ I18N.extend({
     // dashboard
     'dash.title': 'Aujourd’hui',
     'dash.hello': 'Bonsoir, {name}',
+    'dash.helloDay': 'Bonjour, {name}',
+    'login.pinNeeded': 'Définissez d’abord un code PIN pour {name} : Réglages → Équipe.',
     'dash.sales': 'Ventes du jour',
     'dash.itemsSold': 'articles vendus',
     'dash.live': 'En direct',
@@ -159,7 +165,8 @@ I18N.extend({
     'count.reopen': 'Rouvrir cette journée',
     'count.reopenWarn': 'La réouverture est enregistrée dans le journal d’audit. Continuer ?',
     'count.alreadyClosed': 'Journée déjà clôturée',
-    'count.missing': '{n} articles non comptés seront gardés à leur valeur attendue.',
+    'count.missing_one': '{n} article non compté sera gardé à sa valeur attendue.',
+    'count.missing_many': '{n} articles non comptés seront gardés à leur valeur attendue.',
     // reports
     'rep.title': 'Historique',
     'rep.day': 'Rapport du {date}',
@@ -206,8 +213,8 @@ I18N.extend({
     'set.team': 'Équipe',
     'set.teamAdd': 'Ajouter un membre',
     'set.teamPin': 'Code PIN',
-    'set.teamPinReset': 'Réinitialiser le PIN',
-    'set.teamRequirePin': 'PIN requis pour l’équipe',
+    'set.teamPinReset': 'Réinitialiser le code PIN',
+    'set.teamRequirePin': 'Code PIN requis pour l’équipe',
     'set.teamRequirePinHint': 'Sinon, simple sélection du prénom — plus rapide au bar.',
     'set.teamDeactivate': 'Désactiver',
     'set.teamReactivate': 'Réactiver',
@@ -299,6 +306,8 @@ I18N.extend({
     'sell.by': 'by {name}',
     'dash.title': 'Today',
     'dash.hello': 'Good evening, {name}',
+    'dash.helloDay': 'Hello, {name}',
+    'login.pinNeeded': 'Set a PIN for {name} first: Settings → Team.',
     'dash.sales': 'Today’s sales',
     'dash.itemsSold': 'items sold',
     'dash.live': 'Live',
@@ -377,7 +386,8 @@ I18N.extend({
     'count.reopen': 'Reopen this day',
     'count.reopenWarn': 'Reopening is recorded in the audit log. Continue?',
     'count.alreadyClosed': 'Day already closed',
-    'count.missing': '{n} uncounted items will keep their expected value.',
+    'count.missing_one': '{n} uncounted item will keep its expected value.',
+    'count.missing_many': '{n} uncounted items will keep their expected value.',
     'rep.title': 'History',
     'rep.day': 'Report — {date}',
     'rep.sales': 'Sales', 'rep.restocks': 'Deliveries', 'rep.waste': 'Waste',

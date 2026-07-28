@@ -15,6 +15,8 @@
       'wiz.sumStock_one': '{n} article renseigné',
       'wiz.sumStock_many': '{n} articles renseignés',
       'wiz.teamEmpty': 'Encore personne — ajoutez un prénom ci-dessous, ou passez cette étape.',
+      'login.forgotBackup': 'Télécharger une sauvegarde d’abord',
+      'login.forgotType': 'Tapez le nom du bar pour confirmer',
     },
     en: {
       'wiz.heroIntro': 'Stock counted every night, sales tracked live, discrepancies caught before they get expensive.',
@@ -27,6 +29,8 @@
       'wiz.sumStock_one': '{n} item filled in',
       'wiz.sumStock_many': '{n} items filled in',
       'wiz.teamEmpty': 'No one yet — add a first name below, or skip this step.',
+      'login.forgotBackup': 'Download a backup first',
+      'login.forgotType': 'Type the bar name to confirm',
     },
   });
 
@@ -130,7 +134,9 @@
   function collectOpening() {
     const out = {};
     for (const it of (W.items || [])) {
-      let v = parseFloat(String(W.opening[it.id] ?? '').trim().replace(',', '.'));
+      const raw = String(W.opening[it.id] ?? '').trim();
+      if (!raw) continue; // untouched field = item not served → absent from map
+      let v = parseFloat(raw.replace(',', '.'));
       if (!isFinite(v) || v < 0) v = 0;
       out[it.id] = it.allowDecimal ? Math.round(v * 100) / 100 : Math.round(v);
     }
@@ -309,7 +315,8 @@
       }
       const id = e.target.dataset.item;
       if (id) {
-        const clean = e.target.value.replace(/[^\d.,]/g, '');
+        const itm = (W.items || []).find(i => i.id === id);
+        const clean = e.target.value.replace(itm && !itm.allowDecimal ? /[^\d]/g : /[^\d.,]/g, '');
         if (clean !== e.target.value) e.target.value = clean;
         W.opening[id] = clean;
       }
@@ -488,6 +495,10 @@
         paintLogin(el);
         return;
       }
+      if (Store.state.settings.requireStaffPin && !emp.pinHash) {
+        UI.toast(t('login.pinNeeded', { name: emp.name }), { type: 'danger' });
+        return;
+      }
       if (L.busy) return;
       L.busy = true;
       const ok = await Store.loginEmployee(emp.id); // emits 'session' → App.route()
@@ -521,9 +532,37 @@
       if (!b) return;
       if (b.dataset.a === 'back') { UI.haptic('light'); resetL(); paintLogin(el); }
       else if (b.dataset.a === 'pinok') submitPin(view, el);
-      else if (b.dataset.a === 'forgot') {
-        const yes = await UI.confirm(t('login.forgotHint'), { danger: true, title: t('login.forgot'), yes: t('set.reset') });
-        if (yes) { Store.resetAll(); }
+      else if (b.dataset.a === 'forgot') openForgotSheet();
+    });
+  }
+
+  /* forgot-PIN: guarded erase sheet — backup offer + type-the-bar-name confirmation */
+  function openForgotSheet() {
+    const normName = s => String(s || '').normalize('NFD').replace(new RegExp('[\\u0300-\\u036f]', 'g'), '').trim().toLowerCase();
+    const c = UI.el(`<div data-screen="login">
+      <div class="lg-pin-name" style="text-align:center;margin-bottom:var(--s2)">${esc(t('login.forgot'))}</div>
+      <p class="tt" style="line-height:1.5;text-align:center;margin-bottom:var(--s4)">${esc(t('login.forgotHint'))}</p>
+      <button class="btn btn--gold btn--full" type="button" data-a="fgdl">${UI.icon('download')}${esc(t('login.forgotBackup'))}</button>
+      <div class="field" style="margin-top:var(--s4)"><label for="fg-bar">${esc(t('login.forgotType'))}</label>
+        <input id="fg-bar" type="text" data-f="fgbar" autocomplete="off" placeholder="${esc(Store.state.settings.barName || '')}"></div>
+      <button class="btn btn--danger btn--full" type="button" data-a="fgerase" disabled>${esc(t('set.reset'))}</button>
+    </div>`);
+    UI.sheet(c);
+    const inp = c.querySelector('[data-f=fgbar]');
+    const eraseBtn = c.querySelector('[data-a=fgerase]');
+    inp.addEventListener('input', () => {
+      eraseBtn.disabled = normName(inp.value) !== normName(Store.state.settings.barName);
+    });
+    c.addEventListener('click', e => {
+      const b = e.target.closest('[data-a]');
+      if (!b) return;
+      if (b.dataset.a === 'fgdl') {
+        UI.haptic('light');
+        UI.download('bartally-backup.json', Store.exportJSON(), 'application/json');
+      } else if (b.dataset.a === 'fgerase') {
+        if (normName(inp.value) !== normName(Store.state.settings.barName)) return;
+        UI.haptic('warn');
+        Store.resetAll();
       }
     });
   }

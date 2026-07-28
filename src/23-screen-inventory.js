@@ -185,7 +185,7 @@
     const updPrev = () => {
       const p = c.querySelector('[data-r=prev]');
       if (!p) return;
-      if (d.photo) p.innerHTML = `<img src="${d.photo}" alt="${UI.esc(d.name)}">`;
+      if (d.photo && String(d.photo).startsWith('data:image/')) p.innerHTML = `<img src="${UI.esc(d.photo)}" alt="${UI.esc(d.name)}">`;
       else {
         const live = Store.item(id) || src;
         p.innerHTML = UI.art({ ...live, catId: d.catId, name: d.name || live.name, photo: null });

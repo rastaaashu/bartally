@@ -2,6 +2,7 @@
 UI.registerScreen({
   id: 'more',
   render(el) {
+    if (!Store.isOwner) { UI.go(Store.state.session ? 'sell' : 'login'); return; }
     const s = Store.state.settings;
     el.innerHTML = UI.header(t('tab.more'), s.barName) + `
       <div class="card" style="padding:6px 16px">

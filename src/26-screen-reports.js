@@ -190,7 +190,8 @@
     const sold = sumBd(S().sales, c.bd, true);
     const wn = S().waste.filter(w => w.bd === c.bd).length;
     const vt = varTotal(c);
-    const pill = vt === 0
+    const nVar = c.lines.filter(l => l.variance !== 0).length;
+    const pill = nVar === 0
       ? `<span class="pill pill--ok">${UI.icon('check')}<span class="num">0</span></span>`
       : `<span class="pill pill--danger"><span class="num">${esc(sgn(vt))}</span></span>`;
     return `<button class="row rep-fade" data-day="${c.bd}" style="animation-delay:${Math.min(i * 30, 240)}ms">

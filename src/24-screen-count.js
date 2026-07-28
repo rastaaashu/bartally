@@ -172,6 +172,7 @@
       const ln = cc.lines.find(l => l.itemId === item.id);
       if (buf !== '' && !isNaN(val)) { Store.setCountLine(countId, item.id, val, note); UI.haptic('light'); }
       else if (ln && note !== (ln.note || '')) Store.setCountNote(countId, item.id, note);
+      else if (!ln && note !== '') { Store.setCountLine(countId, item.id, Store.countExpected(item.id, cc.bd), note); UI.haptic('light'); }
       s.close();
     });
   }
@@ -329,7 +330,7 @@
           <span class="rev-var ${varCls(sum)}" style="font-size:22px">${UI.esc(fmtVar(sum))}</span>
         </div>
         <div class="tt">${UI.esc(nonzero ? t('dash.varianceIssues', { n: nonzero }) : t('dash.varianceClean'))}</div>
-        ${missing ? `<div class="tt mt2 cnt-alert">${UI.icon('alert')}<span>${UI.esc(t('count.missing', { n: missing }))}</span></div>` : ''}
+        ${missing ? `<div class="tt mt2 cnt-alert">${UI.icon('alert')}<span>${UI.esc(I18N.plural('count.missing', missing))}</span></div>` : ''}
       </div>`}
       <button class="btn btn--gold btn--big btn--full mt4" data-a="close">${UI.icon('check')} ${UI.esc(t('count.closeDay'))}</button>`;
     el.addEventListener('click', async e => {

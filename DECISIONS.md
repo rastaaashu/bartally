@@ -52,7 +52,17 @@
 12. **Currency label default "MAD"** (client in Morocco), configurable; used
     only for optional owner-only cost/loss values. No pricing/POS features
     (§11 out of scope).
-13. **Demo data is opt-in at first run** ("Explorer avec des données de
+13. **Adversarial QA round (5 reviewer agents, 26 findings, all 4 high + 11 med
+    + 11 low fixed).** Notables: per-line count timestamps so sales logged
+    mid-count are never swallowed (engine-tested); owner-only guards added to
+    setOwnerPin/setSettings/importJSON/resetAll/setCountNote; sheet history
+    handling no longer closes stacked sheets (barcode→sale flow); forgot-PIN
+    wipe now gated behind backup download + typing the bar name; FR plural
+    rules (0/1,5 → singular); wizard-skipped items auto-deactivate instead of
+    flooding low-stock; service worker is network-first for the shell so
+    deploys reach phones on next open; CSV formula-injection + photo/tint
+    sanitization hardened.
+14. **Demo data is opt-in at first run** ("Explorer avec des données de
     démonstration"), so the client's real install starts clean via the
     opening-stock wizard, while demos/screenshots stay rich. Demo mode is
     clearable in one tap from Settings.

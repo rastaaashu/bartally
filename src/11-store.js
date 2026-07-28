@@ -24,15 +24,18 @@ const Engine = {
     }
     return best;
   },
-  sumSince(entries, itemId, base, targetBd, { skipVoided = true } = {}) {
+  sumSince(entries, itemId, base, targetBd, { skipVoided = true, cutIso = null } = {}) {
+    // cutIso: the moment this item was physically counted (per-line); falls back
+    // to the count's closedAt. Entries after that moment are "since the count".
     let s = 0;
+    const cut = cutIso || base?.closedAt || null;
     for (const e of entries) {
       if (e.itemId !== itemId) continue;
       if (skipVoided && e.voidedAt) continue;
       if (targetBd && e.bd > targetBd) continue;
       if (base) {
         if (e.bd < base.bd) continue;
-        if (e.bd === base.bd && !(base.closedAt && e.at > base.closedAt)) continue;
+        if (e.bd === base.bd && !(cut && e.at > cut)) continue;
       }
       s += e.qty;
     }
@@ -44,27 +47,36 @@ const Engine = {
    */
   expected(state, itemId, targetBd, { strictlyBefore = false } = {}) {
     const base = this.baselineCount(state.counts, targetBd, { strictlyBefore });
-    let start = 0;
+    let start = 0, cutIso = null;
     if (base) {
       const line = base.lines.find(l => l.itemId === itemId);
-      if (line) start = line.counted;
+      if (line) { start = line.counted; cutIso = line.at || null; }
       else start = 0; // item added after that count → entries since still apply
     }
-    const r = this.sumSince(state.restocks, itemId, base, targetBd, { skipVoided: false });
-    const s = this.sumSince(state.sales, itemId, base, targetBd);
-    const w = this.sumSince(state.waste, itemId, base, targetBd, { skipVoided: false });
+    const r = this.sumSince(state.restocks, itemId, base, targetBd, { skipVoided: false, cutIso });
+    const s = this.sumSince(state.sales, itemId, base, targetBd, { cutIso });
+    const w = this.sumSince(state.waste, itemId, base, targetBd, { skipVoided: false, cutIso });
     return Math.round((start + r - s - w) * 100) / 100;
   },
-  /** sales velocity: avg non-void units/day over last `days` business days ending yesterday-ish */
+  /** sales velocity: avg non-void units/day over the last `days` FULL business days
+   *  (today's partial day excluded); young bars divide by days actually traded */
   velocity(state, itemId, todayBd, days = 14) {
-    const from = this.addDays(todayBd, -days);
+    const to = this.addDays(todayBd, -1);
+    const from = this.addDays(to, -days);
     let s = 0;
     for (const e of state.sales) {
       if (e.itemId !== itemId || e.voidedAt) continue;
-      if (e.bd > todayBd || e.bd <= from) continue;
+      if (e.bd > to || e.bd <= from) continue;
       s += e.qty;
     }
-    return s / days;
+    let firstBd = null;
+    for (const c of (state.counts || [])) if (c.status === 'closed' && (!firstBd || c.bd < firstBd)) firstBd = c.bd;
+    let eff = days;
+    if (firstBd) {
+      const span = Math.round((new Date(to + 'T12:00') - new Date(firstBd + 'T12:00')) / 864e5);
+      eff = Math.max(1, Math.min(days, span));
+    }
+    return s / eff;
   },
   daysUntilStockout(stock, vel) { return vel > 0.01 ? Math.floor(stock / vel) : null; },
   /** cumulative unexplained loss series from closed counts (negative variances only, flipped positive) */
@@ -318,23 +330,25 @@ const Store = (() => {
       const expected = this.countExpected(itemId, c.bd);
       const variance = Math.round((counted - expected) * 100) / 100;
       const i = c.lines.findIndex(l => l.itemId === itemId);
-      const line = { itemId, expected, counted, variance, note: note ?? (i >= 0 ? c.lines[i].note : '') };
+      // per-line timestamp: sales logged after this moment count against the NEXT day
+      const line = { itemId, expected, counted, variance, at: new Date().toISOString(), note: note ?? (i >= 0 ? c.lines[i].note : '') };
       if (i >= 0) c.lines[i] = line; else c.lines.push(line);
       emit('counts');
     },
     setCountNote(countId, itemId, note) {
       const c = state.counts.find(x => x.id === countId);
-      const l = c?.lines.find(l => l.itemId === itemId);
+      if (!c || c.status !== 'open' || !this.isOwner) return;
+      const l = c.lines.find(l => l.itemId === itemId);
       if (l) { l.note = note; emit('counts'); }
     },
     closeCount(countId) {
       const c = state.counts.find(x => x.id === countId);
       if (!c || c.status !== 'open' || !this.isOwner) return null;
-      // uncounted active items keep expected value (variance 0)
-      for (const it of this.activeItems()) {
+      // uncounted items (incl. inactive — they keep their baseline) hold expected value
+      for (const it of state.items) {
         if (!c.lines.some(l => l.itemId === it.id)) {
           const expected = this.countExpected(it.id, c.bd);
-          c.lines.push({ itemId: it.id, expected, counted: expected, variance: 0, note: '', autofilled: true });
+          c.lines.push({ itemId: it.id, expected, counted: expected, variance: 0, at: new Date().toISOString(), note: '', autofilled: true });
         }
       }
       c.status = 'closed'; c.closedAt = new Date().toISOString(); c.closedBy = this.me.name;
@@ -399,6 +413,7 @@ const Store = (() => {
       if (emp) { emp.active = active; this.audit(active ? 'reactivate_employee' : 'deactivate_employee', 'employee', empId, null, null); emit('employees'); }
     },
     async setOwnerPin(pin) {
+      if (state.settings.setupDone && !this.isOwner) return;
       state.settings.ownerPinSalt = uid();
       state.settings.ownerPinHash = await hashPin(pin, state.settings.ownerPinSalt);
       this.audit('change_owner_pin', 'settings', 'owner', null, null);
@@ -407,6 +422,9 @@ const Store = (() => {
 
     /* ---- settings & data ---- */
     setSettings(patch) {
+      // employees may not touch settings; pre-login (no session) only affects
+      // device-level prefs like language, which is fine
+      if (state.settings.setupDone && state.session && state.session.role !== 'owner') return;
       const before = { ...state.settings };
       Object.assign(state.settings, patch);
       if (state.session?.role === 'owner' || !state.settings.setupDone) this.audit('settings', 'settings', 'app', null, Object.keys(patch).join(','));
@@ -416,13 +434,21 @@ const Store = (() => {
     markNotifsRead() { for (const n of state.notifs) n.read = true; emit('notifs'); },
     exportJSON() { return JSON.stringify(state, null, 1); },
     importJSON(json) {
+      if (state.settings.setupDone && state.session && state.session.role !== 'owner') throw new Error('owner only');
       const p = JSON.parse(json);
       if (!p || p.v !== 1 || !Array.isArray(p.items)) throw new Error('bad backup');
       state = Object.assign(blank(), p, { settings: Object.assign(blank().settings, p.settings) });
       state.session = null;
+      I18N.lang = state.settings.lang || 'fr';
       emit('all');
     },
-    resetAll() { state = blank(); LS.removeItem(KEY); emit('all'); },
+    resetAll() {
+      if (state.settings.setupDone && state.session && state.session.role !== 'owner') return;
+      const lang = state.settings.lang;
+      state = blank(); state.settings.lang = lang;
+      I18N.lang = lang || 'fr';
+      LS.removeItem(KEY); emit('all');
+    },
 
     /* ---- setup ---- */
     async setupReal({ barName, ownerName, pin, employees, opening }) {
@@ -436,7 +462,9 @@ const Store = (() => {
       const bd = Engine.addDays(this.todayBd(), -1);
       const c = { id: uid(), bd, status: 'closed', isOpening: true, startedAt: new Date().toISOString(), closedAt: new Date().toISOString(), closedBy: ownerName || 'Patron', lines: [] };
       for (const it of state.items) {
-        const q = opening[it.id] ?? 0;
+        const raw = opening[it.id];
+        const q = raw ?? 0;
+        if (raw === undefined) it.active = false; // untouched in the wizard = "we don't serve this"; reactivable in Stock
         c.lines.push({ itemId: it.id, expected: q, counted: q, variance: 0, note: '' });
       }
       state.counts.push(c);
@@ -454,8 +482,9 @@ const Store = (() => {
       state.categories = JSON.parse(JSON.stringify(SEED.categories));
       state.items = SEED.build();
       state.settings.barName = 'Le Comptoir'; state.settings.ownerName = 'Karim';
-      state.settings.demoMode = true; state.settings.setupDone = true;
-      await this.setOwnerPin('1234');
+      state.settings.demoMode = true;
+      await this.setOwnerPin('1234'); // before setupDone flips, so the owner-guard lets setup through
+      state.settings.setupDone = true;
       const y = await this.addEmployeeRaw('Yassine');
       const s = await this.addEmployeeRaw('Sarah');
       seedDemoHistory(state, [y, s]);
