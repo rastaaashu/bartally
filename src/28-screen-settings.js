@@ -1,5 +1,7 @@
-/* ============ 28 — Settings screen (owner only) ============ */
+/* ============ 28 — Settings screen (owner only, root tab) ============ */
 (() => {
+  'use strict';
+
   I18N.extend({
     fr: {
       'set.pinCurrent': 'Code actuel',
@@ -20,6 +22,10 @@
       'set.curLen': 'La devise doit faire 3 à 5 caractères (ex. MAD).',
       'set.langFr': 'Français',
       'set.langEn': 'English',
+      'set.actExport': 'Exporter',
+      'set.actRestore': 'Restaurer',
+      'set.actClear': 'Effacer',
+      'set.actErase': 'Effacer',
     },
     en: {
       'set.pinCurrent': 'Current PIN',
@@ -40,28 +46,35 @@
       'set.curLen': 'Currency must be 3–5 characters (e.g. MAD).',
       'set.langFr': 'Français',
       'set.langEn': 'English',
+      'set.actExport': 'Export',
+      'set.actRestore': 'Restore',
+      'set.actClear': 'Clear',
+      'set.actErase': 'Erase',
     },
   });
 
   document.head.appendChild(UI.el(`<style>
-    [data-screen=settings] .row__t,[data-screen=settings] .row__s{display:block}
-    [data-screen=settings] .stg-logo{width:64px;height:64px;border-radius:16px;overflow:hidden;border:1px solid var(--hairline);background:var(--surface-2);flex:none;display:flex;align-items:center;justify-content:center}
-    [data-screen=settings] .stg-logo img{width:100%;height:100%;object-fit:cover}
-    [data-screen=settings] .stg-av{width:40px;height:40px;border-radius:50%;background:var(--gold-soft);border:1px solid rgba(201,154,75,.25);color:var(--gold-hi);display:inline-flex;align-items:center;justify-content:center;font-family:var(--f-display);font-weight:700;font-size:13.5px;letter-spacing:.02em;flex:none}
-    [data-screen=settings] .row.is-off .stg-av,[data-screen=settings] .row.is-off .row__t{opacity:.45}
-    [data-screen=settings] .stg-step{display:flex;align-items:center;gap:8px;flex:none}
-    [data-screen=settings] .stg-step__v{font-size:20px;font-weight:700;min-width:30px;text-align:center}
-    [data-screen=settings] .iconbtn[disabled]{opacity:.35;pointer-events:none}
-    [data-screen=settings] .sw::before{content:'';position:absolute;inset:-11px;border-radius:26px}
-    [data-screen=settings] .stg-cost{display:flex;align-items:center;gap:var(--s3);min-height:56px;border-bottom:1px solid var(--hairline)}
-    [data-screen=settings] .stg-cost:last-child{border-bottom:0}
-    [data-screen=settings] .stg-cost__n{flex:1;min-width:0;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    [data-screen=settings] .stg-cost input{width:108px;height:48px;text-align:right;padding:0 12px;border-radius:10px;border:1px solid var(--hairline);background:var(--surface-2);font-family:var(--f-display);font-variant-numeric:tabular-nums;font-size:15px}
-    [data-screen=settings] .stg-cost input:focus{border-color:rgba(201,154,75,.5)}
-    [data-screen=settings] .stg-cost input::-webkit-outer-spin-button,[data-screen=settings] .stg-cost input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
-    [data-screen=settings] .stg-warnbtn{background:var(--warn-soft);color:var(--warn);border:1px solid rgba(251,146,60,.3)}
-    [data-screen=settings] .stg-costs{animation:stg-open .28s cubic-bezier(.2,.8,.3,1)}
-    @keyframes stg-open{from{opacity:0;transform:translateY(-6px)}}
+  [data-screen=settings] .topbar{display:flex;justify-content:space-between;align-items:center;min-height:26px}
+  [data-screen=settings] .h1{font:600 24px/1.2 var(--f-display);letter-spacing:-.01em;margin-top:8px}
+  [data-screen=settings] .row .textbtn{flex:none;padding:16px 0 16px 12px}
+  [data-screen=settings] .stg-in{width:160px;height:40px;flex:none;padding:0 12px;text-align:right;border-radius:var(--r-ctl);border:1px solid var(--hair);background:var(--surface2);color:var(--t1);font-size:14px}
+  [data-screen=settings] .stg-in--s{width:88px;text-transform:uppercase}
+  [data-screen=settings] .stg-in:focus{border-color:rgba(232,177,78,.45)}
+  [data-screen=settings] .stg-sel{width:104px;height:40px;flex:none;padding:0 12px;border-radius:var(--r-ctl);border:1px solid var(--hair);background:var(--surface2);color:var(--t1);font-size:14px}
+  [data-screen=settings] .stg-sel:focus{border-color:rgba(232,177,78,.45)}
+  [data-screen=settings] .stg-seg{width:160px;flex:none}
+  [data-screen=settings] .tile.t40 .mono{font-size:12px;letter-spacing:.04em}
+  [data-screen=settings] .row.is-off .tile,[data-screen=settings] .row.is-off .row__t{opacity:.45}
+  [data-screen=settings] .stg-step{display:flex;align-items:center;gap:4px;flex:none}
+  [data-screen=settings] .stg-stepbtn{width:40px;height:40px;display:flex;align-items:center;justify-content:center;border:1px solid var(--hair);border-radius:var(--r-ctl);font:500 20px var(--f-display);color:var(--t2)}
+  [data-screen=settings] .stg-stepbtn[disabled]{opacity:.35;pointer-events:none}
+  [data-screen=settings] .stg-step__v{font:600 16px var(--f-display);min-width:28px;text-align:center;font-variant-numeric:tabular-nums}
+  [data-screen=settings] .sw::before{content:'';position:absolute;inset:-11px;border-radius:26px}
+  [data-screen=settings] .stg-cost{width:108px;height:40px;flex:none;text-align:right;padding:0 12px;border-radius:var(--r-ctl);border:1px solid var(--hair);background:var(--surface2);color:var(--t1);font-family:var(--f-display);font-weight:600;font-variant-numeric:tabular-nums;font-size:14px}
+  [data-screen=settings] .stg-cost:focus{border-color:rgba(232,177,78,.45)}
+  [data-screen=settings] .stg-cost::-webkit-outer-spin-button,[data-screen=settings] .stg-cost::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  [data-screen=settings] .stg-costs{animation:stg-open .28s cubic-bezier(.2,.8,.3,1)}
+  @keyframes stg-open{from{opacity:0;transform:translateY(-6px)}}
   </style>`));
 
   const VERSION = '1.0.0';
@@ -93,8 +106,8 @@
   function ownerPinSheet() {
     let step = 0, val = '', newPin = '', busy = false;
     const c = UI.el(`<div>
-      <h2 style="font-size:18px;margin-bottom:2px">${esc(t('set.ownerPin'))}</h2>
-      <p data-r="step" style="color:var(--text-2);font-size:13.5px">${esc(t('set.pinCurrent'))}</p>
+      <div class="micro">${esc(t('set.ownerPin'))}</div>
+      <p data-r="step" style="color:var(--t2);font-size:13px;margin-top:8px">${esc(t('set.pinCurrent'))}</p>
       <div class="pinDots" data-r="dots"><i></i><i></i><i></i><i></i></div>
       <div data-r="pad"></div>
     </div>`);
@@ -140,8 +153,8 @@
     if (!emp) return;
     let val = '';
     const c = UI.el(`<div>
-      <h2 style="font-size:18px;margin-bottom:2px">${esc(t('set.teamPinReset'))}</h2>
-      <p style="color:var(--text-2);font-size:13.5px">${esc(t('set.pinFor', { name: emp.name }))}</p>
+      <div class="micro">${esc(t('set.teamPinReset'))}</div>
+      <p style="color:var(--t2);font-size:13px;margin-top:8px">${esc(t('set.pinFor', { name: emp.name }))}</p>
       <div class="pinDots" data-r="dots">${[0, 1, 2, 3, 4, 5].map(i => `<i${i >= 4 ? ' style="opacity:.5"' : ''}></i>`).join('')}</div>
       <p class="tt" style="text-align:center;margin-top:-8px">${esc(t('set.pinLen'))}</p>
       <div data-r="pad"></div>
@@ -168,7 +181,7 @@
 
   function addMemberSheet() {
     const c = UI.el(`<div>
-      <h2 style="font-size:18px;margin-bottom:14px">${esc(t('set.teamAdd'))}</h2>
+      <div class="micro" style="margin-bottom:16px">${esc(t('set.teamAdd'))}</div>
       <div class="field"><label>${esc(t('inv.name'))}</label>
         <input data-r="name" type="text" maxlength="30" placeholder="${esc(t('wiz.staffNamePh'))}" autocomplete="off"></div>
       <div class="field"><label>${esc(t('set.pinOptional'))}</label>
@@ -194,17 +207,15 @@
     const body = rows.length ? rows.map(a => {
       const meta = a.after == null ? '' : (typeof a.after === 'string' ? a.after : JSON.stringify(a.after));
       const metaShort = meta.length > 48 ? meta.slice(0, 48) + '…' : meta;
-      return `<div style="padding:9px 0;border-bottom:1px solid var(--hairline)">
-        <div style="display:flex;gap:8px;align-items:baseline;min-width:0">
-          <span class="num" style="font-size:12.5px;color:var(--gold-hi);flex:none">${esc(UI.fmtTime(a.at))}</span>
-          <span class="tt" style="flex:none">${esc(UI.fmtDate(localBd(a.at)))}</span>
-          <span class="tt" style="margin-left:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(a.actor)}</span>
-        </div>
-        <div class="num" style="font-size:12.5px;color:var(--text-2);margin-top:2px;word-break:break-all">${esc(a.action)} · ${esc(a.entity)}${metaShort ? ' · ' + esc(metaShort) : ''}</div>
+      return `<div class="row">
+        <span class="row__body">
+          <span class="row__t">${esc(a.action)} · ${esc(a.entity)}${metaShort ? ' · ' + esc(metaShort) : ''}</span>
+          <span class="row__s tnum">${esc(a.actor)} · ${esc(UI.fmtDate(localBd(a.at)))} · ${esc(UI.fmtTime(a.at))}</span>
+        </span>
       </div>`;
     }).join('')
-      : `<div class="empty">${UI.icon('book')}<div class="empty__t">${esc(t('set.auditEmpty'))}</div></div>`;
-    UI.sheet(`<h2 style="font-size:18px;margin-bottom:10px">${esc(t('set.audit'))}</h2>${body}`);
+      : `<div class="sub2" style="padding:16px 0">${esc(t('set.auditEmpty'))}</div>`;
+    UI.sheet(`<div class="micro" style="margin-bottom:8px">${esc(t('set.audit'))}</div>${body}`);
   }
 
   function restoreFlow() {
@@ -237,159 +248,132 @@
     else { Store.setSettings({ notifGranted: false }); UI.toast(t('set.notifDenied'), { type: 'danger', ms: 4200 }); }
   }
 
-  /* ---------- section cards ---------- */
+  /* ---------- sections: .sec micro labels + hairline rows, no boxes ---------- */
 
-  function barCard(s) {
+  function barSec(s) {
     const langBtn = (v, key) => `<button class="seg__btn ${s.lang === v ? 'is-on' : ''}" data-a="lang" data-v="${v}">${esc(t(key))}</button>`;
     const hours = Array.from({ length: 13 }, (_, h) =>
       `<option value="${h}" ${h === s.cutoffHour ? 'selected' : ''}>${pad2(h)}:00</option>`).join('');
-    return `<div class="card">
-      <div class="card__head"><div class="card__title">${esc(t('set.bar'))}</div></div>
-      <div class="field"><label>${esc(t('set.barName'))}</label>
-        <input data-r="barname" type="text" maxlength="40" value="${esc(s.barName)}" placeholder="${esc(t('wiz.barNamePh'))}" autocomplete="off"></div>
-      <div class="field"><label>${esc(t('set.logo'))}</label>
-        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-          <div class="stg-logo">${s.logo ? `<img src="${esc(s.logo)}" alt="${esc(t('set.logo'))}">` : UI.logoMark(64)}</div>
-          <button class="btn btn--ghost" data-a="logo-pick">${UI.icon('camera')} ${esc(t('set.logoPick'))}</button>
-          ${s.logo ? `<button class="btn btn--line" data-a="logo-rm">${esc(t('set.logoRemove'))}</button>` : ''}
-        </div></div>
-      <div class="field"><label>${esc(t('set.lang'))}</label>
-        <div class="seg">${langBtn('fr', 'set.langFr')}${langBtn('en', 'set.langEn')}</div></div>
-      <div class="field" style="margin-bottom:0"><label>${esc(t('set.cutoff'))}</label>
-        <select data-r="cutoff" class="num">${hours}</select>
-        <p class="tt mt2">${esc(t('set.cutoffHint'))}</p></div>
-    </div>`;
+    return `
+      <div class="sec"><div class="micro">${esc(t('set.bar'))}</div></div>
+      <label class="row">
+        <span class="row__body"><span class="row__t">${esc(t('set.barName'))}</span></span>
+        <input class="stg-in" data-r="barname" type="text" maxlength="40" value="${esc(s.barName)}" placeholder="${esc(t('wiz.barNamePh'))}" autocomplete="off">
+      </label>
+      <div class="row">
+        <span class="tile t40">${s.logo ? `<img src="${esc(s.logo)}" alt="${esc(t('set.logo'))}">` : UI.logoMark(22)}</span>
+        <span class="row__body"><span class="row__t">${esc(t('set.logo'))}</span></span>
+        ${s.logo ? `<button class="textbtn" data-a="logo-rm">${esc(t('set.logoRemove'))}</button>` : ''}
+        <button class="textbtn" data-a="logo-pick">${esc(t('set.logoPick'))}</button>
+      </div>
+      <div class="row">
+        <span class="row__body"><span class="row__t">${esc(t('set.lang'))}</span></span>
+        <div class="seg stg-seg">${langBtn('fr', 'set.langFr')}${langBtn('en', 'set.langEn')}</div>
+      </div>
+      <label class="row">
+        <span class="row__body"><span class="row__t">${esc(t('set.cutoff'))}</span>
+          <span class="row__s">${esc(t('set.cutoffHint'))}</span></span>
+        <select class="stg-sel num" data-r="cutoff">${hours}</select>
+      </label>`;
   }
 
-  function teamCard(s) {
+  function teamSec(s) {
     const emps = [...Store.state.employees].sort((a, b) => (a.active === b.active ? 0 : a.active ? -1 : 1));
     const rows = emps.map(emp => `
       <div class="row ${emp.active ? '' : 'is-off'}">
-        <span class="stg-av">${esc(initials(emp.name))}</span>
+        <span class="tile t40"><span class="mono" style="color:var(--t2)">${esc(initials(emp.name))}</span></span>
         <span class="row__body">
           <span class="row__t">${esc(emp.name)}</span>
-          ${emp.pinHash ? `<span class="row__s">${esc(t('set.teamPin'))} ····</span>` : ''}
+          ${emp.active
+            ? (emp.pinHash ? `<span class="row__s">${esc(t('set.teamPin'))} ····</span>` : '')
+            : `<span class="row__s">${esc(t('inv.inactive'))}</span>`}
         </span>
-        ${emp.active ? '' : `<span class="pill pill--mut">${esc(t('inv.inactive'))}</span>`}
-        ${emp.active ? `<button class="iconbtn" data-a="emp-pin" data-id="${emp.id}" title="${esc(t('set.teamPinReset'))}" aria-label="${esc(t('set.teamPinReset'))}">${UI.icon('lock')}</button>` : ''}
-        <button class="iconbtn" data-a="emp-act" data-id="${emp.id}" title="${esc(emp.active ? t('set.teamDeactivate') : t('set.teamReactivate'))}" aria-label="${esc(emp.active ? t('set.teamDeactivate') : t('set.teamReactivate'))}">${UI.icon(emp.active ? 'x' : 'check')}</button>
+        ${emp.active ? `<button class="textbtn" data-a="emp-pin" data-id="${emp.id}">${esc(t('set.teamPin'))}</button>` : ''}
+        <button class="textbtn" data-a="emp-act" data-id="${emp.id}">${esc(emp.active ? t('set.teamDeactivate') : t('set.teamReactivate'))}</button>
       </div>`).join('');
-    const empty = `<div class="empty" style="padding:var(--s6) var(--s4)">${UI.icon('users')}
-      <div class="empty__t">${esc(t('set.teamEmpty'))}</div>
-      <div class="empty__s">${esc(t('set.teamEmptySub'))}</div></div>`;
-    return `<div class="card">
-      <div class="card__head"><div class="card__title">${esc(t('set.team'))}</div>
-        <span class="pill pill--mut num">${emps.filter(e => e.active).length}</span></div>
+    const empty = `<div class="sub2" style="margin-top:12px">${esc(t('set.teamEmpty'))}</div>
+      <div class="tt" style="margin-top:4px">${esc(t('set.teamEmptySub'))}</div>`;
+    return `
+      <div class="sec"><div class="micro">${esc(t('set.team'))}</div><div class="micro tnum">${emps.filter(e => e.active).length}</div></div>
       ${emps.length ? rows : empty}
-      <button class="btn btn--ghost btn--full mt3" data-a="team-add">${UI.icon('plus')} ${esc(t('set.teamAdd'))}</button>
-      <hr class="divider">
-      <div class="switchrow">
+      <button class="textbtn" data-a="team-add" style="width:100%;padding:16px 0">${esc(t('set.teamAdd'))}</button>
+      <div class="switchrow" style="border-top:1px solid var(--hair)">
         <div style="flex:1;min-width:0"><div class="switchrow__t">${esc(t('set.teamRequirePin'))}</div>
           <div class="switchrow__s">${esc(t('set.teamRequirePinHint'))}</div></div>
         <button class="sw ${s.requireStaffPin ? 'on' : ''}" data-a="requirePin" role="switch" aria-checked="${s.requireStaffPin}" aria-label="${esc(t('set.teamRequirePin'))}"></button>
       </div>
-    </div>`;
+      <button class="grouprow" data-a="owner-pin"><span>${esc(t('set.ownerPin'))}</span><span class="chev">›</span></button>`;
   }
 
-  function ownerPinCard() {
-    return `<div class="card" style="padding:6px 16px">
-      <button class="row" style="width:100%;text-align:left" data-a="owner-pin">
-        <span class="iconbtn iconbtn--plain" style="color:var(--gold)">${UI.icon('lock')}</span>
-        <span class="row__body"><span class="row__t">${esc(t('set.ownerPin'))}</span></span>
-        <span style="color:var(--text-3)">${UI.icon('chevR')}</span>
-      </button>
-    </div>`;
-  }
-
-  function alertsCard(s) {
+  function alertsSec(s) {
     const hasN = typeof Notification !== 'undefined';
     const perm = hasN ? Notification.permission : 'unsupported';
     const on = hasN && perm === 'granted' && s.notifGranted;
     const sub = !hasN ? t('set.notifUnsupported') : perm === 'denied' ? t('set.notifDenied') : t('set.notifHint');
-    return `<div class="card">
-      <div class="card__head"><div class="card__title">${esc(t('set.alerts'))}</div></div>
-      <div class="switchrow">
-        <div style="flex:1;min-width:0"><div class="switchrow__t">${esc(t('set.varThreshold'))}</div>
-          <div class="switchrow__s">${esc(t('set.varThresholdHint'))}</div></div>
+    return `
+      <div class="sec"><div class="micro">${esc(t('set.alerts'))}</div></div>
+      <div class="row">
+        <span class="row__body"><span class="row__t">${esc(t('set.varThreshold'))}</span>
+          <span class="row__s">${esc(t('set.varThresholdHint'))}</span></span>
         <div class="stg-step">
-          <button class="iconbtn" data-a="var-" ${s.varThreshold <= 1 ? 'disabled' : ''} aria-label="−1">${UI.icon('minus')}</button>
-          <span class="stg-step__v num">${s.varThreshold}</span>
-          <button class="iconbtn" data-a="var+" ${s.varThreshold >= 10 ? 'disabled' : ''} aria-label="+1">${UI.icon('plus')}</button>
+          <button class="stg-stepbtn" data-a="var-" ${s.varThreshold <= 1 ? 'disabled' : ''} aria-label="−1">−</button>
+          <span class="stg-step__v">${s.varThreshold}</span>
+          <button class="stg-stepbtn" data-a="var+" ${s.varThreshold >= 10 ? 'disabled' : ''} aria-label="+1">+</button>
         </div>
       </div>
-      <hr class="divider">
       <div class="switchrow">
         <div style="flex:1;min-width:0"><div class="switchrow__t">${esc(t('set.notifOn'))}</div>
           <div class="switchrow__s"${perm === 'denied' ? ' style="color:var(--warn)"' : ''}>${esc(sub)}</div></div>
         <button class="sw ${on ? 'on' : ''}" data-a="notif" role="switch" aria-checked="${on}" aria-label="${esc(t('set.notifOn'))}"></button>
-      </div>
-    </div>`;
+      </div>`;
   }
 
-  function costsCard(s) {
+  function costsSec(s) {
     const items = Store.activeItems();
-    const list = costsOpen ? `<div class="stg-costs mt2">${items.map(it => `
-      <div class="stg-cost">
-        <span class="stg-cost__n">${esc(it.name)}</span>
-        <input data-cost="${it.id}" type="number" inputmode="decimal" min="0" step="0.5" value="${it.cost ?? ''}" placeholder="—" aria-label="${esc(t('inv.cost', { cur: s.currency }))}">
+    const list = costsOpen ? `<div class="stg-costs">${items.map(it => `
+      <div class="row">
+        <span class="row__body"><span class="row__t">${esc(it.name)}</span></span>
+        <input class="stg-cost" data-cost="${it.id}" type="number" inputmode="decimal" min="0" step="0.5" value="${it.cost ?? ''}" placeholder="—" aria-label="${esc(t('inv.cost', { cur: s.currency }))}">
       </div>`).join('')}</div>` : '';
-    return `<div class="card">
-      <div class="card__head"><div class="card__title">${esc(t('set.costs'))}</div></div>
-      <p class="tt mb3">${esc(t('set.costsHint', { cur: s.currency }))}</p>
-      <div class="field"><label>${esc(t('set.currency'))}</label>
-        <input data-r="cur" type="text" maxlength="5" value="${esc(s.currency)}" style="text-transform:uppercase" autocapitalize="characters" autocomplete="off"></div>
-      <button class="btn btn--ghost btn--full" data-a="costs">${UI.icon(costsOpen ? 'eye' : 'edit')} ${esc(costsOpen ? t('set.costsHide') : t('set.costsShow', { n: items.length }))}</button>
-      ${list}
-    </div>`;
+    return `
+      <div class="sec"><div class="micro">${esc(t('set.costs'))}</div></div>
+      <div class="sub2" style="margin-top:8px">${esc(t('set.costsHint', { cur: s.currency }))}</div>
+      <label class="row" style="margin-top:4px">
+        <span class="row__body"><span class="row__t">${esc(t('set.currency'))}</span></span>
+        <input class="stg-in stg-in--s" data-r="cur" type="text" maxlength="5" value="${esc(s.currency)}" autocapitalize="characters" autocomplete="off">
+      </label>
+      <button class="grouprow" data-a="costs">
+        <span class="micro">${esc(costsOpen ? t('set.costsHide') : t('set.costsShow', { n: items.length }))}</span>
+        <span class="chev">${costsOpen ? '⌄' : '›'}</span>
+      </button>
+      ${list}`;
   }
 
-  function dataCard(s) {
-    return `<div class="card">
-      <div class="card__head"><div class="card__title">${esc(t('set.data'))}</div></div>
-      <button class="row" style="width:100%;text-align:left" data-a="backup">
-        <span class="iconbtn iconbtn--plain" style="color:var(--gold)">${UI.icon('download')}</span>
+  function dataSec(s) {
+    return `
+      <div class="sec"><div class="micro">${esc(t('set.data'))}</div></div>
+      <div class="row">
         <span class="row__body"><span class="row__t">${esc(t('set.backup'))}</span>
           <span class="row__s">${esc(t('set.backupHint'))}</span></span>
-        <span style="color:var(--text-3)">${UI.icon('chevR')}</span>
-      </button>
-      <button class="row" style="width:100%;text-align:left" data-a="restore">
-        <span class="iconbtn iconbtn--plain" style="color:var(--gold)">${UI.icon('upload')}</span>
+        <button class="textbtn" data-a="backup">${esc(t('set.actExport'))}</button>
+      </div>
+      <div class="row">
         <span class="row__body"><span class="row__t">${esc(t('set.restore'))}</span></span>
-        <span style="color:var(--text-3)">${UI.icon('chevR')}</span>
-      </button>
-      <hr class="divider">
-      ${s.demoMode ? `<button class="btn stg-warnbtn btn--full mb2" data-a="demo-clear">${esc(t('set.demoClear'))}</button>` : ''}
-      <button class="btn btn--danger btn--full" data-a="reset">${esc(t('set.reset'))}</button>
-    </div>`;
+        <button class="textbtn" data-a="restore">${esc(t('set.actRestore'))}</button>
+      </div>
+      ${s.demoMode ? `<div class="row">
+        <span class="row__body"><span class="row__t">${esc(t('set.demoClear'))}</span></span>
+        <button class="textbtn" data-a="demo-clear" style="color:var(--bad)">${esc(t('set.actClear'))}</button>
+      </div>` : ''}
+      <div class="row">
+        <span class="row__body"><span class="row__t">${esc(t('set.reset'))}</span></span>
+        <button class="textbtn" data-a="reset" style="color:var(--bad)">${esc(t('set.actErase'))}</button>
+      </div>
+      <button class="grouprow" data-a="audit"><span>${esc(t('set.audit'))}</span><span class="chev">›</span></button>`;
   }
 
-  function auditCard() {
-    return `<div class="card" style="padding:6px 16px">
-      <button class="row" style="width:100%;text-align:left" data-a="audit">
-        <span class="iconbtn iconbtn--plain" style="color:var(--gold)">${UI.icon('book')}</span>
-        <span class="row__body"><span class="row__t">${esc(t('set.audit'))}</span></span>
-        <span style="color:var(--text-3)">${UI.icon('chevR')}</span>
-      </button>
-    </div>`;
-  }
-
-  function aboutCard() {
-    return `<div class="card">
-      <div class="card__head"><div class="card__title">${esc(t('set.about'))}</div></div>
-      <div class="row">
-        <span class="row__body"><span class="row__t">${esc(t('set.version'))}</span></span>
-        <span class="row__end num" style="color:var(--text-2)">${VERSION}</span>
-      </div>
-      <div class="row">
-        <span class="iconbtn iconbtn--plain" style="color:var(--gold)">${UI.icon('download')}</span>
-        <span class="row__body"><span class="row__t">${esc(t('set.installHint'))}</span></span>
-      </div>
-      <div class="center mt4" style="gap:2px;padding-bottom:6px">
-        ${UI.logoMark(44)}
-        <div class="logo__name" style="margin-top:8px">BarTally</div>
-        <div class="logo__sub">${esc(t('app.tagline'))}</div>
-      </div>
-    </div>`;
+  function aboutLine() {
+    return `<div class="sub2" style="margin-top:24px">BarTally · ${esc(t('set.version'))} <span class="tnum">${VERSION}</span> · ${esc(t('set.installHint'))}</div>`;
   }
 
   /* ---------- delegated handlers ---------- */
@@ -399,7 +383,6 @@
     if (!b) return;
     const a = b.dataset.a;
     const s = S();
-    if (a === 'back') { UI.haptic('light'); UI.go('more'); return; }
     if (a === 'lang') {
       const v = b.dataset.v;
       if (v !== s.lang) { Store.setSettings({ lang: v }); UI.refresh(); saved(); }
@@ -487,7 +470,7 @@
     }
   }
 
-  /* ---------- screen ---------- */
+  /* ---------- screen (root tab: no back button, tab bar is global) ---------- */
 
   UI.registerScreen({
     id: 'settings',
@@ -498,19 +481,17 @@
       }
       const s = S();
       el.innerHTML = `
-        <header class="apphead">
-          <button class="iconbtn" data-a="back" aria-label="${esc(t('g.back'))}">${UI.icon('chevL')}</button>
-          <div class="apphead__titles"><h1 class="apphead__title">${esc(t('set.title'))}</h1>
-            ${s.barName ? `<div class="apphead__sub">${esc(s.barName)}</div>` : ''}</div>
-        </header>
-        ${barCard(s)}
-        ${teamCard(s)}
-        ${ownerPinCard()}
-        ${alertsCard(s)}
-        ${costsCard(s)}
-        ${dataCard(s)}
-        ${auditCard()}
-        ${aboutCard()}`;
+        <div class="topbar">
+          ${UI.logoMark(26)}
+          <div class="micro tnum">v${VERSION}</div>
+        </div>
+        <div class="h1">${esc(t('set.title'))}</div>
+        ${barSec(s)}
+        ${teamSec(s)}
+        ${alertsSec(s)}
+        ${costsSec(s)}
+        ${dataSec(s)}
+        ${aboutLine()}`;
       /* keep focus on the cost input the user is moving to across store-driven re-renders */
       if (costsOpen && costFocusId) {
         const inp = el.querySelector(`[data-cost="${costFocusId}"]`);

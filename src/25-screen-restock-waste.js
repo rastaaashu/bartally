@@ -1,5 +1,7 @@
-/* ============ Screens: restock (livraison) + waste (casse & pertes) — owner only ============ */
+/* ============ Screens: restock (livraison) + waste (casse & pertes) — owner only, reference patterns ============ */
 (() => {
+  'use strict';
+
   I18N.extend({
     fr: {
       'rw.todayRestock': 'Livraisons du jour',
@@ -8,6 +10,8 @@
       'rw.clear': 'Effacer la recherche',
       'restock.confirmBtn': 'Ajouter +{qty}',
       'waste.confirmBtn': 'Déclarer −{qty}',
+      'restock.validate': 'Valider la livraison',
+      'waste.validate': 'Valider la perte',
     },
     en: {
       'rw.todayRestock': "Today's deliveries",
@@ -16,8 +20,15 @@
       'rw.clear': 'Clear search',
       'restock.confirmBtn': 'Add +{qty}',
       'waste.confirmBtn': 'Log −{qty}',
+      'restock.validate': 'Confirm delivery',
+      'waste.validate': 'Confirm waste',
     },
   });
+
+  document.head.appendChild(UI.el(`<style>
+  [data-screen=restock] .topbar,[data-screen=waste] .topbar{display:flex;justify-content:space-between;align-items:center;min-height:26px}
+  [data-screen=restock] .h1,[data-screen=waste] .h1{font:600 24px/1.2 var(--f-display);letter-spacing:-.01em;margin-top:8px}
+  </style>`));
 
   /* transient per-screen UI state — survives store-driven re-renders (rule 9) */
   const ST = {
@@ -39,14 +50,11 @@
     return items;
   }
 
+  /* ---- item grid: reference frame 02 anatomy (art + corner qty, caption below) ---- */
   function icardHtml(it) {
-    const stock = Store.stock(it.id);
-    const low = Store.isLow(it.id);
     return `<button type="button" class="icard" data-item="${it.id}" aria-label="${UI.esc(it.name)}">
-      <div class="icard__art">${UI.art(it)}</div>
-      ${low ? `<span class="pill pill--danger icard__badge">${UI.esc(t('inv.low'))}</span>` : ''}
+      <div class="icard__art">${UI.art(it, '', { qty: UI.fmtQty(Store.stock(it.id)) })}</div>
       <div class="icard__name">${UI.esc(it.name)}</div>
-      <div class="icard__meta"><span class="num">${UI.fmtQty(stock)}</span> ${UI.esc(t('u.' + it.unit))}</div>
     </button>`;
   }
 
@@ -54,7 +62,7 @@
     const items = filtered(mode);
     if (!items.length) {
       const searching = !!ST[mode].q.trim();
-      return `<div class="empty">${UI.icon(mode === 'waste' ? 'spill' : 'truck')}
+      return `<div class="empty">
         <div class="empty__t">${UI.esc(t(searching ? 'sell.noresults' : 'inv.empty'))}</div>
         ${searching ? `<div class="empty__s">${UI.esc(t('sell.noresults.hint'))}</div>` : ''}
       </div>`;
@@ -62,36 +70,34 @@
     return `<div class="igrid">${items.map(icardHtml).join('')}</div>`;
   }
 
-  function todayCardHtml(mode) {
+  /* ---- today's entries: micro section label + hairline feed rows, no boxes ---- */
+  function todaySection(mode) {
     const bd = Store.todayBd();
     const isWaste = mode === 'waste';
     const entries = (isWaste ? Store.state.waste : Store.state.restocks).filter(e => e.bd === bd);
     if (!entries.length) return '';
-    const total = Math.round(entries.reduce((s, e) => s + e.qty, 0) * 100) / 100;
     const sign = isWaste ? '−' : '+';
-    const color = isWaste ? 'var(--danger)' : 'var(--ok)';
-    return `<div class="card mt4">
-      <div class="card__head">
-        <div class="card__title">${UI.esc(t(isWaste ? 'rw.todayWaste' : 'rw.todayRestock'))}</div>
-        <span class="pill ${isWaste ? 'pill--danger' : 'pill--ok'} num">${sign}${UI.fmtQty(total)}</span>
-      </div>
+    const color = isWaste ? 'var(--bad)' : 'var(--ok)';
+    return `
+      <div class="sec"><div class="micro">${UI.esc(t('g.today'))}</div><div class="micro tnum">${entries.length}</div></div>
       <div class="feed">
         ${entries.map(e => {
           const it = Store.item(e.itemId);
+          const cat = it && Store.cat(it.catId);
           return `<div class="row">
-            <span class="qtybubble num" style="color:${color};min-width:46px;text-align:right;flex:none">${sign}${UI.fmtQty(e.qty)}</span>
+            <span class="feedtick" style="background:${cat ? cat.hex : 'var(--t3)'}"></span>
             <div class="row__body">
               <div class="row__t">${UI.esc(it ? it.name : '?')}</div>
-              ${isWaste && e.reason ? `<div class="row__s tt">${UI.esc(e.reason)}</div>` : ''}
+              ${isWaste && e.reason ? `<div class="row__s">${UI.esc(e.reason)}</div>` : ''}
             </div>
-            <div class="row__end tt num">${UI.esc(UI.fmtTime(e.at))}</div>
+            <span class="qtybubble" style="color:${color}">${sign}${UI.esc(UI.fmtQty(e.qty))}</span>
+            <div class="row__end"><div class="tnum" style="font-size:12px;color:var(--t3)">${UI.esc(UI.fmtTime(e.at))}</div></div>
           </div>`;
         }).join('')}
-      </div>
-    </div>`;
+      </div>`;
   }
 
-  /* ---- qty sheet (stepper + quick chips; waste adds required reason) ---- */
+  /* ---- qty sheet (mirrors the sale sheet; quick chips; waste adds required reason) ---- */
   function openQtySheet(mode, itemId) {
     const item = Store.item(itemId);
     if (!item || !Store.isOwner) return;
@@ -101,28 +107,26 @@
     const quicks = dec ? [0.5, ...QUICK] : QUICK;
     let qty = 1;
     const c = UI.el(`<div>
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
-        <div class="row__art" style="width:52px;height:52px">${UI.art(item)}</div>
-        <div style="flex:1;min-width:0">
-          <div style="font-family:var(--f-display);font-weight:700;font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${UI.esc(item.name)}</div>
-          <div class="tt" style="margin-top:2px">${UI.esc(t('rw.inStock', { qty: UI.fmtQty(Store.stock(item.id)), unit: t('u.' + item.unit) }))}</div>
-        </div>
+      <div class="sheetrow">
+        <div class="tile t40">${UI.art(item)}</div>
+        <div><div class="sheetname">${UI.esc(item.name)}</div>
+        <div class="sheetsub tnum">${UI.esc(t('sell.stockEst', { n: UI.fmtQty(Store.stock(item.id)) }))}</div></div>
       </div>
       <div class="stepper">
         <button type="button" class="stepper__btn" data-a="minus" aria-label="−1">−</button>
-        <div class="stepper__v num" data-el="v" style="color:${isWaste ? 'var(--danger)' : 'var(--text)'}">1</div>
+        <div class="stepper__v tnum" data-el="v">1</div>
         <button type="button" class="stepper__btn" data-a="plus" aria-label="+1">+</button>
       </div>
-      <div style="display:flex;gap:8px;justify-content:center;margin-top:14px">
+      <div style="display:flex;gap:8px;justify-content:center">
         ${quicks.map(n => `<button type="button" class="chip num" data-q="${n}" style="min-width:52px;justify-content:center">${UI.fmtQty(n)}</button>`).join('')}
       </div>
       ${isWaste ? `
       <div class="field" style="margin-top:20px;margin-bottom:0">
         <label for="rw-reason">${UI.esc(t('waste.reason'))}</label>
         <input id="rw-reason" type="text" data-el="reason" placeholder="${UI.esc(t('waste.reasonPh'))}" maxlength="140" autocomplete="off" enterkeyhint="done">
-        <div class="tt hidden" data-el="reasonHelp" style="color:var(--danger);margin-top:6px">${UI.esc(t('waste.reasonRequired'))}</div>
+        <div class="hidden" data-el="reasonHelp" style="color:var(--bad);font-size:12px;margin-top:8px">${UI.esc(t('waste.reasonRequired'))}</div>
       </div>` : ''}
-      <button type="button" class="btn btn--gold btn--big btn--full" data-a="ok" style="margin-top:20px"></button>
+      <button type="button" class="btn btn--gold btn--full" data-a="ok" style="margin-top:20px">${UI.esc(t(isWaste ? 'waste.validate' : 'restock.validate'))}</button>
     </div>`);
     const s = UI.sheet(c);
     const vEl = c.querySelector('[data-el=v]');
@@ -137,7 +141,6 @@
       vEl.textContent = UI.fmtQty(qty);
       minusBtn.style.opacity = qty <= min ? '.4' : '';
       chips.forEach(ch => ch.classList.toggle('is-on', Number(ch.dataset.q) === qty));
-      okBtn.textContent = t(isWaste ? 'waste.confirmBtn' : 'restock.confirmBtn', { qty: UI.fmtQty(qty) });
       okBtn.style.opacity = blocked() ? '.55' : '';
       okBtn.setAttribute('aria-disabled', blocked() ? 'true' : 'false');
     }
@@ -151,7 +154,7 @@
         const reason = reasonInp.value.trim();
         if (!reason) {
           helpEl.classList.remove('hidden');
-          reasonInp.style.borderColor = 'var(--danger)';
+          reasonInp.style.borderColor = 'var(--bad)';
           UI.haptic('warn');
           reasonInp.focus();
           return;
@@ -191,25 +194,23 @@
     const st = ST[mode];
     const cats = Store.state.categories.slice().sort((a, b) => a.sort - b.sort);
     el.innerHTML = `
-      <header class="apphead">
-        <button type="button" class="iconbtn" data-a="back" aria-label="${UI.esc(t('g.back'))}">${UI.icon('chevL')}</button>
-        <div class="apphead__titles">
-          <h1 class="apphead__title">${UI.esc(t(mode + '.title'))}</h1>
-          <div class="apphead__sub">${UI.esc(t(mode + '.hint'))}</div>
-        </div>
-      </header>
+      <div class="topbar">
+        <button type="button" class="back" data-a="back">‹ ${UI.esc(t('g.back'))}</button>
+        <div class="micro tnum">${UI.esc(UI.fmtDate(Store.todayBd()))}</div>
+      </div>
+      <div class="h1">${UI.esc(t(mode + '.title'))}</div>
+      <div class="sub2">${UI.esc(t(mode + '.hint'))}</div>
       <div class="search">
         ${UI.icon('search')}
         <input type="text" data-el="q" placeholder="${UI.esc(t('g.search'))}" value="${UI.esc(st.q)}" autocomplete="off" enterkeyhint="search" aria-label="${UI.esc(t('g.search'))}">
         <button type="button" class="iconbtn iconbtn--plain search__clear ${st.q ? '' : 'hidden'}" data-a="clear" aria-label="${UI.esc(t('rw.clear'))}">${UI.icon('x')}</button>
       </div>
       <div class="chips" data-el="chips">
-        <button type="button" class="chip ${st.cat === 'all' ? 'is-on' : ''}" data-cat="all">${UI.esc(t('g.all'))}</button>
-        ${cats.map(cat => `<button type="button" class="chip ${st.cat === cat.id ? 'is-on' : ''}" data-cat="${cat.id}">
-          <span class="dot" style="--c:${cat.color}"></span>${UI.esc(Store.catName(cat))}</button>`).join('')}
+        <button type="button" class="chip ${st.cat === 'all' ? 'is-on' : ''}" data-cat="all"><span class="dot"></span>${UI.esc(t('g.all'))}</button>
+        ${cats.map(cat => `<button type="button" class="chip ${st.cat === cat.id ? 'is-on' : ''}" data-cat="${cat.id}"><span class="dot" style="background:${cat.hex}"></span>${UI.esc(Store.catName(cat))}</button>`).join('')}
       </div>
-      <div data-el="gridwrap" class="mt2">${gridSection(mode)}</div>
-      ${todayCardHtml(mode)}
+      <div data-el="gridwrap">${gridSection(mode)}</div>
+      ${todaySection(mode)}
     `;
     const qInp = el.querySelector('[data-el=q]');
     const clearBtn = el.querySelector('[data-a=clear]');
@@ -245,7 +246,7 @@
       updateGrid();
     });
     el.addEventListener('click', e => {
-      if (e.target.closest('[data-a=back]')) { UI.haptic('light'); UI.go(FROM[mode] || 'more'); return; }
+      if (e.target.closest('[data-a=back]')) { UI.haptic('light'); UI.go(FROM[mode] || 'dashboard'); return; }
       const card = e.target.closest('[data-item]');
       if (card) openQtySheet(mode, card.dataset.item);
     });

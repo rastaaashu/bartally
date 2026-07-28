@@ -1,5 +1,7 @@
 /* ============ 26 — reports: history list, day report, CSV/PDF exports (owner only) ============ */
 (() => {
+  'use strict';
+
   I18N.extend({
     fr: {
       'rep.openHint': 'Comptage en cours — clôturez-le pour générer le rapport.',
@@ -17,6 +19,11 @@
       'rep.rangeEmpty': 'Aucune journée clôturée dans cette période.',
       'rep.auto': 'Non compté — valeur attendue conservée',
       'rep.closedBy': 'Clôturé par {name} à {time}',
+      'rep.days': 'Journées',
+      'rep.kSold': 'Vendu', 'rep.kRest': 'Livré',
+      'rep.voidBtn': 'Annuler',
+      'rep.varN_one': '{n} écart', 'rep.varN_many': '{n} écarts',
+      'rep.exportRangeBtn': 'Exporter une période',
     },
     en: {
       'rep.openHint': 'Count in progress — close it to generate the report.',
@@ -34,6 +41,11 @@
       'rep.rangeEmpty': 'No closed days in this range.',
       'rep.auto': 'Not counted — expected value kept',
       'rep.closedBy': 'Closed by {name} at {time}',
+      'rep.days': 'Days',
+      'rep.kSold': 'Sold', 'rep.kRest': 'Delivered',
+      'rep.voidBtn': 'Void',
+      'rep.varN_one': '{n} discrepancy', 'rep.varN_many': '{n} discrepancies',
+      'rep.exportRangeBtn': 'Export a date range',
     },
   });
 
@@ -42,8 +54,8 @@
   const esc = (...a) => UI.esc(...a);
   const fq = n => UI.fmtQty(n);
   const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
-  const sgn = v => (v > 0 ? '+' : '') + fq(v);
-  const vcls = v => v < 0 ? 'varneg' : v > 0 ? 'varpos' : 'varzero';
+  const sgn = v => v === 0 ? '±0' : (v > 0 ? '+' : '−') + fq(Math.abs(v));
+  const dcls = v => v < 0 ? 'bad' : v > 0 ? 'good' : 'faint';
   const pcls = v => v < 0 ? 'neg' : v > 0 ? 'pos' : '';
   const slug = s => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-+|-+$)/g, '');
   const longDate = bd => cap(UI.fmtDate(bd, { weekday: 'long', day: 'numeric', month: 'long' }));
@@ -67,15 +79,10 @@
   const bySort = (a, b) => (Store.item(a.itemId)?.sort ?? 0) - (Store.item(b.itemId)?.sort ?? 0);
   const nameOf = l => Store.item(l.itemId)?.name || '?';
   const catOf = l => { const it = Store.item(l.itemId); const c = it && Store.cat(it.catId); return c ? Store.catName(c) : ''; };
+  const tickOf = itemId => { const it = Store.item(itemId); const c = it && Store.cat(it.catId); return c ? c.hex : 'var(--t3)'; };
+  const noteOf = l => l.note || (l.autofilled ? t('rep.auto') : '');
   const varLinesOf = c => c.lines.filter(l => l.variance !== 0).sort((a, b) => Math.abs(b.variance) - Math.abs(a.variance));
   const rangeCounts = (from, to) => Store.closedCounts().filter(c => c.bd >= from && c.bd <= to).sort((a, b) => a.bd < b.bd ? -1 : 1);
-
-  function head(title, sub, backTo) {
-    return `<header class="apphead">
-      <button class="iconbtn" data-back="${backTo}" aria-label="${esc(t('g.back'))}">${UI.icon('chevL')}</button>
-      <div class="apphead__titles"><h1 class="apphead__title">${esc(title)}</h1>${sub ? `<div class="apphead__sub">${esc(sub)}</div>` : ''}</div>
-    </header>`;
-  }
 
   /* transient view state — survives UI.refresh() re-renders */
   const range = { from: null, to: null };
@@ -86,35 +93,32 @@
   function ensureCss() {
     if (cssIn) return; cssIn = true;
     document.head.appendChild(UI.el(`<style>
-[data-screen=reports] .row__t,[data-screen=reports] .row__s{display:block}
-[data-screen=reports] .rep-days{padding:6px 16px}
-[data-screen=reports] .rep-days .row,[data-screen=reports] [data-a=clean]{width:100%;text-align:left}
-[data-screen=reports] .pill svg{width:12px;height:12px}
-[data-screen=reports] .btn svg{width:18px;height:18px}
-[data-screen=reports] .rep-chev{color:var(--text-3);flex:none;transition:transform .25s cubic-bezier(.2,.8,.3,1)}
-[data-screen=reports] .rep-chev svg{width:18px;height:18px}
-[data-screen=reports] .rep-chev.is-open{transform:rotate(90deg)}
-[data-screen=reports] .rep-range{display:flex;gap:12px}
-[data-screen=reports] .rep-range .field{flex:1;margin-bottom:var(--s3)}
-[data-screen=reports] .field input[type=date]{width:100%;min-height:48px;padding:12px 14px;border-radius:12px;border:1px solid var(--hairline);background:var(--surface-2);font-size:15px;color:var(--text);color-scheme:dark}
-[data-screen=reports] .field input[type=date]:focus{border-color:rgba(201,154,75,.5)}
-[data-screen=reports] .rep-void .row__t,[data-screen=reports] .rep-void .row__s{text-decoration:line-through;opacity:.55}
-[data-screen=reports] .rep-void .row__art{opacity:.4}
-[data-screen=reports] .rep-note{display:flex;align-items:flex-start;gap:5px;margin-top:3px;font-size:12px;color:var(--text-2)}
-[data-screen=reports] .rep-note svg{width:13px;height:13px;flex:none;margin-top:2px;color:var(--gold)}
-[data-screen=reports] .rep-okline{display:flex;align-items:center;gap:10px;padding:4px 0 8px;color:var(--ok)}
-[data-screen=reports] .rep-okline svg{width:22px;height:22px;flex:none}
-[data-screen=reports] .rep-loss{grid-column:1/-1;background:linear-gradient(160deg,rgba(201,154,75,.14),rgba(201,154,75,.03) 60%),var(--surface);border-color:rgba(201,154,75,.25)}
-[data-screen=reports] .rep-clean{animation:rep-drop .28s cubic-bezier(.2,.8,.3,1)}
-[data-screen=reports] .rep-fade{animation:rep-in .34s cubic-bezier(.2,.85,.3,1) both}
-@keyframes rep-in{from{opacity:0;transform:translateY(8px)}}
-@keyframes rep-drop{from{opacity:0;transform:translateY(-6px)}}
+[data-screen=reports] .topbar{display:flex;justify-content:space-between;align-items:center;min-height:26px}
+[data-screen=reports] .h1{font:600 24px/1.2 var(--f-display);letter-spacing:-.01em;margin-top:8px}
+[data-screen=reports] .rep-open{margin-top:16px}
+[data-screen=reports] .rep-cont{flex:none;padding:10px 0 10px 12px;font-size:13px;font-weight:600;color:var(--brass);text-align:right}
+[data-screen=reports] .rep-th3,[data-screen=reports] .rep-drow{grid-template-columns:1fr 64px 84px}
+[data-screen=reports] .rep-drow{display:grid;min-height:56px;align-items:center;border-bottom:1px solid var(--hair);width:100%;text-align:left;font-size:14px}
+[data-screen=reports] .rep-dd{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:8px}
+[data-screen=reports] .rep-dvar{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+[data-screen=reports] .rep-nvar{font-size:10px;font-weight:600;color:var(--bad)}
+[data-screen=reports] .rep-okline{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--hair)}
+[data-screen=reports] .rep-okline svg{width:20px;height:20px;flex:none;color:var(--ok)}
+[data-screen=reports] .rep-okline .row__t{color:var(--ok)}
+[data-screen=reports] .row__t .qtybubble{margin-left:6px}
+[data-screen=reports] .rep-meta{flex:none;text-align:right}
+[data-screen=reports] .rep-time{display:block;font:500 12px var(--f-display);color:var(--t3);font-variant-numeric:tabular-nums}
+[data-screen=reports] .rep-by{display:block;font-size:11px;color:var(--t3);margin-top:2px}
+[data-screen=reports] .rep-cancel{flex:none;padding:8px 0 8px 4px;font-size:12px;font-weight:500;color:var(--t2)}
+[data-screen=reports] .rep-tag{flex:none;font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--t3)}
+[data-screen=reports] .rep-void .row__t,[data-screen=reports] .rep-void .qtybubble{text-decoration:line-through;opacity:.55}
+[data-screen=reports] .rep-void .feedtick{opacity:.4}
 </style>`));
   }
 
   /* ---------- exports: shared bits ---------- */
   const csvHead = () => [t('rep.colDate'), t('inv.category'), t('rep.item'), t('count.expected'), t('count.counted'), t('dash.variance'), t('count.note')];
-  const csvLine = (c, l) => [c.bd, catOf(l), nameOf(l), fq(l.expected), fq(l.counted), fq(l.variance), l.note || (l.autofilled ? t('rep.auto') : '')];
+  const csvLine = (c, l) => [c.bd, catOf(l), nameOf(l), fq(l.expected), fq(l.counted), fq(l.variance), noteOf(l)];
   const thRow = cols => `<tr>${cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr>`;
   const pdfVarTable = lines => `<table>${thRow([t('inv.category'), t('rep.item'), t('count.expected'), t('count.counted'), t('dash.variance'), t('count.note')])}
     ${lines.map(l => `<tr><td>${esc(catOf(l))}</td><td>${esc(nameOf(l))}</td><td>${esc(fq(l.expected))}</td><td>${esc(fq(l.counted))}</td><td class="${pcls(l.variance)}">${esc(sgn(l.variance))}</td><td>${esc(l.note || '')}</td></tr>`).join('')}</table>`;
@@ -179,144 +183,163 @@
     if (dayWaste.length) {
       body += `<h2>${esc(t('rep.waste'))}</h2>
         <table>${thRow([t('rep.time'), t('rep.qty'), t('rep.item'), t('waste.reason'), t('rep.who')])}
-        ${dayWaste.map(w => `<tr><td>${esc(UI.fmtTime(w.at))}</td><td class="neg">${esc('-' + fq(w.qty))}</td><td>${esc(Store.item(w.itemId)?.name || '?')}</td><td>${esc(w.reason || '')}</td><td>${esc(w.by)}</td></tr>`).join('')}</table>`;
+        ${dayWaste.map(w => `<tr><td>${esc(UI.fmtTime(w.at))}</td><td class="neg">${esc('−' + fq(w.qty))}</td><td>${esc(Store.item(w.itemId)?.name || '?')}</td><td>${esc(w.reason || '')}</td><td>${esc(w.by)}</td></tr>`).join('')}</table>`;
     }
     UI.printHTML(t('rep.day', { date: longDate(bd) }), body);
     UI.haptic('success');
   }
 
-  /* ---------- list mode ---------- */
-  function dayRow(c, i) {
+  /* ---------- export range sheet ---------- */
+  function rangeSheet() {
+    const days = Store.closedCounts();
+    if (!days.length) return;
+    const min = days[days.length - 1].bd, max = days[0].bd;
+    const defFrom = days[Math.min(days.length - 1, 6)].bd;
+    const from = range.from || defFrom, to = range.to || max;
+    const c = UI.el(`<div>
+      <div class="micro" style="margin-bottom:16px">${esc(t('rep.export'))} — ${esc(t('rep.exportRange'))}</div>
+      <div style="display:flex;gap:12px">
+        <div class="field" style="flex:1"><label>${esc(t('rep.from'))}</label><input type="date" data-r="from" value="${from}" min="${min}" max="${max}"></div>
+        <div class="field" style="flex:1"><label>${esc(t('rep.to'))}</label><input type="date" data-r="to" value="${to}" min="${min}" max="${max}"></div>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:8px">
+        <button class="btn btn--ghost" style="flex:1" data-a="csv">${esc(t('rep.exportCsv'))}</button>
+        <button class="btn btn--gold" style="flex:1" data-a="pdf">${esc(t('rep.exportPdf'))}</button>
+      </div>
+    </div>`);
+    const sh = UI.sheet(c);
+    const getRange = () => {
+      let f = c.querySelector('[data-r=from]').value || defFrom;
+      let x = c.querySelector('[data-r=to]').value || max;
+      if (f > x) { const y = f; f = x; x = y; }
+      return [f, x];
+    };
+    c.addEventListener('change', e => {
+      const r = e.target.closest('[data-r]');
+      if (r) range[r.dataset.r] = r.value;
+    });
+    c.addEventListener('click', e => {
+      const isCsv = e.target.closest('[data-a=csv]'), isPdf = e.target.closest('[data-a=pdf]');
+      if (!isCsv && !isPdf) return;
+      const [f, x] = getRange();
+      if (isCsv) exportCsvRange(f, x); else exportPdfRange(f, x);
+      if (rangeCounts(f, x).length) sh.close();
+    });
+  }
+
+  /* ---------- list mode (root tab) ---------- */
+  function dayRow(c) {
     const sold = sumBd(S().sales, c.bd, true);
-    const wn = S().waste.filter(w => w.bd === c.bd).length;
     const vt = varTotal(c);
     const nVar = c.lines.filter(l => l.variance !== 0).length;
-    const pill = nVar === 0
-      ? `<span class="pill pill--ok">${UI.icon('check')}<span class="num">0</span></span>`
-      : `<span class="pill pill--danger"><span class="num">${esc(sgn(vt))}</span></span>`;
-    return `<button class="row rep-fade" data-day="${c.bd}" style="animation-delay:${Math.min(i * 30, 240)}ms">
-      <span class="row__body">
-        <span class="row__t">${esc(longDate(c.bd))}</span>
-        <span class="row__s">${esc(I18N.plural('rep.sold', sold, { n: fq(sold) }))}${wn ? ' · ' + esc(I18N.plural('rep.wasteN', wn, { n: wn })) : ''}</span>
-      </span>
-      <span class="row__end">${pill}</span>
-      <span class="rep-chev">${UI.icon('chevR')}</span>
+    /* any nonzero line ⇒ danger-colored discrepancy count — a day never looks clean by netting out */
+    const vHtml = nVar === 0
+      ? `<span class="d faint tnum">${esc(sgn(0))}</span>`
+      : `<span class="d ${vt < 0 ? 'bad' : vt > 0 ? 'good' : 'bad'} tnum">${esc(sgn(vt))}</span>
+         <span class="rep-nvar tnum">${esc(I18N.plural('rep.varN', nVar, { n: nVar }))}</span>`;
+    return `<button class="rep-drow" data-day="${esc(c.bd)}">
+      <span class="rep-dd">${esc(longDate(c.bd))}</span>
+      <span class="r v2 tnum">${esc(fq(sold))}</span>
+      <span class="rep-dvar">${vHtml}</span>
     </button>`;
   }
 
   function renderList(el) {
     const days = Store.closedCounts();
     const open = S().counts.find(c => c.status === 'open');
-    let html = head(t('rep.title'), '', 'more');
+    let html = `
+      <div class="topbar">
+        ${UI.logoMark(26)}
+        <div class="micro tnum">${esc(UI.fmtDate(Store.todayBd()))}</div>
+      </div>
+      <div class="h1">${esc(t('tab.reports'))}</div>`;
     if (open) {
-      html += `<div class="card card--gold rep-fade">
-        <div class="card__head" style="margin-bottom:6px">
-          <div class="card__title" style="display:flex;align-items:center;gap:8px"><span class="livedot"></span>${esc(t('rep.openDay'))}</div>
-          <span class="pill pill--gold"><span class="num">${esc(UI.fmtDate(open.bd))}</span></span>
-        </div>
-        <p class="tt">${esc(t('rep.openHint'))}</p>
-        <button class="btn btn--gold btn--full mt3" data-a="count">${esc(t('g.continue'))}</button>
+      html += `<div class="row rep-open">
+        <span class="livedot"></span>
+        <span class="row__body">
+          <span class="row__t">${esc(t('rep.openDay'))} · <span class="num">${esc(UI.fmtDate(open.bd))}</span></span>
+          <span class="row__s">${esc(t('rep.openHint'))}</span>
+        </span>
+        <span class="row__end"><button class="textbtn rep-cont" data-a="count">${esc(t('g.continue'))}</button></span>
       </div>`;
     }
+    html += `<button class="grouprow${open ? '' : ' mt4'}" data-a="insights">
+      <span class="micro">${esc(t('ins.title'))}</span><span class="chev">›</span>
+    </button>`;
     if (!days.length) {
-      html += `<div class="empty grow">${UI.icon('calendar')}
+      html += `<div class="empty grow">
         <div class="empty__t">${esc(t('rep.noDays'))}</div>
-        <div class="empty__s">${esc(t('rep.noDaysSub'))}</div></div>`;
-    } else {
-      html += `<div class="card rep-days">${days.map(dayRow).join('')}</div>`;
-      const defTo = days[0].bd, defFrom = days[Math.min(days.length - 1, 6)].bd;
-      const from = range.from || defFrom, to = range.to || defTo;
-      html += `<div class="card rep-fade" style="animation-delay:.1s">
-        <div class="card__head"><div class="card__title">${esc(t('rep.export'))}</div><span class="eyebrow">${esc(t('rep.exportRange'))}</span></div>
-        <div class="rep-range">
-          <div class="field"><label>${esc(t('rep.from'))}</label><input type="date" data-r="from" value="${from}" min="${days[days.length - 1].bd}" max="${defTo}"></div>
-          <div class="field"><label>${esc(t('rep.to'))}</label><input type="date" data-r="to" value="${to}" min="${days[days.length - 1].bd}" max="${defTo}"></div>
-        </div>
-        <div style="display:flex;gap:10px">
-          <button class="btn btn--ghost" style="flex:1" data-a="csv">${UI.icon('download')}${esc(t('rep.exportCsv'))}</button>
-          <button class="btn btn--gold" style="flex:1" data-a="pdf">${UI.icon('download')}${esc(t('rep.exportPdf'))}</button>
-        </div>
+        <div class="empty__s">${esc(t('rep.noDaysSub'))}</div>
       </div>`;
+    } else {
+      html += `<div class="sec"><div class="micro">${esc(t('rep.days'))}</div><div class="micro tnum">${days.length}</div></div>
+        <div class="thead rep-th3"><div>${esc(t('rep.colDate'))}</div><div class="r">${esc(t('rep.kSold'))}</div><div class="r">${esc(t('count.ecart'))}</div></div>
+        ${days.map(dayRow).join('')}
+        <div class="bottomstack">
+          <button class="textbtn" data-a="range">${esc(t('rep.exportRangeBtn'))}</button>
+        </div>`;
     }
     el.innerHTML = html;
-    const getRange = () => {
-      const ds = Store.closedCounts();
-      let from = el.querySelector('[data-r=from]')?.value || ds[Math.min(ds.length - 1, 6)].bd;
-      let to = el.querySelector('[data-r=to]')?.value || ds[0].bd;
-      if (from > to) { const x = from; from = to; to = x; }
-      return [from, to];
-    };
     el.addEventListener('click', e => {
-      const back = e.target.closest('[data-back]');
-      if (back) { UI.haptic('light'); return UI.go(back.dataset.back); }
       if (e.target.closest('[data-a=count]')) { UI.haptic('light'); return UI.go('count'); }
+      if (e.target.closest('[data-a=insights]')) { UI.haptic('light'); return UI.go('insights', { from: 'reports' }); }
       const d = e.target.closest('[data-day]');
       if (d) { UI.haptic('light'); return UI.go('reports', { day: d.dataset.day }); }
-      if (e.target.closest('[data-a=csv]')) return exportCsvRange(...getRange());
-      if (e.target.closest('[data-a=pdf]')) return exportPdfRange(...getRange());
-    });
-    el.addEventListener('change', e => {
-      const r = e.target.closest('[data-r]');
-      if (r) range[r.dataset.r] = r.value;
+      if (e.target.closest('[data-a=range]')) return rangeSheet();
     });
   }
 
   /* ---------- day mode ---------- */
-  function varLineRow(l) {
-    const it = Store.item(l.itemId);
-    return `<div class="row">
-      <div class="row__art">${it ? UI.art(it) : ''}</div>
-      <div class="row__body">
-        <div class="row__t">${esc(nameOf(l))}</div>
-        <div class="row__s"><span class="num">${esc(fq(l.expected))} → ${esc(fq(l.counted))}</span></div>
-        ${l.note ? `<div class="rep-note">${UI.icon('note')}<span>${esc(l.note)}</span></div>` : ''}
-      </div>
-      <div class="row__end"><span class="qtybubble ${vcls(l.variance)}">${esc(sgn(l.variance))}</span></div>
-    </div>`;
-  }
-  function cleanLineRow(l) {
-    return `<div class="row" style="min-height:44px">
-      <div class="row__body">
-        <div class="row__t" style="font-weight:500;color:var(--text-2)">${esc(nameOf(l))}</div>
-        ${l.autofilled ? `<div class="tt">${esc(t('rep.auto'))}</div>` : ''}
-      </div>
-      <div class="row__end num" style="color:var(--text-3)">${esc(fq(l.counted))}</div>
-    </div>`;
+  function countRow(l) {
+    const note = noteOf(l);
+    return `<div class="trow">
+      <div class="tname"><span class="feedtick" style="background:${tickOf(l.itemId)}"></span><span>${esc(nameOf(l))}</span></div>
+      <div class="r v1 tnum">${esc(fq(l.expected))}</div>
+      <div class="r v2 tnum">${esc(fq(l.counted))}</div>
+      <div class="r d tnum ${dcls(l.variance)}">${esc(sgn(l.variance))}</div>
+    </div>${note ? `<div class="noterow">↳ ${esc(t('count.notePrefix'))} · ${esc(note)}</div>` : ''}`;
   }
   function saleRow(s) {
     const it = Store.item(s.itemId);
     return `<div class="row ${s.voidedAt ? 'rep-void' : ''}">
-      <div class="row__art">${it ? UI.art(it) : ''}</div>
-      <div class="row__body">
-        <div class="row__t"><span class="num">${esc(fq(s.qty))} ×</span> ${esc(it?.name || '?')}</div>
-        <div class="row__s">${esc(s.by)} · <span class="num">${esc(UI.fmtTime(s.at))}</span></div>
-      </div>
-      <div class="row__end">${s.voidedAt
-        ? `<span class="pill pill--mut">${esc(t('rep.voidedTag'))}</span>`
-        : `<button class="iconbtn" data-void="${s.id}" aria-label="${esc(t('rep.void'))}">${UI.icon('trash')}</button>`}</div>
+      <span class="feedtick" style="background:${tickOf(s.itemId)}"></span>
+      <span class="row__body">
+        <span class="row__t">${esc(it?.name || '?')}<span class="qtybubble">×${esc(fq(s.qty))}</span></span>
+      </span>
+      <span class="rep-meta">
+        <span class="rep-time">${esc(UI.fmtTime(s.at))}</span>
+        <span class="rep-by">${esc(s.by)}</span>
+      </span>
+      ${s.voidedAt
+        ? `<span class="rep-tag">${esc(t('rep.voidedTag'))}</span>`
+        : `<button class="rep-cancel" data-void="${esc(s.id)}" aria-label="${esc(t('rep.void'))}">${esc(t('rep.voidBtn'))}</button>`}
     </div>`;
   }
   function restockRow(r) {
     const it = Store.item(r.itemId);
     return `<div class="row">
-      <div class="row__art">${it ? UI.art(it) : ''}</div>
-      <div class="row__body">
-        <div class="row__t">${esc(it?.name || '?')}</div>
-        <div class="row__s">${esc(r.by)} · <span class="num">${esc(UI.fmtTime(r.at))}</span></div>
-      </div>
-      <div class="row__end qtybubble varpos">${esc('+' + fq(r.qty))}</div>
+      <span class="feedtick" style="background:${tickOf(r.itemId)}"></span>
+      <span class="row__body">
+        <span class="row__t">${esc(it?.name || '?')}<span class="qtybubble varpos">+${esc(fq(r.qty))}</span></span>
+      </span>
+      <span class="rep-meta">
+        <span class="rep-time">${esc(UI.fmtTime(r.at))}</span>
+        <span class="rep-by">${esc(r.by)}</span>
+      </span>
     </div>`;
   }
   function wasteRow(w) {
     const it = Store.item(w.itemId);
     return `<div class="row">
-      <div class="row__art">${it ? UI.art(it) : ''}</div>
-      <div class="row__body">
-        <div class="row__t">${esc(it?.name || '?')}</div>
-        <div class="row__s">${esc(w.by)} · <span class="num">${esc(UI.fmtTime(w.at))}</span></div>
-        ${w.reason ? `<div class="rep-note">${UI.icon('note')}<span>${esc(w.reason)}</span></div>` : ''}
-      </div>
-      <div class="row__end qtybubble varneg">${esc('-' + fq(w.qty))}</div>
+      <span class="feedtick" style="background:${tickOf(w.itemId)}"></span>
+      <span class="row__body">
+        <span class="row__t">${esc(it?.name || '?')}<span class="qtybubble varneg">−${esc(fq(w.qty))}</span></span>
+        ${w.reason ? `<span class="row__s">${esc(w.reason)}</span>` : ''}
+      </span>
+      <span class="rep-meta">
+        <span class="rep-time">${esc(UI.fmtTime(w.at))}</span>
+        <span class="rep-by">${esc(w.by)}</span>
+      </span>
     </div>`;
   }
 
@@ -324,14 +347,18 @@
     if (lastDay !== bd) { lastDay = bd; cleanOpen = false; }
     const c = Store.closedCounts().find(x => x.bd === bd);
     if (!c) {
-      el.innerHTML = head(t('rep.day', { date: UI.fmtDate(bd) }), '', 'reports') +
-        `<div class="empty grow">${UI.icon('alert')}
+      el.innerHTML = `
+        <div class="topbar">
+          <button class="back" data-a="back">‹ ${esc(t('tab.reports'))}</button>
+          <div class="micro tnum">${esc(UI.fmtDate(bd))}</div>
+        </div>
+        <div class="empty grow">
           <div class="empty__t">${esc(t('rep.notFound'))}</div>
           <div class="empty__s">${esc(t('rep.notFoundSub'))}</div>
-          <button class="btn btn--ghost mt3" data-back="reports">${esc(t('g.back'))}</button></div>`;
+          <button class="btn btn--ghost mt3" data-a="back">${esc(t('g.back'))}</button>
+        </div>`;
       el.addEventListener('click', e => {
-        const back = e.target.closest('[data-back]');
-        if (back) { UI.haptic('light'); UI.go(back.dataset.back); }
+        if (e.target.closest('[data-a=back]')) { UI.haptic('light'); UI.go('reports'); }
       });
       return;
     }
@@ -343,78 +370,73 @@
     const daySales = st.sales.filter(s => s.bd === bd).sort((a, b) => a.at < b.at ? -1 : 1);
     const dayRest = st.restocks.filter(r => r.bd === bd).sort((a, b) => a.at < b.at ? -1 : 1);
     const dayWaste = st.waste.filter(w => w.bd === bd).sort((a, b) => a.at < b.at ? -1 : 1);
-    const stat = (v, l, cls, extra, i) =>
-      `<div class="stat rep-fade${extra ? ' ' + extra : ''}" style="animation-delay:${i * 50}ms"><div class="stat__v num ${cls || ''}">${v}</div><div class="stat__l">${esc(l)}</div></div>`;
 
-    let html = head(
-      t('rep.day', { date: UI.fmtDate(bd) }),
-      c.closedAt ? t('rep.closedBy', { name: c.closedBy || '', time: UI.fmtTime(c.closedAt) }) : '',
-      'reports');
-
-    html += `<div class="stats mb3">
-      ${stat(esc(fq(sold)), t('rep.soldLbl'), '', '', 0)}
-      ${stat(esc(fq(rest)), t('rep.restocked'), '', '', 1)}
-      ${stat(esc(fq(waste)), t('rep.wasted'), waste > 0 ? 'varneg' : '', '', 2)}
-      ${stat(esc(sgn(vt)), t('count.varTotal'), vcls(vt), '', 3)}
-      ${costs ? stat(`<span style="font-size:22px" class="${loss > 0 ? 'varneg' : ''}">${esc(UI.money(loss))}</span>`, t('rep.lossValue'), '', 'rep-loss', 4) : ''}
-    </div>`;
-
-    /* 1 — count & variance */
-    html += `<div class="card rep-fade" style="animation-delay:.08s">
-      <div class="card__head"><div class="card__title">${esc(t('rep.countRep'))}</div>
-        ${varLines.length
-          ? `<span class="pill pill--danger"><span class="num">${varLines.length}</span></span>`
-          : `<span class="pill pill--ok">${UI.icon('check')}${esc(t('count.clean'))}</span>`}
+    let html = `
+      <div class="topbar">
+        <button class="back" data-a="back">‹ ${esc(t('tab.reports'))}</button>
+        <div class="micro tnum">${esc(UI.fmtDate(bd))}</div>
       </div>
-      ${varLines.map(varLineRow).join('')}
-      ${!varLines.length && c.lines.length ? `<div class="rep-okline">${UI.icon('check')}<div><div class="row__t">${esc(t('count.clean'))}</div><div class="tt">${esc(t('count.cleanSub'))}</div></div></div>` : ''}
-      ${!c.lines.length ? `<div class="tt" style="padding:6px 0">${esc(t('ins.noData'))}</div>` : ''}
-      ${cleanLines.length ? `
-        <button class="row" data-a="clean" aria-expanded="${cleanOpen}">
-          <span class="iconbtn iconbtn--plain" style="color:var(--ok)">${UI.icon('check')}</span>
-          <span class="row__body"><span class="row__t" style="color:var(--text-2)">${esc(I18N.plural('rep.cleanN', cleanLines.length, { n: cleanLines.length }))}</span></span>
-          <span class="rep-chev ${cleanOpen ? 'is-open' : ''}">${UI.icon('chevR')}</span>
+      <div class="h1">${esc(longDate(bd))}</div>
+      ${c.closedAt ? `<div class="sub2">${esc(t('rep.closedBy', { name: c.closedBy || '', time: UI.fmtTime(c.closedAt) }))}</div>` : ''}
+      <div class="sum">
+        <div class="sumcol"><div class="micro">${esc(t('rep.kSold'))}</div><div class="mid tnum">${esc(fq(sold))}</div></div>
+        <div class="sumcol"><div class="micro">${esc(t('rep.kRest'))}</div><div class="mid tnum">${esc(fq(rest))}</div></div>
+        <div class="sumcol"><div class="micro">${esc(t('count.ecart'))}</div><div class="mid tnum ${dcls(vt)}">${esc(sgn(vt))}</div></div>
+      </div>
+      <div class="sub2"><span class="num">${esc(fq(waste))}</span> ${esc(t('rep.wasted'))}${costs ? ` · ${esc(t('rep.lossValue'))} <span class="num ${loss > 0 ? 'bad' : ''}">${esc(UI.money(loss))}</span>` : ''}</div>`;
+
+    /* 1 — count & variance: reference frame 03 table, variance first */
+    html += `<div class="sec"><div class="micro">${esc(t('rep.countRep'))}</div>
+      ${varLines.length ? `<div class="micro tnum" style="color:var(--bad)">${varLines.length}</div>` : ''}</div>`;
+    if (c.lines.length) {
+      html += `<div class="thead"><div>${esc(t('count.article'))}</div><div class="r">${esc(t('count.att'))}</div><div class="r">${esc(t('count.cpt'))}</div><div class="r">${esc(t('count.ecart'))}</div></div>`;
+      html += varLines.map(countRow).join('');
+      if (!varLines.length) {
+        html += `<div class="rep-okline">${UI.icon('check')}
+          <span class="row__body"><span class="row__t">${esc(t('count.clean'))}</span><span class="row__s">${esc(t('count.cleanSub'))}</span></span>
+        </div>`;
+      }
+      if (cleanLines.length) {
+        html += `<button class="grouprow" data-a="clean" aria-expanded="${cleanOpen}">
+          <span class="micro">${esc(I18N.plural('count.noVar', cleanLines.length))}</span>
+          <span class="chev" data-chev>${cleanOpen ? '⌄' : '›'}</span>
         </button>
-        <div class="rep-clean ${cleanOpen ? '' : 'hidden'}">${cleanLines.map(cleanLineRow).join('')}</div>` : ''}
-    </div>`;
+        <div class="rep-cl ${cleanOpen ? '' : 'hidden'}">${cleanLines.map(countRow).join('')}</div>`;
+      }
+    } else {
+      html += `<div class="sub2">${esc(t('ins.noData'))}</div>`;
+    }
 
     /* 2 — sales */
-    html += `<div class="card rep-fade" style="animation-delay:.12s">
-      <div class="card__head"><div class="card__title">${esc(t('rep.sales'))}</div><span class="pill pill--mut"><span class="num">${daySales.length}</span></span></div>
-      ${daySales.length ? daySales.map(saleRow).join('') : `<div class="tt" style="padding:6px 0">${esc(t('rep.noSales'))}</div>`}
-    </div>`;
+    html += `<div class="sec"><div class="micro">${esc(t('rep.sales'))}</div><div class="micro tnum">${daySales.length}</div></div>`;
+    html += daySales.length ? `<div class="feed">${daySales.map(saleRow).join('')}</div>` : `<div class="sub2">${esc(t('rep.noSales'))}</div>`;
 
     /* 3 — restocks */
-    html += `<div class="card rep-fade" style="animation-delay:.16s">
-      <div class="card__head"><div class="card__title">${esc(t('rep.restocks'))}</div><span class="pill pill--mut"><span class="num">${dayRest.length}</span></span></div>
-      ${dayRest.length ? dayRest.map(restockRow).join('') : `<div class="tt" style="padding:6px 0">${esc(t('rep.noRestocks'))}</div>`}
-    </div>`;
+    html += `<div class="sec"><div class="micro">${esc(t('rep.restocks'))}</div><div class="micro tnum">${dayRest.length}</div></div>`;
+    html += dayRest.length ? `<div class="feed">${dayRest.map(restockRow).join('')}</div>` : `<div class="sub2">${esc(t('rep.noRestocks'))}</div>`;
 
     /* 4 — waste (with reasons) */
-    html += `<div class="card rep-fade" style="animation-delay:.2s">
-      <div class="card__head"><div class="card__title">${esc(t('rep.waste'))}</div><span class="pill pill--mut"><span class="num">${dayWaste.length}</span></span></div>
-      ${dayWaste.length ? dayWaste.map(wasteRow).join('') : `<div class="tt" style="padding:6px 0">${esc(t('rep.noWaste'))}</div>`}
-    </div>`;
+    html += `<div class="sec"><div class="micro">${esc(t('rep.waste'))}</div><div class="micro tnum">${dayWaste.length}</div></div>`;
+    html += dayWaste.length ? `<div class="feed">${dayWaste.map(wasteRow).join('')}</div>` : `<div class="sub2">${esc(t('rep.noWaste'))}</div>`;
 
     /* export this day */
-    html += `<div class="card rep-fade" style="animation-delay:.24s">
-      <div class="card__head"><div class="card__title">${esc(t('rep.export'))}</div><span class="eyebrow">${esc(UI.fmtDate(bd))}</span></div>
-      <div style="display:flex;gap:10px">
-        <button class="btn btn--ghost" style="flex:1" data-a="dcsv">${UI.icon('download')}${esc(t('rep.exportCsv'))}</button>
-        <button class="btn btn--gold" style="flex:1" data-a="dpdf">${UI.icon('download')}${esc(t('rep.exportPdf'))}</button>
+    html += `<div class="bottomstack">
+      <div style="display:flex;gap:12px">
+        <button class="btn btn--ghost" style="flex:1" data-a="dcsv">${esc(t('rep.exportCsv'))}</button>
+        <button class="btn btn--gold" style="flex:1" data-a="dpdf">${esc(t('rep.exportPdf'))}</button>
       </div>
     </div>`;
 
     el.innerHTML = html;
 
     el.addEventListener('click', async e => {
-      const back = e.target.closest('[data-back]');
-      if (back) { UI.haptic('light'); return UI.go(back.dataset.back); }
+      if (e.target.closest('[data-a=back]')) { UI.haptic('light'); return UI.go('reports'); }
       const tg = e.target.closest('[data-a=clean]');
       if (tg) {
         cleanOpen = !cleanOpen;
-        el.querySelector('.rep-clean')?.classList.toggle('hidden', !cleanOpen);
-        tg.querySelector('.rep-chev')?.classList.toggle('is-open', cleanOpen);
+        el.querySelector('.rep-cl')?.classList.toggle('hidden', !cleanOpen);
+        const ch = tg.querySelector('[data-chev]');
+        if (ch) ch.textContent = cleanOpen ? '⌄' : '›';
         tg.setAttribute('aria-expanded', String(cleanOpen));
         UI.haptic('light');
         return;

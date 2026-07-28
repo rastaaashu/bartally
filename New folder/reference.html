@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BarTally — Interface de référence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============ TOKENS — must match src/theme/tokens.ts exactly ============ */
+:root{
+  --bg:#0A0B0F; --page:#050608; --surface:#12141A; --surface2:#191C24;
+  --hair:rgba(255,255,255,.07); --hair2:rgba(255,255,255,.12);
+  --t1:#F4F2ED; --t2:#9BA0AB; --t3:#5C6170;
+  --brass:#E8B14E; --brassg:linear-gradient(135deg,#F0C468,#D89A2B); --onbrass:#1A1405;
+  --ok:#34D399; --okbg:rgba(52,211,153,.12);
+  --bad:#F0655A; --badbg:rgba(240,101,90,.12);
+  --c-beer:#E8B14E; --c-red:#C0564F; --c-white:#D6C7A1; --c-rose:#D89AA0;
+  --c-demi:#8FA3B8; --c-champ:#E5D5A8; --c-spirit:#7FB5A8; --c-food:#D08B5B;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--page);color:var(--t1);font-family:Inter,system-ui,sans-serif;
+  padding:44px 28px 60px;-webkit-font-smoothing:antialiased}
+.sg{font-family:'Space Grotesk',sans-serif}
+.tnum{font-variant-numeric:tabular-nums;font-feature-settings:'tnum' 1}
+.micro{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--t3)}
+
+/* ============ PAGE CHROME ============ */
+.pagehead{max-width:1320px;margin:0 auto 34px;display:flex;align-items:center;gap:16px}
+.pagehead .tt{font:600 17px 'Space Grotesk',sans-serif;letter-spacing:.01em}
+.pagehead .sub{font-size:13px;color:var(--t3);margin-top:3px}
+.phones{display:flex;gap:40px;flex-wrap:wrap;justify-content:center}
+.ph{display:flex;flex-direction:column;align-items:center;gap:16px}
+.caption{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--t3)}
+
+/* ============ PHONE FRAME ============ */
+.frame{width:390px;height:812px;background:var(--bg);border:1px solid var(--hair2);
+  border-radius:40px;overflow:hidden;position:relative;flex:none}
+.screen{position:absolute;inset:0;padding:24px 20px 0;display:flex;flex-direction:column;overflow:hidden}
+
+/* ============ SHARED COMPONENTS ============ */
+.topbar{display:flex;justify-content:space-between;align-items:center;min-height:26px}
+.eyebrow{margin-top:16px}
+.h1{font:600 24px/1.2 'Space Grotesk',sans-serif;letter-spacing:-.01em;margin-top:8px}
+.sec{margin-top:22px;display:flex;justify-content:space-between;align-items:baseline}
+
+.stats{display:flex;margin-top:16px;padding:18px 0;border-top:1px solid var(--hair);border-bottom:1px solid var(--hair)}
+.stat{flex:1;min-width:0}
+.stat + .stat{border-left:1px solid var(--hair);padding-left:18px}
+.stat:first-child{padding-right:18px}
+.big{font:600 34px/1 'Space Grotesk',sans-serif;letter-spacing:-.01em;margin-top:10px}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;
+  padding:3px 7px;border-radius:6px;margin-top:10px}
+.chip.ok{color:var(--ok);background:var(--okbg)}
+.sub2{font-size:12px;color:var(--t3);margin-top:10px}
+.bad{color:var(--bad)} .good{color:var(--ok)} .faint{color:var(--t3)}
+
+.tile{background:var(--surface);border:1px solid var(--hair);border-radius:12px;
+  position:relative;display:flex;align-items:center;justify-content:center;flex:none}
+.tick{position:absolute;top:8px;left:8px;width:3px;height:14px;border-radius:2px}
+.mono{font-family:'Space Grotesk',sans-serif;font-weight:700;letter-spacing:.06em;font-size:15px}
+.qty{position:absolute;right:8px;bottom:6px;font:600 11px 'Space Grotesk',sans-serif;color:var(--t3)}
+.t64{width:64px;height:64px} .t56{width:56px;height:56px} .t40{width:40px;height:40px}
+.tilecol{width:64px;display:flex;flex-direction:column;align-items:center;gap:6px}
+.tilecap{font-size:11px;color:var(--t2);max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lowqty{font:600 12px 'Space Grotesk',sans-serif;color:var(--bad)}
+
+.btn{height:52px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:600}
+.btn.primary{background:var(--brassg);color:var(--onbrass)}
+.btn.ghost{background:var(--surface2);border:1px solid var(--hair);color:var(--t1)}
+
+.tabbar{display:flex;border-top:1px solid var(--hair);margin:14px -20px 0;height:58px;background:var(--bg)}
+.tab{flex:1;display:flex;align-items:center;justify-content:center;position:relative;
+  font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
+.tab.active{color:var(--brass)}
+.tab.active::before{content:'';position:absolute;top:-1px;left:22%;right:22%;height:2px;background:var(--brassg)}
+
+/* ============ SCREEN 1 — DASHBOARD ============ */
+.tilerow{display:flex;gap:14px;margin-top:12px}
+.feed{margin-top:4px}
+.feedrow{display:flex;align-items:center;height:52px;border-bottom:1px solid var(--hair);gap:12px}
+.feedrow:last-child{border-bottom:none}
+.feedtick{width:2px;height:20px;border-radius:1px;flex:none}
+.feedname{font-size:14px;font-weight:500}
+.feedqty{font:600 14px 'Space Grotesk',sans-serif;color:var(--t2);margin-left:6px}
+.feedmeta{margin-left:auto;text-align:right}
+.feedmeta .time{font:500 12px 'Space Grotesk',sans-serif;color:var(--t3)}
+.feedmeta .by{font-size:11px;color:var(--t3);margin-top:2px}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:auto}
+
+/* ============ SCREEN 2 — VENTE ============ */
+.back{font-size:13px;font-weight:500;color:var(--t3)}
+.search{margin-top:16px;height:44px;background:var(--surface2);border:1px solid var(--hair);
+  border-radius:10px;display:flex;align-items:center;padding:0 14px;color:var(--t3);font-size:14px}
+.chips{display:flex;gap:8px;margin-top:16px}
+.pill{height:32px;padding:0 12px;border-radius:10px;background:var(--surface2);
+  border:1px solid var(--hair);display:flex;align-items:center;gap:6px;
+  font-size:12px;font-weight:500;color:var(--t2)}
+.pill .dot{width:5px;height:5px;border-radius:50%;background:var(--brass);display:none}
+.pill.active{color:var(--t1);border-color:rgba(232,177,78,.45)}
+.pill.active .dot{display:block}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px}
+.gcell{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0}
+.gtile{width:100%;aspect-ratio:1/1;background:var(--surface);border:1px solid var(--hair);
+  border-radius:12px;position:relative;display:flex;align-items:center;justify-content:center}
+.gtile .mono{font-size:17px}
+.gcap{font-size:11px;color:var(--t2);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.backdrop{position:absolute;inset:0;background:rgba(5,6,8,.55)}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--surface2);
+  border-top:1px solid var(--hair2);border-radius:22px 22px 0 0;padding:10px 20px 24px}
+.handle{width:36px;height:4px;border-radius:2px;background:var(--hair2);margin:0 auto 18px}
+.sheetrow{display:flex;align-items:center;gap:12px}
+.sheetname{font-size:16px;font-weight:600}
+.sheetsub{font-size:12px;color:var(--t3);margin-top:3px}
+.stepper{display:flex;align-items:center;justify-content:center;gap:24px;margin:24px 0}
+.step{width:56px;height:56px;border-radius:12px;background:var(--surface);border:1px solid var(--hair);
+  display:flex;align-items:center;justify-content:center;font:500 24px 'Space Grotesk',sans-serif;color:var(--t2)}
+.stepnum{font:600 40px 'Space Grotesk',sans-serif;min-width:64px;text-align:center}
+
+/* ============ SCREEN 3 — ÉCARTS ============ */
+.sum{display:flex;margin-top:16px;padding:16px 0;border-top:1px solid var(--hair);border-bottom:1px solid var(--hair)}
+.sumcol{flex:1;min-width:0}
+.sumcol + .sumcol{border-left:1px solid var(--hair);padding-left:16px}
+.sumcol:first-child{padding-right:16px}
+.mid{font:600 24px/1 'Space Grotesk',sans-serif;margin-top:8px}
+.thead{display:grid;grid-template-columns:1fr 54px 54px 54px;height:34px;align-items:center;
+  border-bottom:1px solid var(--hair);font-size:10px;font-weight:600;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--t3);margin-top:14px}
+.trow{display:grid;grid-template-columns:1fr 54px 54px 54px;height:50px;align-items:center;
+  border-bottom:1px solid var(--hair);font-size:14px}
+.tname{display:flex;align-items:center;gap:10px;font-weight:500;min-width:0}
+.tname span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.r{text-align:right;font-family:'Space Grotesk',sans-serif}
+.v1{color:var(--t3);font-weight:500}.v2{color:var(--t1);font-weight:500}
+.d{font-weight:600}
+.noterow{padding:8px 0 12px 12px;margin-top:-4px;border-bottom:1px solid var(--hair);
+  font-size:11px;color:var(--t3)}
+.grouprow{display:flex;justify-content:space-between;align-items:center;height:48px;
+  border-bottom:1px solid var(--hair)}
+.chev{color:var(--t3);font-size:16px}
+.bottomstack{margin-top:auto;padding-bottom:20px;display:flex;flex-direction:column;gap:6px}
+.textbtn{text-align:center;padding:10px;font-size:13px;font-weight:500;color:var(--t2)}
+
+/* ============ TOKEN STRIP ============ */
+.tokens{max-width:1320px;margin:44px auto 0;border-top:1px solid var(--hair);padding-top:30px;
+  display:flex;gap:56px;flex-wrap:wrap}
+.tk .micro{margin-bottom:12px}
+.sw{display:flex;gap:10px}
+.s{width:34px;height:34px;border-radius:8px;border:1px solid var(--hair)}
+.dots{display:flex;gap:10px;margin-top:12px}
+.dot8{width:14px;height:14px;border-radius:50%}
+.spec{font:600 26px 'Space Grotesk',sans-serif;letter-spacing:-.01em}
+.spec2{font-size:14px;color:var(--t2);margin-top:8px}
+.anat{display:flex;gap:16px;align-items:center}
+.anatnotes{font-size:12px;color:var(--t2);line-height:1.9}
+</style>
+</head>
+<body>
+
+<div class="pagehead">
+  <svg viewBox="0 0 30 22" width="30" height="22" fill="none" stroke-linecap="round">
+    <defs><linearGradient id="bg1" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#D89A2B"/><stop offset="1" stop-color="#F0C468"/>
+    </linearGradient></defs>
+    <line x1="4" y1="3" x2="4" y2="19" stroke="#F4F2ED" stroke-width="2.4"/>
+    <line x1="10" y1="3" x2="10" y2="19" stroke="#F4F2ED" stroke-width="2.4"/>
+    <line x1="16" y1="3" x2="16" y2="19" stroke="#F4F2ED" stroke-width="2.4"/>
+    <line x1="22" y1="3" x2="22" y2="19" stroke="#F4F2ED" stroke-width="2.4"/>
+    <line x1="1" y1="17" x2="26" y2="4" stroke="url(#bg1)" stroke-width="2.6"/>
+  </svg>
+  <div>
+    <div class="tt">BarTally — Interface de référence</div>
+    <div class="sub">Vérité terrain. À reproduire exactement — quand la prose et cette page divergent, cette page gagne.</div>
+  </div>
+</div>
+
+<div class="phones">
+
+  <!-- ============ 01 · TABLEAU DE BORD ============ -->
+  <div class="ph">
+    <div class="frame"><div class="screen">
+      <div class="topbar">
+        <svg viewBox="0 0 30 22" width="26" height="19" fill="none" stroke-linecap="round">
+          <defs><linearGradient id="bg2" x1="0" y1="1" x2="1" y2="0">
+            <stop offset="0" stop-color="#D89A2B"/><stop offset="1" stop-color="#F0C468"/>
+          </linearGradient></defs>
+          <line x1="4" y1="3" x2="4" y2="19" stroke="#F4F2ED" stroke-width="2.4"/>
+          <line x1="10" y1="3" x2="10" y2="19" stroke="#F4F2ED" stroke-width="2.4"/>
+          <line x1="16" y1="3" x2="16" y2="19" stroke="#F4F2ED" stroke-width="2.4"/>
+          <line x1="22" y1="3" x2="22" y2="19" stroke="#F4F2ED" stroke-width="2.4"/>
+          <line x1="1" y1="17" x2="26" y2="4" stroke="url(#bg2)" stroke-width="2.6"/>
+        </svg>
+        <div class="micro">Mar. 28 juil.</div>
+      </div>
+      <div class="eyebrow micro">Le Comptoir</div>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="micro">Ventes aujourd'hui</div>
+          <div class="big tnum">148</div>
+          <svg viewBox="0 0 96 26" width="96" height="26" style="margin-top:12px" fill="none">
+            <polyline points="0,20 12,16 24,18 36,10 48,14 60,7 72,11 84,5 96,8"
+              stroke="#E8B14E" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+          </svg>
+          <div><span class="chip ok">+12% vs hier</span></div>
+        </div>
+        <div class="stat">
+          <div class="micro">Écart dernier comptage</div>
+          <div class="big tnum bad">−3</div>
+          <div class="sub2">2 articles concernés</div>
+        </div>
+      </div>
+
+      <div class="sec"><div class="micro">Stock faible</div><div class="micro">4</div></div>
+      <div class="tilerow">
+        <div class="tilecol">
+          <div class="tile t64"><div class="tick" style="background:var(--c-beer)"></div><div class="mono" style="color:var(--c-beer)">HEI</div></div>
+          <div class="tilecap">Heineken</div><div class="lowqty tnum">6</div>
+        </div>
+        <div class="tilecol">
+          <div class="tile t64"><div class="tick" style="background:var(--c-beer)"></div><div class="mono" style="color:var(--c-beer)">R.B</div></div>
+          <div class="tilecap">Red Bull</div><div class="lowqty tnum">4</div>
+        </div>
+        <div class="tilecol">
+          <div class="tile t64"><div class="tick" style="background:var(--c-spirit)"></div><div class="mono" style="color:var(--c-spirit)">GOR</div></div>
+          <div class="tilecap">Gordon's</div><div class="lowqty tnum">1</div>
+        </div>
+        <div class="tilecol">
+          <div class="tile t64"><div class="tick" style="background:var(--c-champ)"></div><div class="mono" style="color:var(--c-champ)">CHM</div></div>
+          <div class="tilecap">Champagne</div><div class="lowqty tnum">2</div>
+        </div>
+      </div>
+
+      <div class="sec"><div class="micro">En direct</div></div>
+      <div class="feed">
+        <div class="feedrow">
+          <div class="feedtick" style="background:var(--c-beer)"></div>
+          <div class="feedname">Heineken</div><div class="feedqty tnum">×2</div>
+          <div class="feedmeta"><div class="time tnum">23:41</div><div class="by">Karim</div></div>
+        </div>
+        <div class="feedrow">
+          <div class="feedtick" style="background:var(--c-beer)"></div>
+          <div class="feedname">Casablanca</div><div class="feedqty tnum">×4</div>
+          <div class="feedmeta"><div class="time tnum">23:38</div><div class="by">Yassine</div></div>
+        </div>
+        <div class="feedrow">
+          <div class="feedtick" style="background:var(--c-spirit)"></div>
+          <div class="feedname">Jack Daniel's</div><div class="feedqty tnum">×1</div>
+          <div class="feedmeta"><div class="time tnum">23:31</div><div class="by">Karim</div></div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <div class="btn primary">Nouvelle vente</div>
+        <div class="btn ghost">Comptage</div>
+        <div class="btn ghost">Livraison</div>
+        <div class="btn ghost">Casse</div>
+      </div>
+      <div class="tabbar">
+        <div class="tab active">Accueil</div><div class="tab">Stock</div>
+        <div class="tab">Rapports</div><div class="tab">Réglages</div>
+      </div>
+    </div></div>
+    <div class="caption">01 — Tableau de bord</div>
+  </div>
+
+  <!-- ============ 02 · VENTE ============ -->
+  <div class="ph">
+    <div class="frame"><div class="screen">
+      <div class="topbar"><div class="back">‹ Retour</div><div></div></div>
+      <div class="h1">Vente</div>
+      <div class="search">Rechercher un article…</div>
+
+      <div class="sec"><div class="micro">Épinglés</div></div>
+      <div class="tilerow">
+        <div class="tile t56"><div class="tick" style="background:var(--c-beer)"></div><div class="mono" style="color:var(--c-beer);font-size:13px">HEI</div></div>
+        <div class="tile t56"><div class="tick" style="background:var(--c-beer)"></div><div class="mono" style="color:var(--c-beer);font-size:13px">CAS</div></div>
+        <div class="tile t56"><div class="tick" style="background:var(--c-beer)"></div><div class="mono" style="color:var(--c-beer);font-size:13px">R.B</div></div>
+        <div class="tile t56"><div class="tick" style="background:var(--c-red)"></div><div class="mono" style="color:var(--c-red);font-size:13px">MÉD</div></div>
+      </div>
+
+      <div class="chips">
+        <div class="pill active"><div class="dot"></div>Tous</div>
+        <div class="pill">Bières</div><div class="pill">Vins</div><div class="pill">Spiritueux</div>
+      </div>
+
+      <div class="grid">
+        <div class="gcell"><div class="gtile"><div class="tick" style="background:var(--c-beer)"></div><div class="mono" style="color:var(--c-beer)">SPÉ</div><div class="qty tnum">96</div></div><div class="gcap">Spécial</div></div>
+        <div class="gcell"><div class="gtile"><div class="tick" style="background:var(--c-beer)"></div><div class="mono" style="color:var(--c-beer)">HEI</div><div class="qty tnum">128</div></div><div class="gcap">Heineken</div></div>
+        <div class="gcell"><div class="gtile"><div class="tick" style="background:var(--c-beer)"></div><div class="mono" style="color:var(--c-beer)">CAS</div><div class="qty tnum">74</div></div><div class="gcap">Casablanca</div></div>
+        <div class="gcell"><div class="gtile"><div class="tick" style="background:var(--c-red)"></div><div class="mono" style="color:var(--c-red)">MÉD</div><div class="qty tnum">18</div></div><div class="gcap">Médaillon</div></div>
+        <div class="gcell"><div class="gtile"><div class="tick" style="background:var(--c-red)"></div><div class="mono" style="color:var(--c-red)">VOL</div><div class="qty tnum">12</div></div><div class="gcap">Volubilia</div></div>
+        <div class="gcell"><div class="gtile"><div class="tick" style="background:var(--c-white)"></div><div class="mono" style="color:var(--c-white)">ODY</div><div class="qty tnum">9</div></div><div class="gcap">Odyssée</div></div>
+        <div class="gcell"><div class="gtile"><div class="tick" style="background:var(--c-champ)"></div><div class="mono" style="color:var(--c-champ)">CHM</div><div class="qty tnum">5</div></div><div class="gcap">Champagne</div></div>
+        <div class="gcell"><div class="gtile"><div class="tick" style="background:var(--c-spirit)"></div><div class="mono" style="color:var(--c-spirit)">J.D</div><div class="qty tnum">3.5</div></div><div class="gcap">Jack Daniel's</div></div>
+        <div class="gcell"><div class="gtile"><div class="tick" style="background:var(--c-food)"></div><div class="mono" style="color:var(--c-food)">PIZ</div><div class="qty tnum">22</div></div><div class="gcap">Pizza V/H</div></div>
+      </div>
+
+      <div class="backdrop"></div>
+      <div class="sheet">
+        <div class="handle"></div>
+        <div class="sheetrow">
+          <div class="tile t40"><div class="mono" style="color:var(--c-beer);font-size:12px">HEI</div></div>
+          <div><div class="sheetname">Heineken</div><div class="sheetsub">Stock estimé · 128</div></div>
+        </div>
+        <div class="stepper">
+          <div class="step">−</div><div class="stepnum tnum">2</div><div class="step">+</div>
+        </div>
+        <div class="btn primary">Valider la vente</div>
+      </div>
+    </div></div>
+    <div class="caption">02 — Vente · 2 gestes</div>
+  </div>
+
+  <!-- ============ 03 · ÉCARTS ============ -->
+  <div class="ph">
+    <div class="frame"><div class="screen">
+      <div class="topbar"><div class="back">‹ Comptage</div><div class="micro">Mar. 28 juil.</div></div>
+      <div class="h1">Écarts</div>
+
+      <div class="sum">
+        <div class="sumcol"><div class="micro">Attendu</div><div class="mid tnum">412</div></div>
+        <div class="sumcol"><div class="micro">Compté</div><div class="mid tnum">409</div></div>
+        <div class="sumcol"><div class="micro">Écart</div><div class="mid tnum bad">−3</div></div>
+      </div>
+
+      <div class="thead"><div>Article</div><div class="r">Att.</div><div class="r">Cpt.</div><div class="r">Écart</div></div>
+
+      <div class="trow">
+        <div class="tname"><div class="feedtick" style="background:var(--c-beer)"></div><span>Heineken</span></div>
+        <div class="r v1 tnum">24</div><div class="r v2 tnum">20</div><div class="r d bad tnum">−4</div>
+      </div>
+      <div class="noterow">↳ Note · à vérifier avec l'équipe du soir</div>
+      <div class="trow">
+        <div class="tname"><div class="feedtick" style="background:var(--c-spirit)"></div><span>Gordon's</span></div>
+        <div class="r v1 tnum">3</div><div class="r v2 tnum">2</div><div class="r d bad tnum">−1</div>
+      </div>
+      <div class="trow">
+        <div class="tname"><div class="feedtick" style="background:var(--c-red)"></div><span>Médaillon</span></div>
+        <div class="r v1 tnum">12</div><div class="r v2 tnum">13</div><div class="r d good tnum">+1</div>
+      </div>
+      <div class="trow">
+        <div class="tname"><div class="feedtick" style="background:var(--c-beer)"></div><span>Casablanca</span></div>
+        <div class="r v1 tnum">36</div><div class="r v2 tnum">36</div><div class="r d faint tnum">±0</div>
+      </div>
+      <div class="grouprow"><div class="micro">Sans écart — 37 articles</div><div class="chev">›</div></div>
+
+      <div class="bottomstack">
+        <div class="btn primary">Clôturer la journée</div>
+        <div class="textbtn">Exporter le rapport PDF</div>
+      </div>
+    </div></div>
+    <div class="caption">03 — Revue de comptage</div>
+  </div>
+
+</div>
+
+<!-- ============ TOKEN STRIP ============ -->
+<div class="tokens">
+  <div class="tk">
+    <div class="micro">Palette</div>
+    <div class="sw">
+      <div class="s" style="background:#0A0B0F"></div><div class="s" style="background:#12141A"></div>
+      <div class="s" style="background:#191C24"></div><div class="s" style="background:#F4F2ED"></div>
+      <div class="s" style="background:linear-gradient(135deg,#F0C468,#D89A2B)"></div>
+      <div class="s" style="background:#34D399"></div><div class="s" style="background:#F0655A"></div>
+    </div>
+    <div class="dots">
+      <div class="dot8" style="background:var(--c-beer)"></div><div class="dot8" style="background:var(--c-red)"></div>
+      <div class="dot8" style="background:var(--c-white)"></div><div class="dot8" style="background:var(--c-rose)"></div>
+      <div class="dot8" style="background:var(--c-demi)"></div><div class="dot8" style="background:var(--c-champ)"></div>
+      <div class="dot8" style="background:var(--c-spirit)"></div><div class="dot8" style="background:var(--c-food)"></div>
+    </div>
+  </div>
+  <div class="tk">
+    <div class="micro">Typographie</div>
+    <div class="spec tnum">0123456789 −+</div>
+    <div class="spec2">Space Grotesk 600, chiffres tabulaires — chaque quantité. Inter — interface et libellés.</div>
+  </div>
+  <div class="tk">
+    <div class="micro">Anatomie d'une tuile</div>
+    <div class="anat">
+      <div class="tile t64"><div class="tick" style="background:var(--c-red)"></div><div class="mono" style="color:var(--c-red)">MÉD</div><div class="qty tnum">18</div></div>
+      <div class="anatnotes">Tick catégorie 3×14 · rayon 2<br>Monogramme SG 700, +6% espacement<br>Quantité tabulaire, coin bas droit</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

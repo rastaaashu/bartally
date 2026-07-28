@@ -104,76 +104,77 @@ async function hashPin(pin, salt) {
 /* ---------- seed catalog (client's exact list) ---------- */
 const SEED = {
   categories: [
-    { id: 'biere', nameFr: 'Bières & Softs', nameEn: 'Beers & Softs', color: 'var(--cat-biere)', hex: '#F2C43D', icon: 'beer', sort: 1 },
-    { id: 'rouge', nameFr: 'Vins Rouges', nameEn: 'Red Wines', color: 'var(--cat-rouge)', hex: '#D05672', icon: 'wine', sort: 2 },
-    { id: 'blanc', nameFr: 'Vins Blancs', nameEn: 'White Wines', color: 'var(--cat-blanc)', hex: '#DCCB7E', icon: 'wine', sort: 3 },
-    { id: 'rose', nameFr: 'Vins Rosés', nameEn: 'Rosé Wines', color: 'var(--cat-rose)', hex: '#F49BB5', icon: 'wine', sort: 4 },
-    { id: 'demi', nameFr: 'Demi-bouteilles', nameEn: 'Half bottles', color: 'var(--cat-demi)', hex: '#A78BFA', icon: 'wine', sort: 5 },
-    { id: 'champ', nameFr: 'Champagne', nameEn: 'Champagne', color: 'var(--cat-champ)', hex: '#EFE3AE', icon: 'sparkles', sort: 6 },
-    { id: 'spirit', nameFr: 'Spiritueux', nameEn: 'Spirits', color: 'var(--cat-spirit)', hex: '#C97A45', icon: 'glass', sort: 7 },
-    { id: 'cuisine', nameFr: 'Cuisine', nameEn: 'Kitchen', color: 'var(--cat-cuisine)', hex: '#6FBF8E', icon: 'utensils', sort: 8 },
+    { id: 'biere', nameFr: 'Bières & Softs', nameEn: 'Beers & Softs', color: 'var(--cat-biere)', hex: '#E8B14E', icon: 'beer', sort: 1 },
+    { id: 'rouge', nameFr: 'Vins Rouges', nameEn: 'Red Wines', color: 'var(--cat-rouge)', hex: '#C0564F', icon: 'wine', sort: 2 },
+    { id: 'blanc', nameFr: 'Vins Blancs', nameEn: 'White Wines', color: 'var(--cat-blanc)', hex: '#D6C7A1', icon: 'wine', sort: 3 },
+    { id: 'rose', nameFr: 'Vins Rosés', nameEn: 'Rosé Wines', color: 'var(--cat-rose)', hex: '#D89AA0', icon: 'wine', sort: 4 },
+    { id: 'demi', nameFr: 'Demi-bouteilles', nameEn: 'Half bottles', color: 'var(--cat-demi)', hex: '#8FA3B8', icon: 'wine', sort: 5 },
+    { id: 'champ', nameFr: 'Champagne', nameEn: 'Champagne', color: 'var(--cat-champ)', hex: '#E5D5A8', icon: 'sparkles', sort: 6 },
+    { id: 'spirit', nameFr: 'Spiritueux', nameEn: 'Spirits', color: 'var(--cat-spirit)', hex: '#7FB5A8', icon: 'glass', sort: 7 },
+    { id: 'cuisine', nameFr: 'Cuisine', nameEn: 'Kitchen', color: 'var(--cat-cuisine)', hex: '#D08B5B', icon: 'utensils', sort: 8 },
   ],
+  // [catId, name, unit, allowDecimal, threshold, monogram] — monograms generated once, stored, never improvised
   items: [
     // Bières & Softs — threshold 24
-    ['biere', 'Spécial', 'bouteille', false, 24, 'beer', { g: '#7A4A17', l: '#E8E0CE' }],
-    ['biere', 'Heineken', 'bouteille', false, 24, 'beer', { g: '#1E6B34', l: '#E8F0E8' }],
-    ['biere', 'Spécial Gold', 'bouteille', false, 24, 'beer', { g: '#8A6A1E', l: '#F0E2B8' }],
-    ['biere', 'Casablanca', 'bouteille', false, 24, 'beer', { g: '#215D3C', l: '#F2EFE4' }],
-    ['biere', 'Budweiser', 'bouteille', false, 24, 'beer', { g: '#6B2A1E', l: '#E9DFD2' }],
-    ['biere', 'Smirnoff Ice', 'bouteille', false, 24, 'beer', { g: '#3C5B78', l: '#EAF0F4' }],
-    ['biere', 'Red Bull', 'canette', false, 24, 'can', { g: '#27427A', l: '#C8CFDA' }],
-    ['biere', 'Soda', 'canette', false, 24, 'can', { g: '#8A2430', l: '#E9DFD2' }],
+    ['biere', 'Spécial', 'bouteille', false, 24, 'SPÉ'],
+    ['biere', 'Heineken', 'bouteille', false, 24, 'HEI'],
+    ['biere', 'Spécial Gold', 'bouteille', false, 24, 'S.G'],
+    ['biere', 'Casablanca', 'bouteille', false, 24, 'CAS'],
+    ['biere', 'Budweiser', 'bouteille', false, 24, 'BUD'],
+    ['biere', 'Smirnoff Ice', 'bouteille', false, 24, 'S.I'],
+    ['biere', 'Red Bull', 'canette', false, 24, 'R.B'],
+    ['biere', 'Soda', 'canette', false, 24, 'SOD'],
     // Vins Rouges — threshold 6
-    ['rouge', 'Ithaque', 'bouteille', false, 6, 'wine', { g: '#38121C', l: '#E5D9C0' }],
-    ['rouge', 'Eclipse', 'bouteille', false, 6, 'wine', { g: '#2E1016', l: '#D8C8A8' }],
-    ['rouge', 'Volubilia', 'bouteille', false, 6, 'wine', { g: '#3B1420', l: '#E2D5BD' }],
-    ['rouge', 'Médaillon', 'bouteille', false, 6, 'wine', { g: '#34101A', l: '#E8DCC4' }],
-    ['rouge', 'Sahari', 'bouteille', false, 6, 'wine', { g: '#40161E', l: '#DECFAF' }],
-    ['rouge', 'Terre Rouge', 'bouteille', false, 6, 'wine', { g: '#391018', l: '#E0D2B6' }],
-    ['rouge', 'Terroir Rouge', 'bouteille', false, 6, 'wine', { g: '#331018', l: '#E6DAC2' }],
-    ['rouge', 'Ferrande', 'bouteille', false, 6, 'wine', { g: '#3D141C', l: '#DACBAB' }],
+    ['rouge', 'Ithaque', 'bouteille', false, 6, 'ITH'],
+    ['rouge', 'Eclipse', 'bouteille', false, 6, 'ECL'],
+    ['rouge', 'Volubilia', 'bouteille', false, 6, 'VOL'],
+    ['rouge', 'Médaillon', 'bouteille', false, 6, 'MÉD'],
+    ['rouge', 'Sahari', 'bouteille', false, 6, 'SAH'],
+    ['rouge', 'Terre Rouge', 'bouteille', false, 6, 'TER'],
+    ['rouge', 'Terroir Rouge', 'bouteille', false, 6, 'T.R'],
+    ['rouge', 'Ferrande', 'bouteille', false, 6, 'FER'],
     // Vins Blancs — threshold 6
-    ['blanc', 'Odyssée', 'bouteille', false, 6, 'wine-w', { g: '#7A7A3E', l: '#F0EAD0' }],
-    ['blanc', 'Médaillon Blanc', 'bouteille', false, 6, 'wine-w', { g: '#807E44', l: '#F2ECD4' }],
-    ['blanc', 'Terroir Blanc', 'bouteille', false, 6, 'wine-w', { g: '#74763C', l: '#EEE8CE' }],
+    ['blanc', 'Odyssée', 'bouteille', false, 6, 'ODY'],
+    ['blanc', 'Médaillon Blanc', 'bouteille', false, 6, 'M.B'],
+    ['blanc', 'Terroir Blanc', 'bouteille', false, 6, 'T.B'],
     // Vins Rosés — threshold 6
-    ['rose', 'Médaillon Rosé', 'bouteille', false, 6, 'wine-r', { g: '#B06070', l: '#F4E4E0' }],
-    ['rose', 'Terroir Rosé', 'bouteille', false, 6, 'wine-r', { g: '#A85A6C', l: '#F2E0DC' }],
-    // Demi-bouteilles — threshold 6
-    ['demi', '1/2 Médaillon', 'bouteille', false, 6, 'half', { g: '#34101A', l: '#E8DCC4' }],
-    ['demi', '1/2 Eclipse', 'bouteille', false, 6, 'half', { g: '#2E1016', l: '#D8C8A8' }],
-    ['demi', '1/2 Volubilia', 'bouteille', false, 6, 'half', { g: '#3B1420', l: '#E2D5BD' }],
-    ['demi', '1/2 Sahari', 'bouteille', false, 6, 'half', { g: '#40161E', l: '#DECFAF' }],
-    ['demi', '1/2 Terroir Rouge', 'bouteille', false, 6, 'half', { g: '#331018', l: '#E6DAC2' }],
-    ['demi', '1/2 Médaillon Blanc', 'bouteille', false, 6, 'half-w', { g: '#807E44', l: '#F2ECD4' }],
-    ['demi', '1/2 Terroir Blanc', 'bouteille', false, 6, 'half-w', { g: '#74763C', l: '#EEE8CE' }],
-    ['demi', '1/2 Médaillon Rosé', 'bouteille', false, 6, 'half-r', { g: '#B06070', l: '#F4E4E0' }],
-    ['demi', '1/2 Terroir Rosé', 'bouteille', false, 6, 'half-r', { g: '#A85A6C', l: '#F2E0DC' }],
+    ['rose', 'Médaillon Rosé', 'bouteille', false, 6, 'M.R'],
+    ['rose', 'Terroir Rosé', 'bouteille', false, 6, 'TRS'],
+    // Demi-bouteilles — threshold 6 (½ chip rendered by the tile)
+    ['demi', '1/2 Médaillon', 'bouteille', false, 6, 'MÉD'],
+    ['demi', '1/2 Eclipse', 'bouteille', false, 6, 'ECL'],
+    ['demi', '1/2 Volubilia', 'bouteille', false, 6, 'VOL'],
+    ['demi', '1/2 Sahari', 'bouteille', false, 6, 'SAH'],
+    ['demi', '1/2 Terroir Rouge', 'bouteille', false, 6, 'T.R'],
+    ['demi', '1/2 Médaillon Blanc', 'bouteille', false, 6, 'M.B'],
+    ['demi', '1/2 Terroir Blanc', 'bouteille', false, 6, 'T.B'],
+    ['demi', '1/2 Médaillon Rosé', 'bouteille', false, 6, 'M.R'],
+    ['demi', '1/2 Terroir Rosé', 'bouteille', false, 6, 'TRS'],
     // Champagne — threshold 3
-    ['champ', 'Champagne', 'bouteille', false, 3, 'champagne', { g: '#5A4A1E', l: '#F2E6BE' }],
+    ['champ', 'Champagne', 'bouteille', false, 3, 'CHM'],
     // Spiritueux — decimal, threshold 2
-    ['spirit', 'Black Label', 'bouteille', true, 2, 'whisky-sq', { g: '#1A1A1A', l: '#E8D9A8' }],
-    ['spirit', 'Red Label', 'bouteille', true, 2, 'whisky-sq', { g: '#241012', l: '#E2B84A' }],
-    ['spirit', 'Absolut', 'bouteille', true, 2, 'vodka', { g: '#B8C8D8', l: '#DDE8F0' }],
-    ['spirit', "Jack Daniel's", 'bouteille', true, 2, 'whisky-sq', { g: '#141414', l: '#E6E0D0' }],
-    ['spirit', 'Belvedere', 'bouteille', true, 2, 'vodka', { g: '#C8D4DC', l: '#EEF2F4' }],
-    ['spirit', "Gordon's", 'bouteille', true, 2, 'gin', { g: '#1E5438', l: '#E8E4C8' }],
-    ['spirit', 'Ricard', 'bouteille', true, 2, 'pastis', { g: '#6A4A14', l: '#F0E2B0' }],
-    ['spirit', 'Agavita', 'bouteille', true, 2, 'tequila', { g: '#7A6A24', l: '#EAE2C0' }],
-    ['spirit', 'Jägermeister', 'bouteille', true, 2, 'herbal', { g: '#12300F', l: '#E8890A' }],
-    ['spirit', 'Cognac', 'bouteille', true, 2, 'cognac', { g: '#4A2410', l: '#E9D9B8' }],
-    ['spirit', 'Martini Blanc', 'bouteille', true, 2, 'vermouth', { g: '#8A8A4A', l: '#F0ECD8' }],
+    ['spirit', 'Black Label', 'bouteille', true, 2, 'B.L'],
+    ['spirit', 'Red Label', 'bouteille', true, 2, 'R.L'],
+    ['spirit', 'Absolut', 'bouteille', true, 2, 'ABS'],
+    ['spirit', "Jack Daniel's", 'bouteille', true, 2, 'J.D'],
+    ['spirit', 'Belvedere', 'bouteille', true, 2, 'BEL'],
+    ['spirit', "Gordon's", 'bouteille', true, 2, 'GOR'],
+    ['spirit', 'Ricard', 'bouteille', true, 2, 'RIC'],
+    ['spirit', 'Agavita', 'bouteille', true, 2, 'AGA'],
+    ['spirit', 'Jägermeister', 'bouteille', true, 2, 'JÄG'],
+    ['spirit', 'Cognac', 'bouteille', true, 2, 'COG'],
+    ['spirit', 'Martini Blanc', 'bouteille', true, 2, 'MAR'],
     // Cuisine — portion, threshold 10
-    ['cuisine', 'Fromage', 'portion', false, 10, 'cheese', { g: '#C89A3A', l: '#F2E2B0' }],
-    ['cuisine', 'Viande Hachée', 'portion', false, 10, 'meat', { g: '#8A3A2E', l: '#E9C9B8' }],
-    ['cuisine', 'Foie', 'portion', false, 10, 'liver', { g: '#6A2A24', l: '#DCB8A8' }],
-    ['cuisine', 'Cervelle', 'portion', false, 10, 'brain', { g: '#B08A7A', l: '#EEDCD0' }],
-    ['cuisine', 'Pizza V/H', 'portion', false, 10, 'pizza', { g: '#B4582A', l: '#F0D8A0' }],
+    ['cuisine', 'Fromage', 'portion', false, 10, 'FRO'],
+    ['cuisine', 'Viande Hachée', 'portion', false, 10, 'V.H'],
+    ['cuisine', 'Foie', 'portion', false, 10, 'FOI'],
+    ['cuisine', 'Cervelle', 'portion', false, 10, 'CER'],
+    ['cuisine', 'Pizza V/H', 'portion', false, 10, 'PIZ'],
   ],
   build() {
-    return this.items.map(([catId, name, unit, allowDecimal, threshold, art, tint], i) => ({
+    return this.items.map(([catId, name, unit, allowDecimal, threshold, mono], i) => ({
       id: 'it' + (i + 1).toString(36).padStart(2, '0'),
-      catId, name, unit, allowDecimal, threshold, art, tint,
+      catId, name, unit, allowDecimal, threshold, mono, isDemi: name.startsWith('1/2 '),
       photo: null, barcode: null, pinned: ['Heineken', 'Spécial', 'Black Label', 'Casablanca', 'Red Bull', 'Ricard'].includes(name),
       cost: null, active: true, sort: i,
     }));
@@ -206,7 +207,22 @@ const Store = (() => {
   let state = blank();
   try {
     const raw = LS.getItem(KEY);
-    if (raw) { const p = JSON.parse(raw); if (p && p.v === 1) state = Object.assign(blank(), p, { settings: Object.assign(blank().settings, p.settings) }); }
+    if (raw) {
+      const p = JSON.parse(raw);
+      if (p && p.v === 1) {
+        state = Object.assign(blank(), p, { settings: Object.assign(blank().settings, p.settings) });
+        // migrations: category accents follow the current design tokens; monograms backfill
+        for (const c of state.categories) {
+          const s = SEED.categories.find(x => x.id === c.id);
+          if (s) { c.hex = s.hex; c.color = s.color; }
+        }
+        const seedByName = new Map(SEED.items.map(([, name, , , , mono]) => [name, mono]));
+        for (const it of state.items) {
+          if (!it.mono && seedByName.has(it.name)) it.mono = seedByName.get(it.name);
+          if (it.isDemi === undefined) it.isDemi = String(it.name || '').startsWith('1/2 ');
+        }
+      }
+    }
   } catch (e) { console.error('load failed', e); }
 
   function save() {
@@ -383,7 +399,13 @@ const Store = (() => {
         this.audit('edit_item', 'item', it.id, { name: before.name, threshold: before.threshold, cost: before.cost }, { name: it.name, threshold: it.threshold, cost: it.cost });
         emit('items'); return it;
       }
-      const it = { id: uid(), catId: data.catId, name: data.name, unit: data.unit || 'bouteille', allowDecimal: !!data.allowDecimal, threshold: data.threshold ?? 6, art: data.art || 'wine', tint: data.tint || { g: '#3B1420', l: '#E2D5BD' }, photo: data.photo || null, barcode: data.barcode || null, pinned: !!data.pinned, cost: data.cost ?? null, active: true, sort: state.items.length };
+      const mono = data.mono || (() => {
+        const clean = String(data.name || '').replace(/^1\/2\s+/, '').trim();
+        const words = clean.split(/\s+/).filter(w => /[A-Za-zÀ-ÿ]/.test(w));
+        if (words.length >= 2) return (words[0][0] + '.' + words[1][0]).toUpperCase();
+        return clean.replace(/[^A-Za-zÀ-ÿ]/g, '').slice(0, 3).toUpperCase();
+      })();
+      const it = { id: uid(), catId: data.catId, name: data.name, unit: data.unit || 'bouteille', allowDecimal: !!data.allowDecimal, threshold: data.threshold ?? 6, mono, isDemi: String(data.name || '').startsWith('1/2 '), photo: data.photo || null, barcode: data.barcode || null, pinned: !!data.pinned, cost: data.cost ?? null, active: true, sort: state.items.length };
       state.items.push(it);
       this.audit('add_item', 'item', it.id, null, { name: it.name });
       emit('items'); return it;

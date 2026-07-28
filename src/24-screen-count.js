@@ -1,410 +1,336 @@
-/* ============ Screen: count — guided daily inventory count (owner only) ============ */
+/* ============ Screen: count — walkthrough + Écarts review (reference frame 03) ============ */
 (() => {
+  'use strict';
+
   I18N.extend({
     fr: {
+      'count.h1': 'Écarts',
+      'count.att': 'Att.', 'count.cpt': 'Cpt.', 'count.ecart': 'Écart',
+      'count.attendu': 'Attendu', 'count.compte': 'Compté',
+      'count.noVar_one': 'Sans écart — {n} article',
+      'count.noVar_many': 'Sans écart — {n} articles',
+      'count.exportPdf': 'Exporter le rapport PDF',
+      'count.article': 'Article',
+      'count.itemsToCount': 'Articles à compter',
+      'count.startHint': 'L’app affiche le stock attendu ; vous saisissez ce que vous comptez réellement. Chaque écart apparaît, article par article.',
+      'count.notePrefix': 'Note',
+      'count.editLine': 'Modifier',
       'count.ownerOnly': 'Réservé au patron',
-      'count.ownerOnlySub': 'Le comptage de fin de journée est géré par le patron.',
-      'count.itemsToCount': 'articles à compter',
-      'count.startHint': 'Comptez le stock réel, article par article. L’écart avec le stock attendu se calcule tout seul.',
       'count.viewReport': 'Voir le rapport',
-      'count.scanMiss': 'Aucun article associé à ce code',
-      'count.skipped': 'Passé',
-      'count.autofilled': 'Auto-rempli',
-      'count.closeConfirm': 'La journée sera clôturée et son rapport ajouté à l’historique. Vous pourrez la rouvrir si besoin.',
-      'count.noItems': 'Aucun article à compter',
-      'count.noItemsSub': 'Activez ou ajoutez des articles dans Stock pour lancer un comptage.',
     },
     en: {
+      'count.h1': 'Variance',
+      'count.att': 'Exp.', 'count.cpt': 'Cnt.', 'count.ecart': 'Var.',
+      'count.attendu': 'Expected', 'count.compte': 'Counted',
+      'count.noVar_one': 'No variance — {n} item',
+      'count.noVar_many': 'No variance — {n} items',
+      'count.exportPdf': 'Export the PDF report',
+      'count.article': 'Item',
+      'count.itemsToCount': 'Items to count',
+      'count.startHint': 'The app shows the expected stock; you type what you actually count. Every discrepancy shows, item by item.',
+      'count.notePrefix': 'Note',
+      'count.editLine': 'Edit',
       'count.ownerOnly': 'Owner only',
-      'count.ownerOnlySub': 'The end-of-day count is managed by the owner.',
-      'count.itemsToCount': 'items to count',
-      'count.startHint': 'Count your real stock, one item at a time. The variance with expected stock is calculated automatically.',
       'count.viewReport': 'View report',
-      'count.scanMiss': 'No item matches this code',
-      'count.skipped': 'Skipped',
-      'count.autofilled': 'Auto-filled',
-      'count.closeConfirm': 'The day will be closed and its report added to History. You can reopen it if needed.',
-      'count.noItems': 'No items to count',
-      'count.noItemsSub': 'Activate or add items in Stock to start a count.',
     },
   });
 
-  /* transient walkthrough state — survives store-driven re-renders */
-  const V = { countId: null, mode: null, idx: 0, buf: '', closedId: null, revealed: false };
-
-  const fmtVar = v => v > 0 ? '+' + UI.fmtQty(v) : v < 0 ? '−' + UI.fmtQty(Math.abs(v)) : UI.fmtQty(0);
-  const fmtBuf = b => I18N.lang === 'fr' ? b.replace('.', ',') : b;
-  const varCls = v => v > 0 ? 'varpos' : v < 0 ? 'varneg' : 'varzero';
-
-  const CSS = `
-  [data-screen=count] .btn svg{width:18px;height:18px}
-  [data-screen=count] .iconbtn[disabled]{opacity:.4;pointer-events:none}
-  [data-screen=count] .cw-top{display:flex;align-items:center;gap:var(--s3);margin-bottom:var(--s4)}
-  [data-screen=count] .cw-top__body{flex:1;min-width:0}
-  [data-screen=count] .cw-top__cat{font-family:var(--f-display);font-weight:700;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  [data-screen=count] .cw-top__sub{font-size:12px;color:var(--text-3);margin-top:1px}
-  [data-screen=count] .cw-stage{display:flex;flex-direction:column;align-items:center;text-align:center;animation:cw-in .3s cubic-bezier(.2,.8,.25,1)}
-  @keyframes cw-in{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
-  [data-screen=count] .cw-art{width:116px;height:140px;filter:drop-shadow(0 14px 28px rgba(0,0,0,.55))}
-  [data-screen=count] .cw-art .itemart{width:100%;height:100%}
-  [data-screen=count] .cw-art .itemart img{width:100%;height:100%;object-fit:cover;border-radius:18px}
-  [data-screen=count] .cw-name{font-size:19px;margin-top:var(--s2)}
-  [data-screen=count] .cw-unit{color:var(--text-3);font-size:12px;margin-top:1px}
-  [data-screen=count] .cw-duo{display:grid;grid-template-columns:1fr 1.3fr;gap:var(--s3);width:100%;margin-top:var(--s4)}
-  [data-screen=count] .cw-exp{background:var(--surface);border:1px solid var(--hairline);border-radius:16px;padding:10px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:64px}
-  [data-screen=count] .cw-exp b{font-size:30px;line-height:1.1;font-weight:700}
-  [data-screen=count] .cw-in{background:var(--surface-2);border:1px solid var(--hairline);border-radius:16px;display:flex;align-items:center;justify-content:center;min-height:64px;font-size:30px;font-weight:700;color:var(--text);padding:4px 10px;transition:border-color .15s,box-shadow .15s,color .15s}
-  [data-screen=count] .cw-in.has{color:var(--gold-hi);border-color:rgba(201,154,75,.5);box-shadow:var(--glow-gold)}
-  [data-screen=count] .cw-pad{width:100%}
-  [data-screen=count] .cw-acts{display:flex;gap:var(--s2);width:100%;margin-top:var(--s3)}
-  [data-screen=count] .cw-acts .btn--ghost{flex:1}
-  [data-screen=count] .cw-acts .btn--gold{flex:1.6}
-  [data-screen=count] .rev-row{width:100%;text-align:left;animation:cnt-rev .45s cubic-bezier(.2,.8,.3,1) both}
-  [data-screen=count] .rev-row.no-anim{animation:none}
-  @keyframes cnt-rev{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-  [data-screen=count] .rev-var{font-family:var(--f-display);font-weight:700;font-size:17px}
-  [data-screen=count] .cnt-alert{display:flex;align-items:center;gap:6px;color:var(--warn)}
-  [data-screen=count] .cnt-alert svg{width:15px;height:15px;flex:none}
-  [data-screen=count] .cnt-spark svg{width:34px;height:34px;color:var(--gold);margin:0 auto}
-  [data-screen=count] .cd-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:var(--s2);padding:var(--s6) 0}
-  [data-screen=count] .cd-check{width:88px;height:88px;border-radius:50%;background:var(--gold-grad);color:var(--on-gold);display:flex;align-items:center;justify-content:center;box-shadow:var(--glow-gold);animation:cd-pop .55s cubic-bezier(.2,.9,.3,1.35)}
-  [data-screen=count] .cd-check svg{width:42px;height:42px}
-  @keyframes cd-pop{from{opacity:0;transform:scale(.5)}60%{transform:scale(1.06)}to{opacity:1;transform:scale(1)}}
-  [data-screen=count].cnt-ov{position:fixed;inset:0;z-index:90;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:var(--s6);text-align:center;background:rgba(6,6,10,.9);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);animation:fade-in .25s}
-  [data-screen=count].cnt-ov.is-out{animation:fade-out .28s forwards}
-  [data-screen=count].cnt-ov .cnt-ov__ring{stroke-dasharray:290;stroke-dashoffset:290;animation:cnt-draw .85s .1s cubic-bezier(.55,0,.3,1) forwards}
-  [data-screen=count].cnt-ov .cnt-ov__ck{stroke-dasharray:56;stroke-dashoffset:56;animation:cnt-draw .35s .8s ease-out forwards}
-  [data-screen=count].cnt-ov h2{font-size:22px;margin-top:var(--s3);opacity:0;animation:cnt-up .45s .95s forwards}
-  [data-screen=count].cnt-ov p{color:var(--text-2);font-size:13.5px;opacity:0;animation:cnt-up .45s 1.05s forwards}
+  document.head.appendChild(UI.el(`<style>
+  [data-screen=count] .topbar{display:flex;justify-content:space-between;align-items:center;min-height:26px}
+  [data-screen=count] .h1{font:600 24px/1.2 var(--f-display);letter-spacing:-.01em;margin-top:8px}
+  [data-screen=count] .cw-item{display:flex;align-items:center;gap:12px;margin-top:20px}
+  [data-screen=count] .cw-name{font-size:16px;font-weight:600}
+  [data-screen=count] .cw-unit{font-size:11px;color:var(--t3);margin-top:2px;text-transform:uppercase;letter-spacing:.07em;font-weight:600}
+  [data-screen=count] .cw-progress{font-variant-numeric:tabular-nums}
+  [data-screen=count] .cw-in.has{color:var(--brass)}
+  [data-screen=count] .cw-actions{display:flex;gap:8px;margin-top:12px}
+  [data-screen=count] .cw-actions .btn{flex:1}
+  [data-screen=count] .trow.tap{cursor:pointer}
+  [data-screen=count] .done-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:6px}
+  [data-screen=count] .done-mark{width:64px;height:64px;border-radius:50%;border:1px solid var(--hair2);display:flex;align-items:center;justify-content:center;margin-bottom:10px}
+  [data-screen=count] .done-mark svg{width:26px;height:26px;color:var(--ok)}
+  [data-screen=count] .ov{position:fixed;inset:0;z-index:90;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:rgba(5,6,8,.94);text-align:center;animation:fade-in .2s}
+  [data-screen=count] .ov.is-out{animation:fade-out .25s forwards}
+  [data-screen=count] .ov .ring1{stroke-dasharray:290;stroke-dashoffset:290;animation:cnt-draw .8s .1s cubic-bezier(.55,0,.3,1) forwards}
+  [data-screen=count] .ov .ck1{stroke-dasharray:56;stroke-dashoffset:56;animation:cnt-draw .3s .75s ease-out forwards}
+  [data-screen=count] .ov h2{font:600 20px var(--f-display);margin-top:12px;opacity:0;animation:cnt-up .4s .9s forwards}
+  [data-screen=count] .ov p{color:var(--t2);font-size:13px;opacity:0;animation:cnt-up .4s 1s forwards}
   @keyframes cnt-draw{to{stroke-dashoffset:0}}
-  @keyframes cnt-up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-  @media (prefers-reduced-motion:reduce){
-    [data-screen=count] .rev-row,
-    [data-screen=count].cnt-ov .cnt-ov__ring,[data-screen=count].cnt-ov .cnt-ov__ck,
-    [data-screen=count].cnt-ov h2,[data-screen=count].cnt-ov p{animation-delay:0ms!important}
-  }`;
+  @keyframes cnt-up{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  </style>`));
 
-  function ensureStyle() {
-    if (document.getElementById('cnt-css')) return;
-    document.head.appendChild(UI.el('<style id="cnt-css">' + CSS + '</style>'));
-  }
+  const V = { mode: 'entry', idx: 0, buf: '', showClean: false };
 
-  /* categories by sort, then items by their sort inside each */
   function orderedItems() {
     const cats = [...Store.state.categories].sort((a, b) => a.sort - b.sort);
     const act = Store.activeItems();
     const out = [];
     for (const c of cats) out.push(...act.filter(i => i.catId === c.id));
-    out.push(...act.filter(i => !cats.some(c => c.id === i.catId)));
     return out;
   }
+  const openCount = () => Store.state.counts.find(c => c.status === 'open');
+  const fmtSigned = v => v === 0 ? '±0' : (v > 0 ? '+' : '−') + UI.fmtQty(Math.abs(v));
+  const parseBuf = b => { const n = parseFloat(String(b).replace(',', '.')); return isNaN(n) ? null : Math.round(n * 100) / 100; };
 
-  function setPos(i, c, ordered) {
-    V.idx = i; V.mode = 'walk'; V.revealed = false;
-    const ln = c.lines.find(l => l.itemId === ordered[i].id);
-    V.buf = ln ? String(ln.counted) : '';
-  }
-
-  function applyKey(buf, k, dec) {
-    if (k === 'del') return buf.slice(0, -1);
-    if (k === 'dot') { if (!dec || buf.includes('.')) return buf; return (buf === '' ? '0' : buf) + '.'; }
-    if (buf.includes('.')) { if (buf.split('.')[1].length >= 2) return buf; return buf + k; }
-    if (buf.length >= 5) return buf;
-    return buf === '0' ? k : buf + k;
-  }
-
-  /* ---------- closing moment: full-screen gold ring draw + check ---------- */
-  function showCloseMoment() {
-    const ov = UI.el(`<div class="cnt-ov" data-screen="count" role="status">
-      <svg viewBox="0 0 100 100" width="118" height="118" aria-hidden="true">
-        <defs><linearGradient id="cntOvG" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stop-color="#DFB86A"/><stop offset="1" stop-color="#A87B2F"/>
-        </linearGradient></defs>
-        <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="5"/>
-        <circle class="cnt-ov__ring" cx="50" cy="50" r="46" fill="none" stroke="url(#cntOvG)" stroke-width="5" stroke-linecap="round" transform="rotate(-90 50 50)"/>
-        <path class="cnt-ov__ck" d="M31 52l13 13 25-27" fill="none" stroke="url(#cntOvG)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  /* ---------- closing ceremony ---------- */
+  function ceremony(el) {
+    const ov = UI.el(`<div class="ov" data-screen="count" role="status">
+      <svg viewBox="0 0 100 100" width="104" height="104" aria-hidden="true">
+        <circle cx="50" cy="50" r="46" fill="none" stroke="var(--hair2)" stroke-width="3"/>
+        <circle class="ring1" cx="50" cy="50" r="46" fill="none" stroke="var(--brass)" stroke-width="3" stroke-linecap="round" transform="rotate(-90 50 50)"/>
+        <path class="ck1" d="M31 52l13 13 25-27" fill="none" stroke="var(--brass)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
       <h2>${UI.esc(t('count.closed'))}</h2>
       <p>${UI.esc(t('count.closedSub'))}</p>
     </div>`);
     document.body.appendChild(ov);
     UI.haptic('success');
-    setTimeout(() => ov.classList.add('is-out'), 1800);
-    setTimeout(() => ov.remove(), 2120);
+    setTimeout(() => { ov.classList.add('is-out'); setTimeout(() => ov.remove(), 260); }, 1900);
   }
 
-  /* ---------- note / edit sheet (lives outside the screen; reads fresh at action time) ---------- */
-  function openLineSheet(countId, item) {
-    const c0 = Store.state.counts.find(x => x.id === countId);
-    if (!c0) return;
-    const l0 = c0.lines.find(l => l.itemId === item.id);
-    let buf = l0 ? String(l0.counted) : '';
-    const exp = l0 ? l0.expected : Store.countExpected(item.id, c0.bd);
-    const content = UI.el(`<div data-screen="count">
-      <div class="row" style="border:0;padding:0;min-height:0;margin-bottom:var(--s3)">
-        <span class="row__art">${UI.art(item)}</span>
-        <span class="row__body">
-          <span class="row__t">${UI.esc(item.name)}</span>
-          <span class="row__s">${UI.esc(t('count.expected'))} ${UI.esc(UI.fmtQty(exp))} · ${UI.esc(t('u.' + item.unit))}</span>
-        </span>
+  /* ---------- line sheet: edit counted + note ---------- */
+  function lineSheet(c, item) {
+    const line = c.lines.find(l => l.itemId === item.id);
+    const exp = line ? line.expected : Store.countExpected(item.id, c.bd);
+    let buf = line ? String(line.counted) : '';
+    const cEl = UI.el(`<div>
+      <div class="sheetrow">
+        <div class="tile t40">${UI.art(item)}</div>
+        <div><div class="sheetname">${UI.esc(item.name)}</div>
+        <div class="sheetsub tnum">${UI.esc(t('count.attendu'))} · ${UI.esc(UI.fmtQty(exp))}</div></div>
       </div>
-      <div class="cw-in num" data-el="d" style="font-size:26px;min-height:58px"></div>
-      <div class="cw-pad" data-el="p"></div>
-      <div class="field mt4"><label>${UI.esc(t('count.note'))}</label>
-        <textarea rows="3" placeholder="${UI.esc(t('count.notePh'))}">${UI.esc(l0 ? (l0.note || '') : '')}</textarea></div>
+      <div class="sum" style="margin-top:14px">
+        <div class="sumcol"><div class="micro">${UI.esc(t('count.compte'))}</div><div class="mid tnum" data-buf>${buf ? UI.esc(UI.fmtQty(parseBuf(buf))) : '—'}</div></div>
+        <div class="sumcol"><div class="micro">${UI.esc(t('count.ecart'))}</div><div class="mid tnum" data-var>${buf ? fmtSigned(parseBuf(buf) - exp) : '—'}</div></div>
+      </div>
+      <div data-np></div>
+      <div class="field" style="margin-top:14px"><label>${UI.esc(t('count.note'))}</label>
+        <textarea rows="2" placeholder="${UI.esc(t('count.notePh'))}">${UI.esc(line ? (line.note || '') : '')}</textarea></div>
       <button class="btn btn--gold btn--full" data-a="save">${UI.esc(t('g.save'))}</button>
     </div>`);
-    const disp = () => {
-      const d = content.querySelector('[data-el=d]');
-      d.classList.toggle('has', buf !== '');
-      d.innerHTML = buf !== ''
-        ? UI.esc(fmtBuf(buf))
-        : `<span style="font-size:13px;font-weight:500;color:var(--text-3)">${UI.esc(t('count.enterCount'))}</span>`;
+    const sh = UI.sheet(cEl);
+    const paint = () => {
+      const v = parseBuf(buf);
+      cEl.querySelector('[data-buf]').textContent = v == null ? '—' : UI.fmtQty(v);
+      const vv = cEl.querySelector('[data-var]');
+      vv.textContent = v == null ? '—' : fmtSigned(Math.round((v - exp) * 100) / 100);
+      vv.className = 'mid tnum ' + (v == null ? '' : (v - exp) < 0 ? 'bad' : (v - exp) > 0 ? 'good' : 'faint');
     };
-    disp();
-    UI.numpad(content.querySelector('[data-el=p]'), { decimal: !!item.allowDecimal, onKey: k => { buf = applyKey(buf, k, !!item.allowDecimal); disp(); } });
-    const s = UI.sheet(content);
-    content.querySelector('[data-a=save]').addEventListener('click', () => {
-      const note = content.querySelector('textarea').value.trim();
-      const cc = Store.state.counts.find(x => x.id === countId);   // fresh read
-      if (!cc || cc.status !== 'open') return s.close();
-      const val = Math.round(parseFloat(buf) * 100) / 100;
-      const ln = cc.lines.find(l => l.itemId === item.id);
-      if (buf !== '' && !isNaN(val)) { Store.setCountLine(countId, item.id, val, note); UI.haptic('light'); }
-      else if (ln && note !== (ln.note || '')) Store.setCountNote(countId, item.id, note);
-      else if (!ln && note !== '') { Store.setCountLine(countId, item.id, Store.countExpected(item.id, cc.bd), note); UI.haptic('light'); }
-      s.close();
+    UI.numpad(cEl.querySelector('[data-np]'), { decimal: item.allowDecimal, onKey: k => {
+      if (k === 'del') buf = buf.slice(0, -1);
+      else if (k === 'dot') { if (!buf.includes('.')) buf = (buf || '0') + '.'; }
+      else if (buf.replace('.', '').length < 5) buf += k;
+      paint();
+    } });
+    cEl.addEventListener('click', e => {
+      if (!e.target.closest('[data-a=save]')) return;
+      const v = parseBuf(buf);
+      const note = cEl.querySelector('textarea').value.trim();
+      if (v != null) Store.setCountLine(c.id, item.id, v, note);
+      else if (note) Store.setCountLine(c.id, item.id, exp, note);
+      sh.close();
     });
   }
 
-  /* ---------- entry states ---------- */
-  function renderLocked(el) {
-    el.innerHTML = UI.header(t('count.title')) + `
-      <div class="empty grow">${UI.icon('lock')}
-        <div class="empty__t">${UI.esc(t('count.ownerOnly'))}</div>
-        <div class="empty__s">${UI.esc(t('count.ownerOnlySub'))}</div>
-      </div>`;
-  }
-
-  function renderNoItems(el) {
-    el.innerHTML = UI.header(t('count.title')) + `
-      <div class="empty grow">${UI.icon('stock')}
-        <div class="empty__t">${UI.esc(t('count.noItems'))}</div>
-        <div class="empty__s">${UI.esc(t('count.noItemsSub'))}</div>
-      </div>`;
-  }
-
-  function renderStart(el, ordered, today) {
-    const sumExp = ordered.reduce((s, o) => s + Math.max(0, Store.countExpected(o.id, today)), 0);
-    el.innerHTML = UI.header(t('count.title'), t('count.forDay', { date: UI.fmtDate(today) })) + `
-      <div class="card card--gold">
-        <p style="color:var(--text-2);font-size:14px;line-height:1.55">${UI.esc(t('count.startHint'))}</p>
-        <div class="stats mt4">
-          <div class="stat"><div class="stat__v num">${ordered.length}</div><div class="stat__l">${UI.esc(t('count.itemsToCount'))}</div></div>
-          <div class="stat"><div class="stat__v num">${UI.esc(UI.fmtQty(sumExp))}</div><div class="stat__l">${UI.esc(t('inv.expected'))}</div></div>
+  /* ---------- entry ---------- */
+  function renderEntry(el) {
+    const today = Store.todayBd();
+    const closedToday = Store.state.counts.find(c => c.bd === today && c.status === 'closed');
+    const oc = openCount();
+    const items = orderedItems();
+    if (closedToday && !oc) {
+      el.innerHTML = `
+        <div class="topbar"><button class="back" data-a="back">‹ ${UI.esc(t('g.back'))}</button><div class="micro tnum">${UI.esc(UI.fmtDate(today))}</div></div>
+        <div class="done-wrap">
+          <div class="done-mark">${UI.icon('check')}</div>
+          <div style="font:600 20px var(--f-display)">${UI.esc(t('count.closed'))}</div>
+          <div class="sub2">${UI.esc(t('count.closedSub'))}</div>
         </div>
-        <button class="btn btn--gold btn--big btn--full mt4" data-a="start">${UI.icon('count')} ${UI.esc(t('count.start'))}</button>
-      </div>`;
-    el.addEventListener('click', e => {
-      if (!e.target.closest('[data-a=start]')) return;
-      if (!Store.isOwner) return;
-      UI.haptic('light');
-      V.countId = null; V.closedId = null; V.revealed = false;
-      Store.openCount();
-    });
-  }
-
-  /* ---------- walkthrough: one item at a time ---------- */
-  function renderWalk(el, c, ordered) {
-    const it = ordered[V.idx];
-    const catg = Store.cat(it.catId);
-    const done = ordered.filter(o => c.lines.some(l => l.itemId === o.id)).length;
-    const total = ordered.length;
-    const exp = Store.countExpected(it.id, c.bd);
+        <div class="bottomstack">
+          <button class="btn btn--ghost" data-a="report">${UI.esc(t('count.viewReport'))}</button>
+          <button class="textbtn" data-a="reopen">${UI.esc(t('count.reopen'))}</button>
+        </div>`;
+      return;
+    }
+    const sumExp = items.reduce((a, it) => a + Store.countExpected(it.id, today), 0);
     el.innerHTML = `
-      <div class="cw-top">
-        ${UI.ring(done / total, done + '/' + total)}
-        <div class="cw-top__body">
-          <div class="cw-top__cat">${UI.esc(catg ? Store.catName(catg) : '')}</div>
-          <div class="cw-top__sub">${UI.esc(t('count.forDay', { date: UI.fmtDate(c.bd) }))}</div>
-        </div>
-        <button class="iconbtn" data-a="scan" aria-label="${UI.esc(t('sell.scan'))}">${UI.icon('scan')}</button>
-        <button class="iconbtn" data-a="exit" aria-label="${UI.esc(t('g.close'))}">${UI.icon('x')}</button>
+      <div class="topbar"><button class="back" data-a="back">‹ ${UI.esc(t('g.back'))}</button><div class="micro tnum">${UI.esc(UI.fmtDate(today))}</div></div>
+      <div class="h1">${UI.esc(t('count.title'))}</div>
+      <div class="sub2" style="margin-top:10px;line-height:1.6">${UI.esc(t('count.startHint'))}</div>
+      <div class="sum">
+        <div class="sumcol"><div class="micro">${UI.esc(t('count.itemsToCount'))}</div><div class="mid tnum">${items.length}</div></div>
+        <div class="sumcol"><div class="micro">${UI.esc(t('count.attendu'))}</div><div class="mid tnum">${UI.esc(UI.fmtQty(Math.round(sumExp * 100) / 100))}</div></div>
       </div>
-      <div class="card cw-stage">
-        <div class="cw-art">${UI.art(it)}</div>
-        <h2 class="cw-name">${UI.esc(it.name)}</h2>
-        <div class="cw-unit">${UI.esc(t('u.' + it.unit))}</div>
-        <div class="cw-duo">
-          <div class="cw-exp"><span class="eyebrow">${UI.esc(t('count.expected'))}</span><b class="num">${UI.esc(UI.fmtQty(exp))}</b></div>
-          <div class="cw-in num" data-el="disp" aria-label="${UI.esc(t('count.counted'))}"></div>
-        </div>
-        <div class="cw-pad" data-el="pad"></div>
-        <div class="cw-acts">
-          <button class="iconbtn" data-a="prev" ${V.idx === 0 ? 'disabled' : ''} aria-label="${UI.esc(t('g.back'))}">${UI.icon('chevL')}</button>
-          <button class="btn btn--ghost" data-a="skip">${UI.esc(t('count.skip'))}</button>
-          <button class="btn btn--gold" data-a="ok">${UI.icon('check')} ${UI.esc(t('g.confirm'))}</button>
-        </div>
+      <div class="bottomstack">
+        <button class="btn btn--gold" data-a="start">${UI.esc(oc ? t('count.continue') : t('count.start'))}</button>
       </div>`;
-    const disp = () => {
-      const d = el.querySelector('[data-el=disp]'); if (!d) return;
-      const has = V.buf !== '' && !isNaN(parseFloat(V.buf));
-      d.classList.toggle('has', V.buf !== '');
-      d.innerHTML = V.buf !== ''
-        ? UI.esc(fmtBuf(V.buf))
-        : `<span style="font-size:13px;font-weight:500;color:var(--text-3)">${UI.esc(t('count.enterCount'))}</span>`;
-      const ok = el.querySelector('[data-a=ok]'); if (ok) ok.disabled = !has;
+  }
+
+  /* ---------- walkthrough ---------- */
+  function renderWalk(el, c, items) {
+    const it = items[V.idx];
+    if (!it) { V.mode = 'review'; UI.refresh(); return; }
+    const cat = Store.cat(it.catId);
+    const exp = (() => { const l = c.lines.find(l => l.itemId === it.id); return l ? l.expected : Store.countExpected(it.id, c.bd); })();
+    const existing = c.lines.find(l => l.itemId === it.id);
+    const done = c.lines.length;
+    const v = parseBuf(V.buf);
+    el.innerHTML = `
+      <div class="topbar">
+        <button class="back" data-a="exit">‹ ${UI.esc(t('count.title'))}</button>
+        <div class="micro cw-progress">${done}/${items.length}</div>
+      </div>
+      <div class="sec" style="margin-top:14px"><div class="micro">${UI.esc(cat ? Store.catName(cat) : '')}</div>
+        <button class="scanbtn iconbtn iconbtn--plain" data-a="scan" aria-label="scan" style="width:32px;height:32px">${UI.icon('scan')}</button></div>
+      <div class="cw-item">
+        <div class="tile t56">${UI.art(it)}</div>
+        <div><div class="cw-name">${UI.esc(it.name)}</div><div class="cw-unit">${UI.esc(t('u.' + it.unit))}</div></div>
+      </div>
+      <div class="sum">
+        <div class="sumcol"><div class="micro">${UI.esc(t('count.attendu'))}</div><div class="mid tnum">${UI.esc(UI.fmtQty(exp))}</div></div>
+        <div class="sumcol"><div class="micro">${UI.esc(t('count.compte'))}</div>
+          <div class="mid tnum cw-in ${V.buf ? 'has' : ''}">${V.buf ? UI.esc(UI.fmtQty(v ?? 0)) : (existing ? UI.esc(UI.fmtQty(existing.counted)) : '—')}</div></div>
+      </div>
+      <div data-np></div>
+      <div class="cw-actions">
+        <button class="btn btn--ghost" data-a="prev" ${V.idx === 0 ? 'disabled' : ''}>‹</button>
+        <button class="btn btn--ghost" data-a="skip">${UI.esc(t('count.skip'))}</button>
+        <button class="btn btn--gold" data-a="ok">${UI.esc(t('g.confirm'))}</button>
+      </div>`;
+    UI.numpad(el.querySelector('[data-np]'), { decimal: it.allowDecimal, onKey: k => {
+      if (k === 'del') V.buf = V.buf.slice(0, -1);
+      else if (k === 'dot') { if (!V.buf.includes('.')) V.buf = (V.buf || '0') + '.'; }
+      else if (V.buf.replace('.', '').length < 5) V.buf += k;
+      UI.refresh();
+    } });
+  }
+
+  /* ---------- review: reference frame 03 ---------- */
+  function renderReview(el, c, items) {
+    const lines = items.map(it => {
+      const l = c.lines.find(x => x.itemId === it.id);
+      return { it, exp: l ? l.expected : Store.countExpected(it.id, c.bd), cnt: l ? l.counted : null, v: l ? l.variance : null, note: l?.note || '' };
+    });
+    const withVar = lines.filter(l => l.v != null && l.v !== 0);
+    const clean = lines.filter(l => l.v === 0);
+    const missing = lines.filter(l => l.cnt == null);
+    const sumExp = Math.round(lines.reduce((a, l) => a + l.exp, 0) * 100) / 100;
+    const sumCnt = Math.round(lines.reduce((a, l) => a + (l.cnt ?? l.exp), 0) * 100) / 100;
+    const sumVar = Math.round((sumCnt - sumExp) * 100) / 100;
+    const rowHtml = l => {
+      const cat = Store.cat(l.it.catId);
+      return `<div class="trow tap" data-line="${l.it.id}">
+        <div class="tname"><span class="feedtick" style="background:${cat ? cat.hex : 'var(--t3)'}"></span><span>${UI.esc(l.it.name)}</span></div>
+        <div class="r v1 tnum">${UI.esc(UI.fmtQty(l.exp))}</div>
+        <div class="r v2 tnum">${l.cnt == null ? '—' : UI.esc(UI.fmtQty(l.cnt))}</div>
+        <div class="r d tnum ${l.v == null ? 'faint' : l.v < 0 ? 'bad' : l.v > 0 ? 'good' : 'faint'}">${l.v == null ? '—' : fmtSigned(l.v)}</div>
+      </div>${l.note ? `<div class="noterow">↳ ${UI.esc(t('count.notePrefix'))} · ${UI.esc(l.note)}</div>` : ''}`;
     };
-    disp();
-    UI.numpad(el.querySelector('[data-el=pad]'), { decimal: !!it.allowDecimal, onKey: k => { V.buf = applyKey(V.buf, k, !!it.allowDecimal); disp(); } });
-    el.addEventListener('click', e => {
-      const b = e.target.closest('[data-a]'); if (!b) return;
-      const a = b.dataset.a;
-      if (a === 'exit') { UI.haptic('light'); return UI.go('dashboard'); }   // confirm-less: count stays open
-      if (a === 'scan') {
-        return UI.scan({ onCode: code => {
-          const found = Store.findByBarcode(code);
-          const j = found ? ordered.findIndex(o => o.id === found.id) : -1;
-          if (j >= 0) { setPos(j, c, ordered); UI.haptic('light'); UI.refresh(); }
-          else { UI.haptic('warn'); UI.toast(t('count.scanMiss'), { type: 'danger' }); }
-        } });
-      }
-      if (a === 'prev') { if (V.idx > 0) { setPos(V.idx - 1, c, ordered); UI.refresh(); } return; }
-      if (a === 'skip') {
-        UI.haptic('light');
-        if (V.idx >= ordered.length - 1) { V.mode = 'review'; V.revealed = false; } else setPos(V.idx + 1, c, ordered);
-        return UI.refresh();
-      }
-      if (a === 'ok') {
-        const val = Math.round(parseFloat(V.buf) * 100) / 100;
-        if (isNaN(val)) return;
-        UI.haptic('light');
-        if (V.idx >= ordered.length - 1) { V.mode = 'review'; V.revealed = false; V.buf = ''; }
-        else setPos(V.idx + 1, c, ordered);
-        Store.setCountLine(c.id, it.id, val);   // emits → screen re-renders on updated V
-      }
-    });
-  }
-
-  /* ---------- review: the variance reveal ---------- */
-  function renderReview(el, c, ordered) {
-    const lineOf = id => c.lines.find(l => l.itemId === id);
-    const done = ordered.filter(o => lineOf(o.id)).length;
-    const missing = ordered.length - done;
-    const sum = Math.round(c.lines.reduce((s, l) => s + l.variance, 0) * 100) / 100;
-    const nonzero = c.lines.filter(l => l.variance !== 0).length;
-    const clean = missing === 0 && nonzero === 0 && ordered.length > 0;
-    const anim = !V.revealed; V.revealed = true;
-    const rows = ordered.map((it2, i) => {
-      const l = lineOf(it2.id);
-      let sub, end;
-      if (l) {
-        const parts = [`${UI.esc(UI.fmtQty(l.expected))} → ${UI.esc(UI.fmtQty(l.counted))}`];
-        if (l.autofilled) parts.push(UI.esc(t('count.autofilled')));
-        if (l.note) parts.push(UI.esc(l.note.length > 26 ? l.note.slice(0, 25) + '…' : l.note));
-        sub = parts.join(' · ');
-        end = `<span class="rev-var ${varCls(l.variance)}">${UI.esc(fmtVar(l.variance))}</span>`;
-      } else {
-        sub = `${UI.esc(t('count.expected'))} ${UI.esc(UI.fmtQty(Store.countExpected(it2.id, c.bd)))} · ${UI.esc(t('count.skipped'))}`;
-        end = `<span class="rev-var varzero">—</span>`;
-      }
-      return `<button class="row rev-row ${anim ? '' : 'no-anim'}" data-i="${i}" ${anim ? `style="animation-delay:${Math.min(i * 35, 650)}ms"` : ''}>
-        <span class="row__art">${UI.art(it2)}</span>
-        <span class="row__body"><span class="row__t">${UI.esc(it2.name)}</span><span class="row__s">${sub}</span></span>
-        <span class="row__end">${end}</span>
-      </button>`;
-    }).join('');
-    el.innerHTML = UI.header(t('count.review'), t('count.reviewHint'),
-      `<button class="iconbtn" data-a="backwalk" aria-label="${UI.esc(t('g.back'))}">${UI.icon('chevL')}</button>
-       <button class="iconbtn" data-a="exit" aria-label="${UI.esc(t('g.close'))}">${UI.icon('x')}</button>`) + `
-      <div class="card" style="padding:6px 16px">${rows}</div>
-      ${clean ? `
-      <div class="card card--gold mt3" style="text-align:center;padding:24px 16px">
-        <span class="cnt-spark">${UI.icon('sparkles')}</span>
-        <h2 style="font-size:20px;margin-top:8px">${UI.esc(t('count.clean'))}</h2>
-        <p style="color:var(--text-2);font-size:13.5px;margin-top:4px">${UI.esc(t('count.cleanSub'))}</p>
-      </div>` : `
-      <div class="card mt3">
-        <div class="card__head" style="margin-bottom:6px">
-          <span class="card__title">${UI.esc(t('count.varTotal'))}</span>
-          <span class="rev-var ${varCls(sum)}" style="font-size:22px">${UI.esc(fmtVar(sum))}</span>
-        </div>
-        <div class="tt">${UI.esc(nonzero ? t('dash.varianceIssues', { n: nonzero }) : t('dash.varianceClean'))}</div>
-        ${missing ? `<div class="tt mt2 cnt-alert">${UI.icon('alert')}<span>${UI.esc(I18N.plural('count.missing', missing))}</span></div>` : ''}
-      </div>`}
-      <button class="btn btn--gold btn--big btn--full mt4" data-a="close">${UI.icon('check')} ${UI.esc(t('count.closeDay'))}</button>`;
-    el.addEventListener('click', async e => {
-      const b = e.target.closest('[data-a],[data-i]'); if (!b) return;
-      const a = b.dataset.a;
-      if (a === 'exit') { UI.haptic('light'); return UI.go('dashboard'); }
-      if (a === 'backwalk') { setPos(ordered.length - 1, c, ordered); return UI.refresh(); }
-      if (a === 'close') {
-        const ok = await UI.confirm(t('count.closeConfirm'), { title: t('count.closeDay'), yes: t('count.closeDay') });
-        if (!ok) return;
-        const closed = Store.closeCount(c.id);
-        if (closed) { V.closedId = closed.id; V.countId = null; V.mode = null; showCloseMoment(); }
-        return;
-      }
-      if (b.dataset.i !== undefined) openLineSheet(c.id, ordered[+b.dataset.i]);
-    });
-  }
-
-  /* ---------- done state: day closed ---------- */
-  function renderDone(el, cc) {
-    const nonzero = cc.lines.filter(l => l.variance !== 0).length;
-    const sum = Math.round(cc.lines.reduce((s, l) => s + l.variance, 0) * 100) / 100;
-    el.innerHTML = UI.header(t('count.title')) + `
-      <div class="cd-wrap grow">
-        <div class="cd-check">${UI.icon('check')}</div>
-        <h1 style="font-size:24px;margin-top:10px">${UI.esc(t('count.closed'))}</h1>
-        <div style="color:var(--text-2);font-size:14px">${UI.esc(UI.fmtDate(cc.bd, { weekday: 'long', day: 'numeric', month: 'long' }))}</div>
-        <div style="font-size:13.5px">
-          ${nonzero
-            ? `<span class="num ${varCls(sum)}" style="font-weight:700">${UI.esc(fmtVar(sum))}</span> <span style="color:var(--text-2)">· ${UI.esc(t('dash.varianceIssues', { n: nonzero }))}</span>`
-            : `<span style="color:var(--ok);font-weight:600">${UI.esc(t('dash.varianceClean'))}</span>`}
-        </div>
-        ${cc.closedBy ? `<div class="tt">${UI.esc(t('sell.by', { name: cc.closedBy }))}${cc.closedAt ? ' · ' + UI.esc(UI.fmtTime(cc.closedAt)) : ''}</div>` : ''}
-        <div style="width:100%;max-width:340px;display:flex;flex-direction:column;gap:10px;margin-top:var(--s6)">
-          <button class="btn btn--gold btn--big btn--full" data-a="report">${UI.icon('calendar')} ${UI.esc(t('count.viewReport'))}</button>
-          ${cc.isOpening ? '' : `<button class="btn btn--ghost btn--full" data-a="reopen">${UI.esc(t('count.reopen'))}</button>`}
-        </div>
+    el.innerHTML = `
+      <div class="topbar">
+        <button class="back" data-a="backwalk">‹ ${UI.esc(t('count.title'))}</button>
+        <div class="micro tnum">${UI.esc(UI.fmtDate(c.bd))}</div>
+      </div>
+      <div class="h1">${UI.esc(t('count.h1'))}</div>
+      <div class="sum">
+        <div class="sumcol"><div class="micro">${UI.esc(t('count.attendu'))}</div><div class="mid tnum">${UI.esc(UI.fmtQty(sumExp))}</div></div>
+        <div class="sumcol"><div class="micro">${UI.esc(t('count.compte'))}</div><div class="mid tnum">${UI.esc(UI.fmtQty(sumCnt))}</div></div>
+        <div class="sumcol"><div class="micro">${UI.esc(t('count.ecart'))}</div><div class="mid tnum ${sumVar < 0 ? 'bad' : sumVar > 0 ? 'good' : 'faint'}">${fmtSigned(sumVar)}</div></div>
+      </div>
+      ${missing.length ? `<div class="sub2">${UI.esc(I18N.plural('count.missing', missing.length))}</div>` : ''}
+      <div class="thead"><div>${UI.esc(t('count.article'))}</div><div class="r">${UI.esc(t('count.att'))}</div><div class="r">${UI.esc(t('count.cpt'))}</div><div class="r">${UI.esc(t('count.ecart'))}</div></div>
+      ${withVar.map(rowHtml).join('')}
+      ${clean.length ? `<button class="grouprow" data-a="toggleclean">
+        <span class="micro">${UI.esc(I18N.plural('count.noVar', clean.length))}</span><span class="chev">${V.showClean ? '⌄' : '›'}</span>
+      </button>` : ''}
+      ${V.showClean ? clean.map(rowHtml).join('') : ''}
+      <div class="bottomstack">
+        <button class="btn btn--gold" data-a="close">${UI.esc(t('count.closeDay'))}</button>
+        <button class="textbtn" data-a="pdf">${UI.esc(t('count.exportPdf'))}</button>
       </div>`;
-    el.addEventListener('click', async e => {
-      const b = e.target.closest('[data-a]'); if (!b) return;
-      if (b.dataset.a === 'report') return UI.go('reports', { day: cc.bd });
-      if (b.dataset.a === 'reopen') {
-        const ok = await UI.confirm(t('count.reopenWarn'), { danger: true, title: t('count.reopen'), yes: t('count.reopen') });
-        if (ok && Store.reopenCount(cc.id)) { V.countId = null; V.closedId = null; UI.haptic('warn'); }
-      }
-    });
   }
 
-  /* ---------- register ---------- */
+  function exportPdf(c, items) {
+    const lines = items.map(it => {
+      const l = c.lines.find(x => x.itemId === it.id);
+      return { name: it.name, exp: l ? l.expected : Store.countExpected(it.id, c.bd), cnt: l ? l.counted : '', v: l ? l.variance : '', note: l?.note || '' };
+    });
+    const rows = lines.map(l => `<tr><td>${UI.esc(l.name)}</td><td style="text-align:right">${UI.esc(UI.fmtQty(l.exp))}</td><td style="text-align:right">${l.cnt === '' ? '' : UI.esc(UI.fmtQty(l.cnt))}</td><td style="text-align:right" class="${l.v < 0 ? 'neg' : l.v > 0 ? 'pos' : ''}">${l.v === '' ? '' : fmtSigned(l.v)}</td><td>${UI.esc(l.note)}</td></tr>`).join('');
+    UI.printHTML(`${t('count.h1')} — ${UI.fmtDate(c.bd)}`,
+      `<table><thead><tr><th>${UI.esc(t('count.article'))}</th><th style="text-align:right">${UI.esc(t('count.attendu'))}</th><th style="text-align:right">${UI.esc(t('count.compte'))}</th><th style="text-align:right">${UI.esc(t('count.ecart'))}</th><th>${UI.esc(t('count.note'))}</th></tr></thead><tbody>${rows}</tbody></table>`);
+  }
+
   UI.registerScreen({
     id: 'count',
     render(el) {
-      ensureStyle();
-      if (!Store.isOwner) return renderLocked(el);
-      const st = Store.state, today = Store.todayBd();
-      const ordered = orderedItems();
-      const closedToday = st.counts.find(c => c.status === 'closed' && !c.isOpening && c.bd === today)
-        || (V.closedId ? st.counts.find(c => c.id === V.closedId && c.status === 'closed') : null);
-      const open = st.counts.find(c => c.status === 'open');
-      if (closedToday && !open) return renderDone(el, closedToday);        // (a) day already closed
-      if (open) {                                                          // (b) resume where left
-        if (!ordered.length) return renderNoItems(el);
-        if (V.countId !== open.id) {
-          V.countId = open.id; V.closedId = null; V.revealed = false;
-          const fi = ordered.findIndex(o => !open.lines.some(l => l.itemId === o.id));
-          if (fi === -1) { V.mode = 'review'; V.idx = ordered.length - 1; V.buf = ''; }
-          else setPos(fi, open, ordered);
+      if (!Store.isOwner) { UI.go(Store.state.session ? 'sell' : 'login'); return; }
+      const items = orderedItems();
+      const c = openCount();
+      if (!c) V.mode = 'entry';
+      if (V.mode === 'walk' && c) renderWalk(el, c, items);
+      else if (V.mode === 'review' && c) renderReview(el, c, items);
+      else renderEntry(el);
+
+      el.addEventListener('click', async e => {
+        const lineEl = e.target.closest('[data-line]');
+        if (lineEl && c) { const item = Store.item(lineEl.dataset.line); if (item) lineSheet(c, item); return; }
+        const b = e.target.closest('[data-a]');
+        if (!b) return;
+        const a = b.dataset.a;
+        if (a === 'back') UI.go('dashboard');
+        else if (a === 'report') UI.go('reports', { day: Store.todayBd() });
+        else if (a === 'reopen') {
+          const closedToday = Store.state.counts.find(x => x.bd === Store.todayBd() && x.status === 'closed');
+          if (closedToday && await UI.confirm(t('count.reopenWarn'), { danger: true })) {
+            Store.reopenCount(closedToday.id);
+            V.mode = 'review'; V.buf = '';
+            UI.refresh();
+          }
         }
-        if (V.idx >= ordered.length) V.idx = ordered.length - 1;
-        if (V.mode === 'review') return renderReview(el, open, ordered);
-        return renderWalk(el, open, ordered);
+        else if (a === 'start') {
+          const oc = Store.openCount();
+          V.mode = 'walk'; V.buf = '';
+          V.idx = items.findIndex(it => !oc.lines.some(l => l.itemId === it.id));
+          if (V.idx === -1) V.mode = 'review';
+          UI.refresh();
+        }
+        else if (a === 'exit') { V.mode = 'entry'; V.buf = ''; UI.refresh(); }
+        else if (a === 'scan') {
+          UI.scan({ onCode: code => {
+            const item = Store.findByBarcode(code);
+            const i2 = items.findIndex(x => x.id === item?.id);
+            if (i2 >= 0) { V.idx = i2; V.buf = ''; UI.haptic('success'); UI.refresh(); }
+            else UI.toast(t('sell.noresults'), { type: 'danger' });
+          } });
+        }
+        else if (a === 'prev') { if (V.idx > 0) { V.idx--; V.buf = ''; UI.refresh(); } }
+        else if (a === 'skip') { advance(items); }
+        else if (a === 'ok') {
+          const it = items[V.idx];
+          const v = parseBuf(V.buf);
+          if (v != null && c) Store.setCountLine(c.id, it.id, v);
+          advance(items, v != null);
+        }
+        else if (a === 'backwalk') { V.mode = 'walk'; V.idx = Math.max(0, items.length - 1); V.buf = ''; UI.refresh(); }
+        else if (a === 'toggleclean') { V.showClean = !V.showClean; UI.refresh(); }
+        else if (a === 'pdf') { if (c) exportPdf(c, items); }
+        else if (a === 'close') {
+          if (!c) return;
+          if (await UI.confirm(t('count.reviewHint'), { title: t('count.closeDay'), yes: t('count.closeDay') })) {
+            Store.closeCount(c.id);
+            V.mode = 'entry'; V.buf = ''; V.showClean = false;
+            ceremony(el);
+          }
+        }
+      });
+
+      function advance(items2, counted) {
+        V.buf = '';
+        if (V.idx >= items2.length - 1) { V.mode = 'review'; }
+        else V.idx++;
+        if (counted) UI.haptic('light');
+        UI.refresh();
       }
-      if (!ordered.length) return renderNoItems(el);                       // nothing to count yet
-      renderStart(el, ordered, today);                                     // (c) start card
     },
   });
 })();

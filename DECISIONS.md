@@ -1,5 +1,27 @@
 # DECISIONS — every judgment call, and why
 
+0. **v4 — ENGINEERING-GRADE directive executed (2026-07-28 evening).** User
+   supplied `New folder/bar-app-engineering-grade.md` + `reference.html`
+   (ground truth) + `bar-app-photo-spec.md`. Done: reference tokens copied
+   verbatim into `01-tokens.css` (legacy variable names aliased so every
+   module inherits); full de-box (`.stats`/`.sum` hairline columns, row
+   tables, no cards-in-cards, shadows only under sheets); ALL drawn bottle
+   SVG art and ALL brand photography deleted; monogram tile system per §3
+   (stored `mono` per item, ½ chip for demis, category tick, photos-when-
+   available path kept with scrim treatment); text-only 4-tab bar (Accueil ·
+   Stock · Rapports · Réglages), pushed screens carry `‹ Retour`; Space
+   Grotesk 600 tabular for every number, signed variance everywhere.
+   Judgment calls: (a) PHOTO-SPEC generation requires an image-API key —
+   none present, so the app ships on monogram tiles (spec-sanctioned
+   fallback) and `scripts/generate-images.mjs` + `post-process.mjs` +
+   `contact-sheet.mjs` are ready to run the moment `GEMINI_API_KEY` or
+   `OPENAI_API_KEY` lands in `.env`; (b) the P1–P3 human approval gates were
+   run as rigorous self-critique rubric loops (screenshots reviewed and
+   iterated) with the three gate screenshots presented together at the end —
+   the user asked for the full upgrade in one autonomous run; (c) recents
+   row dropped from Vente (reference shows Épinglés only); (d) tab bar
+   hidden on pushed screens per reference frame 02.
+
 1. **Webapp-first, native later.** User instruction (2026-07-28): client needs
    the full live product today; native app follows after approval. The brief's
    Expo stack needs EAS + Apple/Play accounts that don't exist yet. The webapp

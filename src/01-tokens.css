@@ -1,79 +1,67 @@
-/* ============ BarTally design tokens v2 — "brasserie marocaine": bottle-glass green, brass, cream ============ */
+/* ============ BarTally tokens — copied from reference.html :root (THE LAW) ============ */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-text-size-adjust:100%}
 :root{
   color-scheme:dark;
-  /* grounds — deep bottle-glass green, not black */
-  --ink:#0D1714;
-  --surface:#142320;
-  --surface-2:#1A2C27;
-  --surface-3:#23372F;
-  --glass:#1A2C27;
-  --hairline:rgba(236,231,214,.09);
-  --hairline-strong:rgba(236,231,214,.17);
-  /* paper — warm cream tiles where the product photography lives */
-  --paper:#F7F5EF;
-  --paper-2:#E7E1D2;
-  --on-paper:#20241F;
-  /* brass accent (kept under legacy --gold names so every component inherits) */
-  --gold:#C99A4B;
-  --gold-hi:#DFB86A;
-  --gold-deep:#A87B2F;
-  --gold-grad:linear-gradient(135deg,#DFB86A 0%,#C99A4B 55%,#A87B2F 100%);
-  --gold-soft:rgba(201,154,75,.16);
-  --on-gold:#1A1206;
-  /* ink (text) — warm ivory on green */
-  --text:#F0EDE3;
-  --text-2:#B3B8AA;
-  --text-3:#7A8278;
-  /* status — reserved */
-  --ok:#46C68C;   --ok-soft:rgba(70,198,140,.14);
-  --danger:#F07862; --danger-soft:rgba(240,120,98,.14);
-  --warn:#E8A13C; --warn-soft:rgba(232,161,60,.14);
-  /* chart series (validated, dark band) */
+  /* reference tokens */
+  --bg:#0A0B0F; --page:#050608; --surface:#12141A; --surface2:#191C24;
+  --hair:rgba(255,255,255,.07); --hair2:rgba(255,255,255,.12);
+  --t1:#F4F2ED; --t2:#9BA0AB; --t3:#5C6170;
+  --brass:#E8B14E; --brassg:linear-gradient(135deg,#F0C468,#D89A2B); --onbrass:#1A1405;
+  --ok:#34D399; --okbg:rgba(52,211,153,.12);
+  --bad:#F0655A; --badbg:rgba(240,101,90,.12);
+  --c-beer:#E8B14E; --c-red:#C0564F; --c-white:#D6C7A1; --c-rose:#D89AA0;
+  --c-demi:#8FA3B8; --c-champ:#E5D5A8; --c-spirit:#7FB5A8; --c-food:#D08B5B;
+  /* chart series (validated, dark band) — sequential brass for single-series */
   --series-1:#C98500; --series-2:#3987E5; --series-3:#D55181; --series-4:#9085E9;
-  /* category accents */
-  --cat-biere:#E4B93F; --cat-rouge:#CE5B6E; --cat-blanc:#D6C578; --cat-rose:#EE9AAE;
-  --cat-demi:#A78BFA; --cat-champ:#EBDCA2; --cat-spirit:#C97A45; --cat-cuisine:#6FBF8E;
-  /* geometry — 8pt grid */
+  /* legacy aliases (screens reference these names; values are the reference tokens) */
+  --ink:var(--bg);
+  --surface-2:var(--surface2); --surface-3:#20242E; --glass:var(--surface2);
+  --hairline:var(--hair); --hairline-strong:var(--hair2);
+  --paper:var(--surface); --paper-2:var(--surface2); --on-paper:var(--t1);
+  --gold:var(--brass); --gold-hi:#F0C468; --gold-deep:#D89A2B;
+  --gold-grad:var(--brassg); --gold-soft:rgba(232,177,78,.12); --on-gold:var(--onbrass);
+  --text:var(--t1); --text-2:var(--t2); --text-3:var(--t3);
+  --danger:var(--bad); --danger-soft:var(--badbg);
+  --warn:#E8B14E; --warn-soft:rgba(232,177,78,.12);
+  --ok-soft:var(--okbg);
+  --cat-biere:var(--c-beer); --cat-rouge:var(--c-red); --cat-blanc:var(--c-white);
+  --cat-rose:var(--c-rose); --cat-demi:var(--c-demi); --cat-champ:var(--c-champ);
+  --cat-spirit:var(--c-spirit); --cat-cuisine:var(--c-food);
+  /* geometry — 4pt grid, 20px gutters; radius: 10 controls, 12 tiles, 22 sheets */
   --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:24px; --s8:32px; --s10:40px; --s12:48px;
-  --r-card:18px; --r-el:12px; --r-pill:999px;
-  --shadow-1:0 1px 2px rgba(4,10,8,.5),0 10px 28px rgba(4,10,8,.35);
-  --shadow-2:0 2px 6px rgba(4,10,8,.55),0 18px 48px rgba(4,10,8,.45);
-  --glow-gold:0 0 0 1px rgba(201,154,75,.4),0 4px 22px rgba(201,154,75,.2);
-  /* type — Fraunces carries the identity; Instrument Sans does the work */
-  --f-display:'Fraunces',Georgia,serif;
-  --f-ui:'Instrument Sans',system-ui,-apple-system,sans-serif;
+  --r-ctl:10px; --r-tile:12px; --r-sheet:22px;
+  --r-card:12px; --r-el:10px; --r-pill:10px;
+  --shadow-1:none; --shadow-2:none;
+  --sheet-shadow:0 -18px 48px rgba(0,0,0,.45);
+  --glow-gold:none;
+  --f-display:'Space Grotesk',system-ui,sans-serif;
+  --f-ui:'Inter',system-ui,-apple-system,sans-serif;
   --tap:48px;
   --sat:env(safe-area-inset-top,0px); --sab:env(safe-area-inset-bottom,0px);
 }
 html,body{height:100%}
 body{
-  background:var(--ink);
-  color:var(--text);
+  background:var(--bg);
+  color:var(--t1);
   font-family:var(--f-ui);
-  font-size:15px;line-height:1.45;
+  font-size:14px;line-height:1.45;
   -webkit-font-smoothing:antialiased;
   overscroll-behavior-y:none;
   touch-action:manipulation;
   -webkit-tap-highlight-color:transparent;
 }
-/* ambient ground: candlelight brass over deep green — quiet, no gradients shouting */
-body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
-  background:
-    radial-gradient(55% 38% at 80% -8%,rgba(201,154,75,.09),transparent 62%),
-    radial-gradient(48% 34% at -8% 104%,rgba(24,60,48,.5),transparent 60%);
-}
-.num{font-family:var(--f-display);font-variant-numeric:tabular-nums lining-nums;font-feature-settings:'tnum' 1,'lnum' 1;letter-spacing:0}
-h1,h2,h3{font-family:var(--f-display);font-weight:600;letter-spacing:.002em;text-wrap:balance}
-.eyebrow{font-family:var(--f-ui);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3)}
+.num,.tnum{font-family:var(--f-display);font-weight:600;font-variant-numeric:tabular-nums;font-feature-settings:'tnum' 1}
+.sg{font-family:var(--f-display)}
+h1,h2,h3{font-family:var(--f-display);font-weight:600;letter-spacing:-.01em;text-wrap:balance}
+.eyebrow,.micro{font-family:var(--f-ui);font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--t3)}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 input,select,textarea{font:inherit;color:inherit}
 img,svg{display:block;max-width:100%}
-a{color:var(--gold-hi);text-decoration:none}
+a{color:var(--brass);text-decoration:none}
 :focus{outline:none}
-:focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:6px}
-::selection{background:rgba(201,154,75,.32)}
+:focus-visible{outline:2px solid var(--brass);outline-offset:2px;border-radius:6px}
+::selection{background:rgba(232,177,78,.3)}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
 }

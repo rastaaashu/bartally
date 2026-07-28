@@ -65,109 +65,49 @@ const UI = (() => {
   };
   const icon = (name, cls) => `<svg class="${cls || ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${P[name] || P.more}"/></svg>`;
 
-  /* ---------- item art: parametric bottles/plates, unified treatment ---------- */
-  function shade(hex, f) { // f -1..1
-    const n = parseInt(hex.slice(1), 16);
-    let r = n >> 16, g = (n >> 8) & 255, b = n & 255;
-    if (f >= 0) { r += (255 - r) * f; g += (255 - g) * f; b += (255 - b) * f; }
-    else { r *= 1 + f; g *= 1 + f; b *= 1 + f; }
-    return '#' + [r, g, b].map(v => Math.round(v).toString(16).padStart(2, '0')).join('');
-  }
-  const ART = {
-    // [neckW, neckH, shoulderH, bodyW, bodyH, capH, capColor|null(=gold), labelY, labelH, squareness]
-    beer:      [10, 22, 10, 26, 52, 6, '#C9A227', 58, 22, .35],
-    can:       [0, 0, 0, 30, 62, 0, null, 40, 26, .9],
-    wine:      [9, 30, 12, 26, 46, 9, null, 60, 24, .3],
-    'wine-w':  [9, 30, 12, 26, 46, 9, null, 60, 24, .3],
-    'wine-r':  [9, 30, 12, 26, 46, 9, null, 60, 24, .3],
-    half:      [8, 20, 9, 22, 34, 7, null, 52, 18, .3],
-    'half-w':  [8, 20, 9, 22, 34, 7, null, 52, 18, .3],
-    'half-r':  [8, 20, 9, 22, 34, 7, null, 52, 18, .3],
-    champagne: [10, 24, 16, 30, 44, 12, '#C9A227', 60, 22, .45],
-    'whisky-sq': [11, 16, 8, 32, 54, 8, '#1A1A1A', 48, 26, .8],
-    vodka:     [10, 20, 6, 24, 60, 8, '#D8DEE4', 46, 30, .5],
-    gin:       [11, 16, 12, 30, 50, 8, '#1E5438', 50, 26, .6],
-    pastis:    [10, 14, 10, 30, 54, 8, '#6A4A14', 48, 26, .55],
-    tequila:   [10, 18, 8, 26, 52, 8, '#7A6A24', 50, 24, .5],
-    herbal:    [12, 12, 8, 32, 56, 9, '#0E2A0C', 46, 28, .75],
-    cognac:    [10, 20, 14, 32, 44, 8, '#2A160A', 56, 22, .5],
-    vermouth:  [10, 22, 8, 26, 56, 8, '#8A8A4A', 48, 28, .5],
-  };
+  /* ---------- item visuals: photo (owner/generated) inside the standard tile
+     treatment, monogram tile as the automatic fallback. No drawn art, ever. ---------- */
   const HEX_OK = /^#[0-9a-fA-F]{6}$/;
-  function art(item, cls) {
-    const id = 'g' + (gradSeq++);
+  /** 2–4 significant chars; dot style for two-word names; accents kept */
+  function deriveMono(name) {
+    const clean = String(name).replace(/^1\/2\s+/, '').trim();
+    const words = clean.split(/\s+/).filter(w => /[A-Za-zÀ-ÿ]/.test(w));
+    if (words.length >= 2) return (words[0][0] + '.' + words[1][0]).toUpperCase();
+    return clean.replace(/[^A-Za-zÀ-ÿ]/g, '').slice(0, 3).toUpperCase();
+  }
+  /**
+   * Item visual, reference anatomy. Fills its container (.icard__art / .row__art / .tile).
+   * Photo (owner camera or generated catalog) → cover image + bottom scrim + category tick.
+   * Otherwise → monogram in the category accent + tick. opts.qty renders the tabular corner qty.
+   */
+  function art(item, cls, opts = {}) {
     const cat = Store.cat(item.catId);
-    const vig = cat && HEX_OK.test(cat.hex) ? cat.hex : '#F5A623';
-    let { g, l } = item.tint || {};
-    if (!HEX_OK.test(g || '')) g = '#3B1420';
-    if (!HEX_OK.test(l || '')) l = '#E2D5BD';
-    let inner = '';
-    const spec = ART[item.art];
-    // photos only ever come from the in-app camera/gallery pipeline; anything else
-    // (e.g. a tampered backup file) is refused so it can't smuggle markup
-    if (item.photo && String(item.photo).startsWith('data:image/')) {
-      return `<div class="itemart ${cls || ''}"><img src="${esc(item.photo)}" alt="${esc(item.name)}" loading="lazy"></div>`;
+    const color = (cat && HEX_OK.test(cat.hex)) ? cat.hex : 'var(--brass)';
+    const mono = item.mono || deriveMono(item.name);
+    const half = item.isDemi ? `<span class="mono--half">½</span>` : '';
+    const tick = `<span class="tick" style="background:${color}"></span>`;
+    const qty = opts.qty != null ? `<span class="tqty">${esc(opts.qty)}</span>` : '';
+    const photo = (item.photo && String(item.photo).startsWith('data:image/')) ? item.photo
+      : (typeof ITEM_PHOTOS !== 'undefined' && ITEM_PHOTOS[item.name]) ? ITEM_PHOTOS[item.name] : null;
+    if (photo) {
+      return `<div class="itemart ${cls || ''}"><img src="${esc(photo)}" alt="${esc(item.name)}" loading="lazy"><span class="scrim"></span>${tick}${half}${qty}</div>`;
     }
-    // real product photography bundled at build time (curated, licensed sources)
-    const stockPhoto = (typeof ITEM_PHOTOS !== 'undefined') ? ITEM_PHOTOS[item.name] : null;
-    if (stockPhoto) {
-      return `<div class="itemart ${cls || ''}"><img src="${stockPhoto}" alt="${esc(item.name)}" loading="lazy"></div>`;
-    }
-    if (spec) {
-      const [nw, nh, sh, bw, bh, capH, capC, labelY, labelH, sq] = spec;
-      const cx = 50, top = 118 - bh - sh - nh - capH;
-      const bodyX = cx - bw / 2, bodyY = 118 - bh;
-      const r = 4 + sq * 4;
-      if (item.art === 'can') {
-        inner = `
-          <rect x="${cx - 15}" y="52" width="30" height="62" rx="7" fill="url(#${id}b)"/>
-          <rect x="${cx - 15}" y="52" width="30" height="6" rx="3" fill="${shade(g, .35)}"/>
-          <rect x="${cx - 13.4}" y="${52 + 40}" width="26.8" height="18" fill="${l}" opacity=".92"/>
-          <rect x="${cx - 6}" y="56" width="3.4" height="54" rx="1.7" fill="#fff" opacity=".16"/>`;
-      } else {
-        const neck = nh ? `<rect x="${cx - nw / 2}" y="${top + capH}" width="${nw}" height="${nh + 2}" fill="url(#${id}b)"/>` : '';
-        const capCol = capC || '#C9A227';
-        const cap = capH ? `<rect x="${cx - nw / 2 - 1.4}" y="${top}" width="${nw + 2.8}" height="${capH}" rx="2" fill="${capCol}"/><rect x="${cx - nw / 2 - 1.4}" y="${top}" width="${nw + 2.8}" height="${capH * .45}" rx="2" fill="#fff" opacity=".18"/>` : '';
-        const shoulder = `<path d="M${cx - nw / 2} ${top + capH + nh} C ${cx - nw / 2} ${top + capH + nh + sh * .8}, ${bodyX} ${bodyY - sh * .6}, ${bodyX} ${bodyY} L ${bodyX} ${bodyY} ${cx + nw / 2} ${top + capH + nh} C ${cx + nw / 2} ${top + capH + nh + sh * .8}, ${bodyX + bw} ${bodyY - sh * .6}, ${bodyX + bw} ${bodyY} Z" fill="url(#${id}b)"/>
-          <path d="M${bodyX} ${bodyY - 1} h${bw}" stroke="url(#${id}b)" stroke-width="2"/>`;
-        const body = `<rect x="${bodyX}" y="${bodyY - 2}" width="${bw}" height="${bh + 2}" rx="${r}" fill="url(#${id}b)"/>`;
-        const label = `<rect x="${bodyX + 2.4}" y="${labelY}" width="${bw - 4.8}" height="${labelH}" rx="2.5" fill="${l}" opacity=".95"/>
-          <rect x="${bodyX + 2.4}" y="${labelY + labelH * .42}" width="${bw - 4.8}" height="1.6" fill="${shade(l, -.35)}" opacity=".7"/>`;
-        const gloss = `<rect x="${bodyX + 3.2}" y="${bodyY + 3}" width="3.6" height="${bh - 8}" rx="1.8" fill="#fff" opacity=".14"/>`;
-        inner = neck + shoulder + body + cap + label + gloss;
-      }
-    } else {
-      // kitchen: plate + glyph
-      const glyphs = {
-        cheese: `<path d="M32 76 68 62 74 84 H30 Z" fill="${l}"/><circle cx="48" cy="74" r="2.6" fill="${shade(l, -.3)}"/><circle cx="60" cy="76" r="2.2" fill="${shade(l, -.3)}"/><circle cx="54" cy="68" r="1.8" fill="${shade(l, -.3)}"/>`,
-        meat: `<ellipse cx="52" cy="74" rx="20" ry="12" fill="${g}"/><ellipse cx="52" cy="71" rx="18" ry="9" fill="${shade(g, .18)}"/>`,
-        liver: `<path d="M34 76 q4 -14 20 -12 q16 2 14 12 q-2 10 -18 9 q-14 -1 -16 -9Z" fill="${g}"/><path d="M40 72 q8 -5 20 -2" stroke="${shade(g, .3)}" stroke-width="2" fill="none"/>`,
-        brain: `<ellipse cx="52" cy="73" rx="17" ry="11" fill="${l}"/><path d="M40 70 q4 -5 8 0 q4 5 8 0 q4 -5 8 0" stroke="${shade(g, -.1)}" stroke-width="2" fill="none"/>`,
-        pizza: `<circle cx="52" cy="73" r="16" fill="${l}"/><circle cx="52" cy="73" r="13" fill="${shade(g, .35)}"/><circle cx="47" cy="69" r="2.4" fill="#B4262A"/><circle cx="57" cy="72" r="2.4" fill="#B4262A"/><circle cx="51" cy="78" r="2.4" fill="#B4262A"/>`,
-      };
-      inner = `<ellipse cx="52" cy="88" rx="30" ry="8" fill="#fff" opacity=".07"/><ellipse cx="52" cy="84" rx="26" ry="9" fill="${shade('#14141B', .12)}" stroke="rgba(255,255,255,.14)"/>${glyphs[item.art] || glyphs.cheese}`;
-    }
-    return `<svg class="itemart ${cls || ''}" viewBox="0 0 100 120" role="img" aria-label="${esc(item.name)}">
-      <defs>
-        <linearGradient id="${id}b" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0" stop-color="${shade(g, -.25)}"/><stop offset=".38" stop-color="${shade(g, .22)}"/><stop offset=".62" stop-color="${g}"/><stop offset="1" stop-color="${shade(g, -.4)}"/>
-        </linearGradient>
-      </defs>
-      <ellipse cx="50" cy="112" rx="24" ry="4" fill="#4A3A18" opacity=".16"/>
-      ${inner}
-    </svg>`;
+    return `<div class="itemart ${cls || ''}" role="img" aria-label="${esc(item.name)}">${tick}${half}<span class="mono" style="color:${color}">${esc(mono)}</span>${qty}</div>`;
   }
 
-  /* ---------- logo mark: five tally strokes, fifth in gold ---------- */
+  /* ---------- logo mark: reference construction — 4 upright strokes + brass diagonal ---------- */
   function logoMark(size) {
     const id = 'lg' + (gradSeq++);
-    return `<svg class="logo__mark" style="width:${size || 38}px;height:${size || 38}px" viewBox="0 0 48 48" role="img" aria-label="BarTally">
-      <defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DFB86A"/><stop offset="1" stop-color="#A87B2F"/></linearGradient></defs>
-      <rect width="48" height="48" rx="13" fill="#142320" stroke="rgba(255,255,255,.1)"/>
-      <g stroke="#EDEDF2" stroke-width="3.2" stroke-linecap="round">
-        <path d="M14 14v20M21 14v20M28 14v20M35 14v20"/>
-      </g>
-      <path d="M10 31 39 17" stroke="url(#${id})" stroke-width="3.6" stroke-linecap="round"/>
+    const w = size || 26, h = Math.round(w * 22 / 30);
+    return `<svg class="logo__mark" viewBox="0 0 30 22" width="${w}" height="${h}" fill="none" stroke-linecap="round" role="img" aria-label="BarTally">
+      <defs><linearGradient id="${id}" x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0" stop-color="#D89A2B"/><stop offset="1" stop-color="#F0C468"/>
+      </linearGradient></defs>
+      <line x1="4" y1="3" x2="4" y2="19" stroke="#F4F2ED" stroke-width="2.4"/>
+      <line x1="10" y1="3" x2="10" y2="19" stroke="#F4F2ED" stroke-width="2.4"/>
+      <line x1="16" y1="3" x2="16" y2="19" stroke="#F4F2ED" stroke-width="2.4"/>
+      <line x1="22" y1="3" x2="22" y2="19" stroke="#F4F2ED" stroke-width="2.4"/>
+      <line x1="1" y1="17" x2="26" y2="4" stroke="url(#${id})" stroke-width="2.6"/>
     </svg>`;
   }
 
@@ -328,19 +268,19 @@ const UI = (() => {
     document.body.appendChild(f);
     f.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)}</title>
       <style>
-        body{font-family:Segoe UI,system-ui,sans-serif;color:#151519;margin:32px;font-size:13px}
-        h1{font-size:20px;margin:0 0 2px} .sub{color:#777;font-size:12px;margin-bottom:18px}
+        body{font-family:Inter,Segoe UI,system-ui,sans-serif;color:#15161A;margin:36px;font-size:12.5px}
+        h1{font-size:19px;margin:0 0 2px;letter-spacing:-.01em} .sub{color:#8A8F98;font-size:11px;margin-bottom:18px}
         table{width:100%;border-collapse:collapse;margin:10px 0 22px}
-        th{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#888;text-align:left;padding:6px 8px;border-bottom:2px solid #e8c87a}
-        td{padding:6px 8px;border-bottom:1px solid #eee;font-variant-numeric:tabular-nums}
-        .neg{color:#C0392B;font-weight:600}.pos{color:#1E8E5A}
-        .brand{display:flex;align-items:center;gap:10px;margin-bottom:20px;padding-bottom:14px;border-bottom:3px solid #C99A4B}
-        .brand b{font-size:16px} h2{font-size:14px;margin:18px 0 4px}
-        .kpis{display:flex;gap:26px;margin:14px 0}.kpis div b{display:block;font-size:19px}
-        .kpis div span{font-size:11px;color:#888}
+        th{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:#8A8F98;text-align:left;padding:7px 8px;border-bottom:1px solid #D9DBDF}
+        td{padding:7px 8px;border-bottom:1px solid #ECEDEF;font-variant-numeric:tabular-nums}
+        .neg{color:#C2483E;font-weight:600}.pos{color:#1E8E5A;font-weight:600}
+        .brand{display:flex;align-items:center;gap:10px;margin-bottom:22px;padding-bottom:14px;border-bottom:1px solid #D9DBDF}
+        .brand b{font-size:15px} h2{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:#8A8F98;margin:20px 0 4px}
+        .kpis{display:flex;gap:32px;margin:14px 0}.kpis div b{display:block;font-size:19px;font-variant-numeric:tabular-nums}
+        .kpis div span{font-size:10px;color:#8A8F98;text-transform:uppercase;letter-spacing:.07em}
       </style></head><body>
-      <div class="brand"><svg width="34" height="34" viewBox="0 0 48 48"><rect width="48" height="48" rx="13" fill="#142320"/><g stroke="#EDEDF2" stroke-width="3.2" stroke-linecap="round"><path d="M14 14v20M21 14v20M28 14v20M35 14v20"/></g><path d="M10 31 39 17" stroke="#C99A4B" stroke-width="3.6" stroke-linecap="round"/></svg>
-      <div><b>${esc(Store.state.settings.barName || 'BarTally')}</b><div style="color:#999;font-size:11px">${esc(title)}</div></div></div>
+      <div class="brand"><svg width="30" height="22" viewBox="0 0 30 22" fill="none" stroke-linecap="round"><line x1="4" y1="3" x2="4" y2="19" stroke="#15161A" stroke-width="2.4"/><line x1="10" y1="3" x2="10" y2="19" stroke="#15161A" stroke-width="2.4"/><line x1="16" y1="3" x2="16" y2="19" stroke="#15161A" stroke-width="2.4"/><line x1="22" y1="3" x2="22" y2="19" stroke="#15161A" stroke-width="2.4"/><line x1="1" y1="17" x2="26" y2="4" stroke="#D89A2B" stroke-width="2.6"/></svg>
+      <div><b>${esc(Store.state.settings.barName || 'BarTally')}</b><div style="color:#8A8F98;font-size:11px">${esc(title)}</div></div></div>
       ${bodyHtml}</body></html>`;
     f.addEventListener('load', () => setTimeout(() => { f.contentWindow.print(); setTimeout(() => f.remove(), 2000); }, 150));
   }
@@ -363,15 +303,14 @@ const UI = (() => {
     def.render(wrap, currentParams);
     if (!def.bare) renderTabs(root);
   }
+  /* reference: text-only bar, 4 root destinations; pushed screens carry a back link instead */
+  const TAB_ROOTS = ['dashboard', 'inventory', 'reports', 'settings'];
   function renderTabs(root) {
-    const owner = Store.isOwner;
-    const tabs = owner
-      ? [['dashboard', 'home', 'tab.home'], ['sell', 'sell', 'tab.sell'], ['count', 'count', 'tab.count'], ['inventory', 'stock', 'tab.stock'], ['more', 'more', 'tab.more']]
-      : [['sell', 'sell', 'tab.sell']];
-    if (!owner) return; // staff: single screen, no tab chrome
-    const lit = ['restock', 'waste', 'reports', 'insights', 'settings'].includes(current) ? 'more' : current;
-    const bar = el(`<nav class="tabbar" aria-label="Navigation">${tabs.map(([id, ic, key]) =>
-      `<button class="tabbar__btn ${lit === id ? 'is-on' : ''}" data-go="${id}">${icon(ic)}<span>${esc(t(key))}</span></button>`).join('')}</nav>`);
+    if (!Store.isOwner) return;              // staff: single screen, no tab chrome
+    if (!TAB_ROOTS.includes(current)) return; // pushed screens: no bar (per reference frame 02)
+    const tabs = [['dashboard', 'tab.home'], ['inventory', 'tab.stock'], ['reports', 'tab.reports'], ['settings', 'set.title']];
+    const bar = el(`<nav class="tabbar" aria-label="Navigation">${tabs.map(([id, key]) =>
+      `<button class="tabbar__btn ${current === id ? 'is-on' : ''}" data-go="${id}"><span>${esc(t(key))}</span></button>`).join('')}</nav>`);
     bar.addEventListener('click', e => {
       const b = e.target.closest('[data-go]'); if (!b) return;
       haptic('light'); go(b.dataset.go);

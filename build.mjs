@@ -15,7 +15,7 @@ if (js.includes('</scr' + 'ipt>')) { console.error('FATAL: literal </scr' + 'ipt
 
 const html = `<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
-<meta name="theme-color" content="#0A0A0E">
+<meta name="theme-color" content="#0A0B0F">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">

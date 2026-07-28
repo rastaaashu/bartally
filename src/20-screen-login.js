@@ -34,87 +34,44 @@
     },
   });
 
-  /* ---------- scoped styles ---------- */
+  /* ---------- scoped styles (reference patterns only, 4pt grid, radius 10/12/22) ---------- */
   document.head.appendChild(UI.el(`<style>
-/* ===== welcome ===== */
-[data-screen=welcome] .wz-hero{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:var(--s3);padding:var(--s8) var(--s2)}
-[data-screen=welcome] .wz-hero>*{animation:blw-up .55s cubic-bezier(.2,.8,.25,1) both}
-[data-screen=welcome] .wz-hero>*:nth-child(1){animation-delay:.03s}
-[data-screen=welcome] .wz-hero>*:nth-child(2){animation-delay:.1s}
-[data-screen=welcome] .wz-hero>*:nth-child(3){animation-delay:.17s}
-[data-screen=welcome] .wz-hero>*:nth-child(4){animation-delay:.24s}
-[data-screen=welcome] .wz-hero>*:nth-child(5){animation-delay:.34s}
-[data-screen=welcome] .wz-logo{filter:drop-shadow(0 10px 34px rgba(201,154,75,.28))}
-[data-screen=welcome] .wz-logo .logo__mark{width:72px;height:72px}
-[data-screen=welcome] .wz-name{font-size:38px;letter-spacing:-.02em;background:var(--gold-grad);-webkit-background-clip:text;background-clip:text;color:transparent}
-[data-screen=welcome] .wz-intro{color:var(--text-2);font-size:14.5px;line-height:1.55;max-width:310px;margin-top:var(--s1)}
-[data-screen=welcome] .wz-cta{width:100%;max-width:340px;display:flex;flex-direction:column;gap:var(--s3);margin-top:var(--s6)}
-[data-screen=welcome] .wz-demohint{line-height:1.5;max-width:300px;margin:0 auto}
-[data-screen=welcome] .wz-top{display:flex;align-items:center;gap:var(--s3);margin-bottom:var(--s5)}
-[data-screen=welcome] .wz-mid{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px}
-[data-screen=welcome] .wz-dots{display:flex;gap:7px}
-[data-screen=welcome] .wz-dots i{width:8px;height:8px;border-radius:4px;background:var(--surface-3);transition:all .3s cubic-bezier(.2,.8,.3,1)}
-[data-screen=welcome] .wz-dots i.on{width:22px;background:var(--gold-grad);box-shadow:var(--glow-gold)}
-[data-screen=welcome] .wz-dots i.done{background:rgba(201,154,75,.5)}
-[data-screen=welcome] .wz-spacer{width:48px;flex:none}
-[data-screen=welcome] .wz-body{flex:1;display:flex;flex-direction:column;animation:blw-up .3s cubic-bezier(.2,.8,.25,1) both}
-[data-screen=welcome] .wz-body h2{font-size:22px;margin-bottom:6px}
-[data-screen=welcome] .wz-sub{color:var(--text-2);font-size:13.5px;line-height:1.5;margin-bottom:var(--s5)}
-[data-screen=welcome] .wz-next{margin-top:auto;padding-top:var(--s6)}
-[data-screen=welcome] .wz-pin{width:100%;max-width:320px;margin:0 auto;display:flex;flex-direction:column}
-[data-screen=welcome] .wz-pin h2{text-align:center;font-size:19px;margin:var(--s4) 0 var(--s2)}
-[data-screen=welcome] .wz-addrow{display:flex;gap:var(--s2);margin-top:var(--s3)}
-[data-screen=welcome] .wz-addrow input{flex:1;min-width:0;min-height:48px;padding:0 14px;border-radius:12px;border:1px solid var(--hairline);background:var(--surface-2);font-size:15px}
-[data-screen=welcome] .wz-addrow input:focus{border-color:rgba(201,154,75,.5)}
-[data-screen=welcome] .wz-addrow .btn{min-width:56px;padding:0;flex:none}
-[data-screen=welcome] .wz-cathead{display:flex;align-items:center;gap:8px;margin:var(--s5) 0 var(--s1)}
-[data-screen=welcome] .wz-cathead i{width:8px;height:8px;border-radius:50%;flex:none}
-[data-screen=welcome] .wz-qty{width:86px;min-height:48px;text-align:center;border-radius:12px;border:1px solid var(--hairline);background:var(--surface-2);font-size:17px;font-weight:600;flex:none;transition:border-color .15s}
-[data-screen=welcome] .wz-qty:focus{border-color:rgba(201,154,75,.55);background:var(--surface-3)}
-[data-screen=welcome] .wz-qty::placeholder{color:var(--text-3);font-weight:500}
-[data-screen=welcome] .wz-done{flex:1;display:flex;flex-direction:column;padding-top:var(--s6)}
-[data-screen=welcome] .wz-check{width:76px;height:76px;border-radius:50%;background:var(--gold-soft);color:var(--gold-hi);display:flex;align-items:center;justify-content:center;margin:0 auto var(--s4);box-shadow:var(--glow-gold);animation:blw-pop .55s cubic-bezier(.2,.9,.3,1.35) both}
-[data-screen=welcome] .wz-check svg{width:36px;height:36px}
-[data-screen=welcome] .wz-done h2,[data-screen=welcome] .wz-done .wz-sub{text-align:center}
-[data-screen=welcome] .wz-sumrow{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);min-height:44px;border-bottom:1px solid var(--hairline);font-size:14px}
-[data-screen=welcome] .wz-sumrow:last-child{border-bottom:0}
-[data-screen=welcome] .wz-sumrow span{color:var(--text-3)}
-[data-screen=welcome] .wz-sumrow b{font-weight:600;text-align:right}
-/* shared bits (scoped to both screens) */
-[data-screen=welcome] .bt-ava,[data-screen=login] .bt-ava{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--f-display);font-weight:700;font-size:15px;color:#0E0E13;flex:none}
-[data-screen=welcome] .bt-perr,[data-screen=login] .bt-perr{min-height:20px;margin-top:2px;text-align:center;color:var(--danger);font-size:13px;font-weight:600;opacity:0;transition:opacity .18s}
-[data-screen=welcome] .bt-perr.is-err,[data-screen=login] .bt-perr.is-err{opacity:1}
-[data-screen=welcome] .bt-spin,[data-screen=login] .bt-spin{width:18px;height:18px;flex:none;border-radius:50%;border:2.5px solid rgba(128,128,128,.35);border-top-color:currentColor;animation:blw-rot .7s linear infinite}
-/* ===== login ===== */
-[data-screen=login] .lg-head{display:flex;flex-direction:column;align-items:center;gap:var(--s2);padding:var(--s10) 0 var(--s8);text-align:center}
-[data-screen=login] .lg-head .logo__mark{width:56px;height:56px;filter:drop-shadow(0 8px 28px rgba(201,154,75,.25));animation:blw-pop .5s cubic-bezier(.2,.9,.3,1.3) both}
-[data-screen=login] .lg-bar{font-size:26px;letter-spacing:-.01em;animation:blw-up .5s .08s cubic-bezier(.2,.8,.25,1) both}
-[data-screen=login] .lg-sub{color:var(--text-3);font-size:13.5px;animation:blw-up .5s .15s cubic-bezier(.2,.8,.25,1) both}
-[data-screen=login] .lg-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--s3)}
-[data-screen=login] .lg-user{display:flex;flex-direction:column;align-items:center;gap:10px;min-height:112px;padding:var(--s5) var(--s3);border-radius:var(--r-card);background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,0) 45%),var(--glass);backdrop-filter:blur(14px) saturate(1.3);-webkit-backdrop-filter:blur(14px) saturate(1.3);border:1px solid var(--hairline);box-shadow:var(--shadow-1);transition:transform .12s,border-color .18s;animation:blw-up .45s cubic-bezier(.2,.8,.25,1) both;animation-delay:calc(.18s + var(--i,0)*55ms)}
-[data-screen=login] .lg-user:active{transform:scale(.96)}
-[data-screen=login] .lg-user--owner{grid-column:1/-1;flex-direction:row;justify-content:flex-start;gap:var(--s4);min-height:84px;padding:var(--s4) var(--s5);background:linear-gradient(160deg,rgba(201,154,75,.15),rgba(201,154,75,.02) 60%),var(--glass);border-color:rgba(201,154,75,.32)}
-[data-screen=login] .lg-owner-body{flex:1;min-width:0;text-align:left}
-[data-screen=login] .lg-name{font-weight:600;font-size:14.5px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-[data-screen=login] .lg-user--owner .lg-name{font-size:16px}
-[data-screen=login] .bt-ava--big{width:54px;height:54px;font-size:19px}
-[data-screen=login] .bt-ava--gold{background:var(--gold-grad);color:var(--on-gold);box-shadow:var(--glow-gold)}
-[data-screen=login] .bt-ava--gold svg{width:24px;height:24px}
-[data-screen=login] .lg-topbar{display:flex;margin-bottom:var(--s2)}
-[data-screen=login] .lg-pinwrap{width:100%;max-width:320px;margin:0 auto;display:flex;flex-direction:column;animation:blw-up .3s cubic-bezier(.2,.8,.25,1) both}
-[data-screen=login] .lg-pinhead{display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:var(--s2);text-align:center}
-[data-screen=login] .lg-pin-name{font-family:var(--f-display);font-weight:700;font-size:18px}
-[data-screen=login] .lg-pin-title{color:var(--text-3);font-size:13px}
-@keyframes blw-up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
-@keyframes blw-pop{from{opacity:0;transform:scale(.55)}to{opacity:1;transform:none}}
-@keyframes blw-rot{to{transform:rotate(360deg)}}
-</style>`));
+  [data-screen=welcome] .topbar,[data-screen=login] .topbar{display:flex;justify-content:space-between;align-items:center;min-height:26px}
+  [data-screen=welcome] .wiz-top{padding-right:88px}
+  [data-screen=welcome] .h1,[data-screen=login] .h1{font:600 24px/1.2 var(--f-display);letter-spacing:-.01em;margin-top:8px}
+  [data-screen=welcome] .stepof{font-variant-numeric:tabular-nums}
+  [data-screen=welcome] .fade{animation:lgw-fade .25s ease-out}
+  [data-screen=welcome] .hero{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:8px}
+  [data-screen=welcome] .hero .h1{margin-top:8px}
+  [data-screen=welcome] .hero .sub2{max-width:300px;line-height:1.6}
+  [data-screen=welcome] .wiz{flex:1;display:flex;flex-direction:column}
+  [data-screen=welcome] .pad,[data-screen=login] .pad{width:100%;max-width:320px;margin:24px auto 0;display:flex;flex-direction:column}
+  [data-screen=welcome] .pad .micro,[data-screen=login] .pad .micro{text-align:center}
+  [data-screen=welcome] .perr,[data-screen=login] .perr{min-height:16px;text-align:center;font-size:12px;font-weight:500;color:var(--bad);opacity:0;transition:opacity .15s}
+  [data-screen=welcome] .perr.is-err,[data-screen=login] .perr.is-err{opacity:1}
+  [data-screen=welcome] .qin{width:86px;min-height:44px;padding:0 12px;text-align:right;flex:none;border-radius:var(--r-ctl);border:1px solid var(--hair);background:var(--surface2);color:var(--t1);font-size:14px}
+  [data-screen=welcome] .qin:focus{border-color:rgba(232,177,78,.45)}
+  [data-screen=welcome] .qin::placeholder{color:var(--t3)}
+  [data-screen=welcome] .addrow{display:flex;gap:8px;margin-top:16px}
+  [data-screen=welcome] .addrow input{flex:1;min-width:0;min-height:44px;padding:10px 14px;border-radius:var(--r-ctl);border:1px solid var(--hair);background:var(--surface2);color:var(--t1);font-size:14px}
+  [data-screen=welcome] .addrow input:focus{border-color:rgba(232,177,78,.45)}
+  [data-screen=welcome] .addrow .btn{height:44px;min-height:44px;flex:none}
+  [data-screen=welcome] .sumrow{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;border-bottom:1px solid var(--hair);font-size:14px}
+  [data-screen=welcome] .sumrow:last-child{border-bottom:0}
+  [data-screen=welcome] .sumrow span{color:var(--t3)}
+  [data-screen=welcome] .sumrow b{font-weight:600;text-align:right}
+  [data-screen=login] button.row{width:100%;text-align:left}
+  @keyframes lgw-fade{from{opacity:0}}
+  </style>`));
 
   /* ---------- helpers ---------- */
   const esc = UI.esc;
-  const AVA_COLORS = ['#D05672', '#3987E5', '#9085E9', '#6FBF8E', '#C97A45', '#B8A94A', '#F49BB5', '#4AA8A0'];
-  const avaColor = name => AVA_COLORS[[...String(name || '?')].reduce((a, c) => a + c.charCodeAt(0), 0) % AVA_COLORS.length];
-  const initials = name => (String(name || '').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase()) || '?';
+  /** 2-letter initials: first letters of two words, else first 2 chars */
+  const initials = name => {
+    const w = String(name || '').trim().split(/\s+/).filter(Boolean);
+    if (!w.length) return '?';
+    return (w.length >= 2 ? w[0][0] + w[1][0] : w[0].slice(0, 2)).toUpperCase();
+  };
   const dotsHtml = (n, filled) => `<div class="pinDots" data-dots>${Array.from({ length: n }, (_, i) => `<i class="${i < filled ? 'on' : ''}"></i>`).join('')}</div>`;
 
   /* ================================================================
@@ -167,19 +124,19 @@
     else paintStep(view, el);
   }
 
-  /* ---- hero (first launch) ---- */
+  /* ---- hero (first launch): typographic centered column, simple fade ---- */
   function paintHero(view, el) {
     view.innerHTML = `
-      <div class="wz-hero">
-        <div class="wz-logo">${UI.logoMark(72)}</div>
-        <h1 class="wz-name">BarTally</h1>
-        <div class="eyebrow">${esc(t('app.tagline'))}</div>
-        <p class="wz-intro">${esc(t('wiz.heroIntro'))}</p>
-        <div class="wz-cta">
-          <button class="btn btn--gold btn--big btn--full" data-a="start">${esc(t('wiz.startReal'))}</button>
-          <button class="btn btn--ghost btn--full" data-a="demo">${esc(t('wiz.demo'))}</button>
-          <p class="tt wz-demohint">${esc(t('wiz.demoHint'))}</p>
-        </div>
+      <div class="hero fade">
+        ${UI.logoMark(30)}
+        <div class="h1">BarTally</div>
+        <div class="micro">${esc(t('app.tagline'))}</div>
+        <p class="sub2">${esc(t('wiz.heroIntro'))}</p>
+      </div>
+      <div class="bottomstack">
+        <button class="btn btn--gold" data-a="start">${esc(t('wiz.startReal'))}</button>
+        <button class="btn btn--ghost" data-a="demo">${esc(t('wiz.demo'))}</button>
+        <p class="sub2" style="text-align:center;line-height:1.5">${esc(t('wiz.demoHint'))}</p>
       </div>`;
     view.addEventListener('click', async e => {
       const b = e.target.closest('[data-a]');
@@ -189,7 +146,7 @@
         if (W.busy) return;
         W.busy = true;
         b.disabled = true;
-        b.innerHTML = `<span class="bt-spin"></span>${esc(t('wiz.demoLoading'))}`;
+        b.textContent = t('wiz.demoLoading');
         try {
           await Store.setupDemo(); // emits 'all' → App.route() takes over
           UI.haptic('success');
@@ -203,16 +160,11 @@
     });
   }
 
-  /* ---- wizard chrome ---- */
+  /* ---- wizard chrome: back + micro step counter (no decorative dots) ---- */
   function wizTop() {
-    return `<div class="wz-top">
-      <button class="iconbtn" data-a="back" aria-label="${esc(t('g.back'))}">${UI.icon('chevL')}</button>
-      <div class="wz-mid">
-        <div class="wz-dots" aria-hidden="true">${Array.from({ length: TOTAL }, (_, i) =>
-          `<i class="${i + 1 === W.step ? 'on' : i + 1 < W.step ? 'done' : ''}"></i>`).join('')}</div>
-        <div class="tt wz-stepof">${esc(t('wiz.stepOf', { n: W.step, total: TOTAL }))}</div>
-      </div>
-      <span class="wz-spacer"></span>
+    return `<div class="topbar wiz-top">
+      <button class="back" data-a="back">‹ ${esc(t('g.back'))}</button>
+      <div class="micro stepof">${esc(t('wiz.stepOf', { n: W.step, total: TOTAL }))}</div>
     </div>`;
   }
 
@@ -220,39 +172,41 @@
     let body = '';
     if (W.step === 1) {
       body = `
-        <h2>${esc(t('wiz.welcome'))}</h2>
-        <p class="wz-sub">${esc(t('wiz.intro'))}</p>
-        <div class="field"><label for="wz-bar">${esc(t('wiz.barName'))}</label>
-          <input id="wz-bar" type="text" data-f="barName" autocomplete="off" enterkeyhint="next" placeholder="${esc(t('wiz.barNamePh'))}" value="${esc(W.barName)}"></div>
-        <div class="field"><label for="wz-owner">${esc(t('wiz.ownerName'))}</label>
-          <input id="wz-owner" type="text" data-f="ownerName" autocomplete="off" enterkeyhint="next" value="${esc(W.ownerName)}"></div>
-        <div class="wz-next"><button class="btn btn--gold btn--big btn--full" data-a="next" ${W.barName.trim() ? '' : 'disabled'}>${esc(t('g.next'))}</button></div>`;
+        <div class="h1">${esc(t('wiz.welcome'))}</div>
+        <p class="sub2">${esc(t('wiz.intro'))}</p>
+        <div class="mt6">
+          <div class="field"><label for="wz-bar">${esc(t('wiz.barName'))}</label>
+            <input id="wz-bar" type="text" data-f="barName" autocomplete="off" enterkeyhint="next" placeholder="${esc(t('wiz.barNamePh'))}" value="${esc(W.barName)}"></div>
+          <div class="field"><label for="wz-owner">${esc(t('wiz.ownerName'))}</label>
+            <input id="wz-owner" type="text" data-f="ownerName" autocomplete="off" enterkeyhint="next" value="${esc(W.ownerName)}"></div>
+        </div>
+        <div class="bottomstack"><button class="btn btn--gold" data-a="next" ${W.barName.trim() ? '' : 'disabled'}>${esc(t('g.next'))}</button></div>`;
     } else if (W.step === 2) {
       body = `
-        <div class="wz-pin">
-          <h2>${esc(t(W.pinPhase === 'set' ? 'wiz.ownerPinSet' : 'wiz.ownerPinConfirm'))}</h2>
+        <div class="pad">
+          <div class="micro">${esc(t(W.pinPhase === 'set' ? 'wiz.ownerPinSet' : 'wiz.ownerPinConfirm'))}</div>
           ${dotsHtml(4, W.pinEntry.length)}
-          <div class="bt-perr${W.pinErr ? ' is-err' : ''}" data-err aria-live="polite">${esc(W.pinErr)}</div>
+          <div class="perr${W.pinErr ? ' is-err' : ''}" data-err aria-live="polite">${esc(W.pinErr)}</div>
           <div data-np></div>
         </div>`;
     } else if (W.step === 3) {
       const list = W.employees.length
         ? W.employees.map((n, i) => `
             <div class="row">
-              <span class="bt-ava" style="background:${avaColor(n)}">${esc(initials(n))}</span>
+              <span class="row__art tile t40"><span class="mono" style="color:var(--t2)">${esc(initials(n))}</span></span>
               <span class="row__body"><span class="row__t">${esc(n)}</span></span>
-              <button class="iconbtn" data-rm="${i}" aria-label="${esc(t('g.delete'))}">${UI.icon('x')}</button>
+              <button class="iconbtn iconbtn--plain" data-rm="${i}" aria-label="${esc(t('g.delete'))}">${UI.icon('x')}</button>
             </div>`).join('')
-        : `<div class="empty" style="padding:var(--s6) var(--s4)">${UI.icon('users')}<div class="empty__s">${esc(t('wiz.teamEmpty'))}</div></div>`;
+        : `<div class="sub2" style="line-height:1.6">${esc(t('wiz.teamEmpty'))}</div>`;
       body = `
-        <h2>${esc(t('wiz.staff'))}</h2>
-        <p class="wz-sub">${esc(t('wiz.staffHint'))}</p>
-        <div class="card" style="padding:6px 16px">${list}</div>
-        <div class="wz-addrow">
+        <div class="h1">${esc(t('wiz.staff'))}</div>
+        <p class="sub2">${esc(t('wiz.staffHint'))}</p>
+        <div class="mt4">${list}</div>
+        <div class="addrow">
           <input type="text" data-f="empName" autocomplete="off" enterkeyhint="done" placeholder="${esc(t('wiz.staffNamePh'))}" value="${esc(W.empName)}">
-          <button class="btn btn--ghost" data-a="addEmp" aria-label="${esc(t('wiz.staffAdd'))}">${UI.icon('plus')}</button>
+          <button class="btn btn--ghost" data-a="addEmp">${esc(t('wiz.staffAdd'))}</button>
         </div>
-        <div class="wz-next"><button class="btn btn--gold btn--big btn--full" data-a="next">${esc(t('g.next'))}</button></div>`;
+        <div class="bottomstack"><button class="btn btn--gold" data-a="next">${esc(t('g.next'))}</button></div>`;
     } else if (W.step === 4) {
       W.items = W.items || Store.SEED.build();
       const cats = [...Store.SEED.categories].sort((a, b) => a.sort - b.sort);
@@ -260,19 +214,19 @@
         const its = W.items.filter(i => i.catId === c.id);
         if (!its.length) return '';
         return `
-          <div class="wz-cathead"><i style="background:${c.hex}"></i><span class="eyebrow">${esc(I18N.lang === 'en' ? c.nameEn : c.nameFr)}</span></div>
+          <div class="sec"><div class="micro">${esc(I18N.lang === 'en' ? c.nameEn : c.nameFr)}</div></div>
           ${its.map(it => `
             <div class="row">
-              <div class="row__art">${UI.art(it)}</div>
-              <div class="row__body"><div class="row__t">${esc(it.name)}</div><div class="row__s">${esc(t('u.' + it.unit))}</div></div>
-              <input class="wz-qty num" type="text" inputmode="${it.allowDecimal ? 'decimal' : 'numeric'}" placeholder="0" data-item="${it.id}" value="${esc(W.opening[it.id] ?? '')}" aria-label="${esc(it.name)}">
+              <span class="row__art tile t40">${UI.art(it)}</span>
+              <span class="row__body"><span class="row__t">${esc(it.name)}</span><span class="row__s">${esc(t('u.' + it.unit))}</span></span>
+              <input class="qin num" type="text" inputmode="${it.allowDecimal ? 'decimal' : 'numeric'}" placeholder="0" data-item="${it.id}" value="${esc(W.opening[it.id] ?? '')}" aria-label="${esc(it.name)}">
             </div>`).join('')}`;
       }).join('');
       body = `
-        <h2>${esc(t('wiz.stock'))}</h2>
-        <p class="wz-sub">${esc(t('wiz.stockHint'))}</p>
+        <div class="h1">${esc(t('wiz.stock'))}</div>
+        <p class="sub2">${esc(t('wiz.stockHint'))}</p>
         ${groups}
-        <div class="wz-next"><button class="btn btn--gold btn--big btn--full" data-a="next">${esc(t('g.next'))}</button></div>`;
+        <div class="bottomstack"><button class="btn btn--gold" data-a="next">${esc(t('g.next'))}</button></div>`;
     } else {
       W.items = W.items || Store.SEED.build();
       const opening = collectOpening();
@@ -284,16 +238,13 @@
         [t('wiz.stock'), I18N.plural('wiz.sumStock', filled)],
       ];
       body = `
-        <div class="wz-done">
-          <div class="wz-check">${UI.icon('check')}</div>
-          <h2>${esc(t('wiz.ready'))}</h2>
-          <p class="wz-sub">${esc(t('wiz.readySub'))}</p>
-          <div class="card">${rows.map(([l, v]) => `<div class="wz-sumrow"><span>${esc(l)}</span><b>${esc(v)}</b></div>`).join('')}</div>
-          <div class="wz-next"><button class="btn btn--gold btn--big btn--full" data-a="finish">${esc(t('wiz.finish'))}</button></div>
-        </div>`;
+        <div class="h1">${esc(t('wiz.ready'))}</div>
+        <p class="sub2">${esc(t('wiz.readySub'))}</p>
+        <div class="mt4">${rows.map(([l, v]) => `<div class="sumrow"><span>${esc(l)}</span><b>${esc(v)}</b></div>`).join('')}</div>
+        <div class="bottomstack"><button class="btn btn--gold" data-a="finish">${esc(t('wiz.finish'))}</button></div>`;
     }
 
-    view.innerHTML = wizTop() + `<div class="wz-body" data-step="${W.step}">${body}</div>`;
+    view.innerHTML = wizTop() + `<div class="wiz fade" data-step="${W.step}">${body}</div>`;
     if (W.step === 2) UI.numpad(view.querySelector('[data-np]'), { decimal: false, onKey: k => onWizPin(k, view, el) });
 
     view.addEventListener('click', e => {
@@ -416,7 +367,7 @@
     }
     W.busy = true;
     btn.disabled = true;
-    btn.innerHTML = `<span class="bt-spin"></span>${esc(t('g.loading'))}`;
+    btn.textContent = t('g.loading');
     try {
       W.items = W.items || Store.SEED.build();
       await Store.setupReal({
@@ -439,7 +390,7 @@
   UI.registerScreen({ id: 'welcome', bare: true, render(el) { paintWelcome(el); } });
 
   /* ================================================================
-     LOGIN — daily unlock: user grid → PIN pad */
+     LOGIN — daily unlock: user rows → PIN pad */
   const L = { view: 'grid', target: null, pin: '', busy: false };
   function resetL() { L.view = 'grid'; L.target = null; L.pin = ''; L.busy = false; }
 
@@ -456,26 +407,29 @@
     else paintPinPad(view, el);
   }
 
+  /* initials tile: standard t40 tile, monogram brass for owner / t2 for staff — no new art */
+  const userArt = (name, owner) =>
+    `<span class="row__art tile t40"><span class="mono" style="color:${owner ? 'var(--brass)' : 'var(--t2)'}">${esc(initials(name))}</span></span>`;
+
   function paintUserGrid(view, el) {
     const s = Store.state.settings;
     const emps = Store.state.employees.filter(e => e.active);
     const ownerName = s.ownerName || t('g.owner');
     view.innerHTML = `
-      <header class="lg-head">
-        ${UI.logoMark(56)}
-        <h1 class="lg-bar">${esc(s.barName || 'BarTally')}</h1>
-        <div class="lg-sub">${esc(t('login.title'))}</div>
-      </header>
-      <div class="lg-grid">
-        <button class="lg-user lg-user--owner" data-owner style="--i:0">
-          <span class="bt-ava bt-ava--gold bt-ava--big">${UI.icon('user')}</span>
-          <span class="lg-owner-body"><span class="lg-name">${esc(ownerName)}</span></span>
-          <span class="pill pill--gold">${esc(t('g.owner'))}</span>
+      <div class="topbar">${UI.logoMark(26)}</div>
+      <div class="h1">${esc(s.barName || 'BarTally')}</div>
+      <div class="sub2">${esc(t('login.subtitle'))}</div>
+      <div class="mt4">
+        <button class="row" data-owner>
+          ${userArt(ownerName, true)}
+          <span class="row__body"><span class="row__t">${esc(ownerName)}</span><span class="row__s">${esc(t('g.owner'))}</span></span>
+          <span class="chev">›</span>
         </button>
-        ${emps.map((e2, i) => `
-          <button class="lg-user" data-emp="${esc(e2.id)}" style="--i:${i + 1}">
-            <span class="bt-ava bt-ava--big" style="background:${avaColor(e2.name)}">${esc(initials(e2.name))}</span>
-            <span class="lg-name">${esc(e2.name)}</span>
+        ${emps.map(e2 => `
+          <button class="row" data-emp="${esc(e2.id)}">
+            ${userArt(e2.name, false)}
+            <span class="row__body"><span class="row__t">${esc(e2.name)}</span></span>
+            <span class="chev">›</span>
           </button>`).join('')}
       </div>`;
     view.addEventListener('click', async e => {
@@ -511,20 +465,15 @@
     const isOwner = L.target.type === 'owner';
     const nDots = isOwner ? 4 : Math.min(6, Math.max(4, L.pin.length));
     view.innerHTML = `
-      <div class="lg-topbar"><button class="iconbtn" data-a="back" aria-label="${esc(t('g.back'))}">${UI.icon('chevL')}</button></div>
-      <div class="lg-pinwrap">
-        <div class="lg-pinhead">
-          ${isOwner
-            ? `<span class="bt-ava bt-ava--gold bt-ava--big">${UI.icon('user')}</span><div class="lg-pin-name">${esc(L.target.name)}</div>`
-            : `<span class="bt-ava bt-ava--big" style="background:${avaColor(L.target.name)}">${esc(initials(L.target.name))}</span>`}
-          <div class="lg-pin-title">${esc(isOwner ? t('login.ownerPin') : t('login.staffPin', { name: L.target.name }))}</div>
-        </div>
+      <div class="topbar"><button class="back" data-a="back">‹ ${esc(t('g.back'))}</button></div>
+      <div class="pad">
+        <div class="micro">${esc(isOwner ? t('login.ownerPin') : t('login.staffPin', { name: L.target.name }))}</div>
         ${dotsHtml(nDots, L.pin.length)}
-        <div class="bt-perr" data-err aria-live="polite"></div>
-        ${isOwner && Store.state.settings.demoMode ? `<div class="tt" style="text-align:center;margin-bottom:8px;color:var(--gold-hi)">${esc(t('login.demoPin'))}</div>` : ''}
+        <div class="perr" data-err aria-live="polite"></div>
+        ${isOwner && Store.state.settings.demoMode ? `<div class="sub2" style="text-align:center">${esc(t('login.demoPin'))}</div>` : ''}
         <div data-np></div>
         ${isOwner ? '' : `<button class="btn btn--gold btn--full mt3" data-a="pinok" ${L.pin.length >= 4 ? '' : 'disabled'}>${esc(t('g.confirm'))}</button>`}
-        ${isOwner ? `<button class="btn btn--line btn--full mt3" data-a="forgot" style="border:0;color:var(--text-3);font-size:13px">${esc(t('login.forgot'))}</button>` : ''}
+        ${isOwner ? `<button class="textbtn mt3" data-a="forgot">${esc(t('login.forgot'))}</button>` : ''}
       </div>`;
     UI.numpad(view.querySelector('[data-np]'), { decimal: false, onKey: k => onLoginKey(k, view, el) });
     view.addEventListener('click', async e => {
@@ -540,10 +489,10 @@
   function openForgotSheet() {
     const normName = s => String(s || '').normalize('NFD').replace(new RegExp('[\\u0300-\\u036f]', 'g'), '').trim().toLowerCase();
     const c = UI.el(`<div data-screen="login">
-      <div class="lg-pin-name" style="text-align:center;margin-bottom:var(--s2)">${esc(t('login.forgot'))}</div>
-      <p class="tt" style="line-height:1.5;text-align:center;margin-bottom:var(--s4)">${esc(t('login.forgotHint'))}</p>
-      <button class="btn btn--gold btn--full" type="button" data-a="fgdl">${UI.icon('download')}${esc(t('login.forgotBackup'))}</button>
-      <div class="field" style="margin-top:var(--s4)"><label for="fg-bar">${esc(t('login.forgotType'))}</label>
+      <div class="sheetname" style="text-align:center">${esc(t('login.forgot'))}</div>
+      <p class="sub2" style="text-align:center;line-height:1.6">${esc(t('login.forgotHint'))}</p>
+      <button class="btn btn--gold btn--full mt4" type="button" data-a="fgdl">${esc(t('login.forgotBackup'))}</button>
+      <div class="field" style="margin-top:16px"><label for="fg-bar">${esc(t('login.forgotType'))}</label>
         <input id="fg-bar" type="text" data-f="fgbar" autocomplete="off" placeholder="${esc(Store.state.settings.barName || '')}"></div>
       <button class="btn btn--danger btn--full" type="button" data-a="fgerase" disabled>${esc(t('set.reset'))}</button>
     </div>`);

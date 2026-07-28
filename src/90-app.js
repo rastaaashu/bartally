@@ -1,6 +1,9 @@
 /* ============ boot + "Plus" menu screen ============ */
+/* 'more' retired by the 4-tab reference layout — legacy targets land on the dashboard */
+UI.registerScreen({ id: 'more', render() { UI.go(Store.isOwner ? 'dashboard' : 'sell'); } });
+
 UI.registerScreen({
-  id: 'more',
+  id: 'more-legacy',
   render(el) {
     if (!Store.isOwner) { UI.go(Store.state.session ? 'sell' : 'login'); return; }
     const s = Store.state.settings;
