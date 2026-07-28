@@ -51,6 +51,13 @@ const App = {
     if ('serviceWorker' in navigator && location.protocol === 'https:') {
       navigator.serviceWorker.register('sw.js').catch(() => {});
     }
+    // the fixed tab bar must never ride on top of the software keyboard
+    if (window.visualViewport) {
+      const vv = window.visualViewport;
+      vv.addEventListener('resize', () => {
+        document.documentElement.classList.toggle('kb-open', vv.height < window.innerHeight * 0.72);
+      });
+    }
   },
   route() {
     const st = Store.state;

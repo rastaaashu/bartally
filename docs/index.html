@@ -104,9 +104,14 @@ a{color:var(--brass);text-decoration:none}
 .back{font-size:13px;font-weight:500;color:var(--t3);display:inline-flex;align-items:center;gap:2px}
 
 /* ---- text-only tab bar (reference) ---- */
-.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;height:calc(58px + var(--sab));
-  padding:0 0 var(--sab);background:var(--bg);border-top:1px solid var(--hair);max-width:520px;margin:0 auto}
-@media (min-width:520px){.tabbar{left:50%;transform:translateX(-50%);width:520px}}
+.tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);z-index:40;display:flex;
+  width:100%;max-width:520px;height:calc(58px + var(--sab));
+  padding:0 0 var(--sab);background:var(--bg);border-top:1px solid var(--hair)}
+/* landscape phones: shorter chrome, same anatomy */
+@media (max-height:520px){
+  .tabbar{height:calc(48px + var(--sab))}
+  .screen{padding-bottom:calc(var(--sab) + 76px)}
+}
 .tabbar__btn{flex:1;display:flex;align-items:center;justify-content:center;position:relative;
   font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
 .tabbar__btn.is-on{color:var(--brass)}
@@ -373,6 +378,9 @@ a{color:var(--brass);text-decoration:none}
   #app{max-width:100%}
 }
 .print-only{display:none}
+
+/* keyboard open: dock the bar away */
+:root.kb-open .tabbar{display:none}
 
 </style>
 <div id="app" lang="fr"></div>
@@ -5017,6 +5025,13 @@ const App = {
     // PWA service worker (no-op where sw.js doesn't exist, e.g. artifact preview)
     if ('serviceWorker' in navigator && location.protocol === 'https:') {
       navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
+    // the fixed tab bar must never ride on top of the software keyboard
+    if (window.visualViewport) {
+      const vv = window.visualViewport;
+      vv.addEventListener('resize', () => {
+        document.documentElement.classList.toggle('kb-open', vv.height < window.innerHeight * 0.72);
+      });
     }
   },
   route() {
