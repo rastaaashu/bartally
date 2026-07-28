@@ -1,2 +1,5 @@
 node_modules/
 BRIEF-AGENTS.md
+.env
+.env.*
+assets/items/
