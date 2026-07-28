@@ -54,7 +54,7 @@
   [data-screen=count] .cw-exp{background:var(--surface);border:1px solid var(--hairline);border-radius:16px;padding:10px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:64px}
   [data-screen=count] .cw-exp b{font-size:30px;line-height:1.1;font-weight:700}
   [data-screen=count] .cw-in{background:var(--surface-2);border:1px solid var(--hairline);border-radius:16px;display:flex;align-items:center;justify-content:center;min-height:64px;font-size:30px;font-weight:700;color:var(--text);padding:4px 10px;transition:border-color .15s,box-shadow .15s,color .15s}
-  [data-screen=count] .cw-in.has{color:var(--gold-hi);border-color:rgba(245,166,35,.5);box-shadow:var(--glow-gold)}
+  [data-screen=count] .cw-in.has{color:var(--gold-hi);border-color:rgba(201,154,75,.5);box-shadow:var(--glow-gold)}
   [data-screen=count] .cw-pad{width:100%}
   [data-screen=count] .cw-acts{display:flex;gap:var(--s2);width:100%;margin-top:var(--s3)}
   [data-screen=count] .cw-acts .btn--ghost{flex:1}
@@ -118,7 +118,7 @@
     const ov = UI.el(`<div class="cnt-ov" data-screen="count" role="status">
       <svg viewBox="0 0 100 100" width="118" height="118" aria-hidden="true">
         <defs><linearGradient id="cntOvG" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stop-color="#F7C14B"/><stop offset="1" stop-color="#E8940A"/>
+          <stop offset="0" stop-color="#DFB86A"/><stop offset="1" stop-color="#A87B2F"/>
         </linearGradient></defs>
         <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="5"/>
         <circle class="cnt-ov__ring" cx="50" cy="50" r="46" fill="none" stroke="url(#cntOvG)" stroke-width="5" stroke-linecap="round" transform="rotate(-90 50 50)"/>

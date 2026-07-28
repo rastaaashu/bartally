@@ -1,45 +1,49 @@
-/* ============ BarTally design tokens (§7) — single-theme: ink & gold ============ */
+/* ============ BarTally design tokens v2 — "brasserie marocaine": bottle-glass green, brass, cream ============ */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-text-size-adjust:100%}
 :root{
   color-scheme:dark;
-  /* grounds */
-  --ink:#0A0A0E;
-  --surface:#14141B;
-  --surface-2:#1A1A23;
-  --surface-3:#22222D;
-  --glass:rgba(26,26,35,.72);
-  --hairline:rgba(255,255,255,.08);
-  --hairline-strong:rgba(255,255,255,.14);
-  /* brand */
-  --gold:#F5A623;
-  --gold-hi:#F7C14B;
-  --gold-deep:#E8940A;
-  --gold-grad:linear-gradient(135deg,#F7C14B 0%,#F5A623 55%,#E8940A 100%);
-  --gold-soft:rgba(245,166,35,.14);
-  --on-gold:#161006;
-  /* ink (text) */
-  --text:#F2F2F5;
-  --text-2:#A9A9B5;
-  --text-3:#6E6E7A;
-  /* status — reserved, never series colors */
-  --ok:#34D399;   --ok-soft:rgba(52,211,153,.13);
-  --danger:#F87171; --danger-soft:rgba(248,113,113,.13);
-  --warn:#FB923C; --warn-soft:rgba(251,146,60,.13);
+  /* grounds — deep bottle-glass green, not black */
+  --ink:#0D1714;
+  --surface:#142320;
+  --surface-2:#1A2C27;
+  --surface-3:#23372F;
+  --glass:#1A2C27;
+  --hairline:rgba(236,231,214,.09);
+  --hairline-strong:rgba(236,231,214,.17);
+  /* paper — warm cream tiles where the product photography lives */
+  --paper:#F1EDE2;
+  --paper-2:#E7E1D2;
+  --on-paper:#20241F;
+  /* brass accent (kept under legacy --gold names so every component inherits) */
+  --gold:#C99A4B;
+  --gold-hi:#DFB86A;
+  --gold-deep:#A87B2F;
+  --gold-grad:linear-gradient(135deg,#DFB86A 0%,#C99A4B 55%,#A87B2F 100%);
+  --gold-soft:rgba(201,154,75,.16);
+  --on-gold:#1A1206;
+  /* ink (text) — warm ivory on green */
+  --text:#F0EDE3;
+  --text-2:#B3B8AA;
+  --text-3:#7A8278;
+  /* status — reserved */
+  --ok:#46C68C;   --ok-soft:rgba(70,198,140,.14);
+  --danger:#F07862; --danger-soft:rgba(240,120,98,.14);
+  --warn:#E8A13C; --warn-soft:rgba(232,161,60,.14);
   /* chart series (validated, dark band) */
   --series-1:#C98500; --series-2:#3987E5; --series-3:#D55181; --series-4:#9085E9;
   /* category accents */
-  --cat-biere:#F2C43D; --cat-rouge:#D05672; --cat-blanc:#DCCB7E; --cat-rose:#F49BB5;
-  --cat-demi:#A78BFA; --cat-champ:#EFE3AE; --cat-spirit:#C97A45; --cat-cuisine:#6FBF8E;
+  --cat-biere:#E4B93F; --cat-rouge:#CE5B6E; --cat-blanc:#D6C578; --cat-rose:#EE9AAE;
+  --cat-demi:#A78BFA; --cat-champ:#EBDCA2; --cat-spirit:#C97A45; --cat-cuisine:#6FBF8E;
   /* geometry — 8pt grid */
   --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:24px; --s8:32px; --s10:40px; --s12:48px;
-  --r-card:20px; --r-el:12px; --r-pill:999px;
-  --shadow-1:0 1px 2px rgba(0,0,0,.5),0 8px 24px rgba(0,0,0,.35);
-  --shadow-2:0 2px 6px rgba(0,0,0,.55),0 16px 48px rgba(0,0,0,.45);
-  --glow-gold:0 0 0 1px rgba(245,166,35,.35),0 4px 24px rgba(245,166,35,.18);
-  /* type */
-  --f-display:'Space Grotesk','Inter',system-ui,sans-serif;
-  --f-ui:'Inter',system-ui,-apple-system,sans-serif;
+  --r-card:18px; --r-el:12px; --r-pill:999px;
+  --shadow-1:0 1px 2px rgba(4,10,8,.5),0 10px 28px rgba(4,10,8,.35);
+  --shadow-2:0 2px 6px rgba(4,10,8,.55),0 18px 48px rgba(4,10,8,.45);
+  --glow-gold:0 0 0 1px rgba(201,154,75,.4),0 4px 22px rgba(201,154,75,.2);
+  /* type — Fraunces carries the identity; Instrument Sans does the work */
+  --f-display:'Fraunces',Georgia,serif;
+  --f-ui:'Instrument Sans',system-ui,-apple-system,sans-serif;
   --tap:48px;
   --sat:env(safe-area-inset-top,0px); --sab:env(safe-area-inset-bottom,0px);
 }
@@ -54,22 +58,22 @@ body{
   touch-action:manipulation;
   -webkit-tap-highlight-color:transparent;
 }
-/* ambient ground: faint gold aurora, fixed, never moves content */
+/* ambient ground: candlelight brass over deep green — quiet, no gradients shouting */
 body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
   background:
-    radial-gradient(60% 40% at 85% -10%,rgba(245,166,35,.10),transparent 60%),
-    radial-gradient(50% 35% at -10% 100%,rgba(88,60,150,.08),transparent 60%);
+    radial-gradient(55% 38% at 80% -8%,rgba(201,154,75,.09),transparent 62%),
+    radial-gradient(48% 34% at -8% 104%,rgba(24,60,48,.5),transparent 60%);
 }
-.num{font-family:var(--f-display);font-variant-numeric:tabular-nums lining-nums;font-feature-settings:'tnum' 1;letter-spacing:.01em}
-h1,h2,h3{font-family:var(--f-display);font-weight:700;letter-spacing:-.01em;text-wrap:balance}
-.eyebrow{font-family:var(--f-ui);font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text-3)}
+.num{font-family:var(--f-display);font-variant-numeric:tabular-nums lining-nums;font-feature-settings:'tnum' 1,'lnum' 1;letter-spacing:0}
+h1,h2,h3{font-family:var(--f-display);font-weight:600;letter-spacing:.002em;text-wrap:balance}
+.eyebrow{font-family:var(--f-ui);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3)}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 input,select,textarea{font:inherit;color:inherit}
 img,svg{display:block;max-width:100%}
-a{color:var(--gold);text-decoration:none}
+a{color:var(--gold-hi);text-decoration:none}
 :focus{outline:none}
 :focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:6px}
-::selection{background:rgba(245,166,35,.3)}
+::selection{background:rgba(201,154,75,.32)}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
 }

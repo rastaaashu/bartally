@@ -47,7 +47,7 @@
     [data-screen=settings] .row__t,[data-screen=settings] .row__s{display:block}
     [data-screen=settings] .stg-logo{width:64px;height:64px;border-radius:16px;overflow:hidden;border:1px solid var(--hairline);background:var(--surface-2);flex:none;display:flex;align-items:center;justify-content:center}
     [data-screen=settings] .stg-logo img{width:100%;height:100%;object-fit:cover}
-    [data-screen=settings] .stg-av{width:40px;height:40px;border-radius:50%;background:var(--gold-soft);border:1px solid rgba(245,166,35,.25);color:var(--gold-hi);display:inline-flex;align-items:center;justify-content:center;font-family:var(--f-display);font-weight:700;font-size:13.5px;letter-spacing:.02em;flex:none}
+    [data-screen=settings] .stg-av{width:40px;height:40px;border-radius:50%;background:var(--gold-soft);border:1px solid rgba(201,154,75,.25);color:var(--gold-hi);display:inline-flex;align-items:center;justify-content:center;font-family:var(--f-display);font-weight:700;font-size:13.5px;letter-spacing:.02em;flex:none}
     [data-screen=settings] .row.is-off .stg-av,[data-screen=settings] .row.is-off .row__t{opacity:.45}
     [data-screen=settings] .stg-step{display:flex;align-items:center;gap:8px;flex:none}
     [data-screen=settings] .stg-step__v{font-size:20px;font-weight:700;min-width:30px;text-align:center}
@@ -57,7 +57,7 @@
     [data-screen=settings] .stg-cost:last-child{border-bottom:0}
     [data-screen=settings] .stg-cost__n{flex:1;min-width:0;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     [data-screen=settings] .stg-cost input{width:108px;height:48px;text-align:right;padding:0 12px;border-radius:10px;border:1px solid var(--hairline);background:var(--surface-2);font-family:var(--f-display);font-variant-numeric:tabular-nums;font-size:15px}
-    [data-screen=settings] .stg-cost input:focus{border-color:rgba(245,166,35,.5)}
+    [data-screen=settings] .stg-cost input:focus{border-color:rgba(201,154,75,.5)}
     [data-screen=settings] .stg-cost input::-webkit-outer-spin-button,[data-screen=settings] .stg-cost input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
     [data-screen=settings] .stg-warnbtn{background:var(--warn-soft);color:var(--warn);border:1px solid rgba(251,146,60,.3)}
     [data-screen=settings] .stg-costs{animation:stg-open .28s cubic-bezier(.2,.8,.3,1)}

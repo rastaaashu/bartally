@@ -108,6 +108,11 @@ const UI = (() => {
     if (item.photo && String(item.photo).startsWith('data:image/')) {
       return `<div class="itemart ${cls || ''}"><img src="${esc(item.photo)}" alt="${esc(item.name)}" loading="lazy"></div>`;
     }
+    // real product photography bundled at build time (curated, licensed sources)
+    const stockPhoto = (typeof ITEM_PHOTOS !== 'undefined') ? ITEM_PHOTOS[item.name] : null;
+    if (stockPhoto) {
+      return `<div class="itemart ${cls || ''}"><img src="${stockPhoto}" alt="${esc(item.name)}" loading="lazy"></div>`;
+    }
     if (spec) {
       const [nw, nh, sh, bw, bh, capH, capC, labelY, labelH, sq] = spec;
       const cx = 50, top = 118 - bh - sh - nh - capH;
@@ -147,12 +152,8 @@ const UI = (() => {
         <linearGradient id="${id}b" x1="0" y1="0" x2="1" y2="0">
           <stop offset="0" stop-color="${shade(g, -.25)}"/><stop offset=".38" stop-color="${shade(g, .22)}"/><stop offset=".62" stop-color="${g}"/><stop offset="1" stop-color="${shade(g, -.4)}"/>
         </linearGradient>
-        <radialGradient id="${id}v" cx=".5" cy=".28" r=".8">
-          <stop offset="0" stop-color="${vig}" stop-opacity=".16"/><stop offset=".55" stop-color="${vig}" stop-opacity=".05"/><stop offset="1" stop-color="#0A0A0E" stop-opacity="0"/>
-        </radialGradient>
       </defs>
-      <rect width="100" height="120" fill="url(#${id}v)"/>
-      <ellipse cx="50" cy="113" rx="26" ry="4.5" fill="#000" opacity=".45"/>
+      <ellipse cx="50" cy="112" rx="24" ry="4" fill="#4A3A18" opacity=".16"/>
       ${inner}
     </svg>`;
   }
@@ -161,8 +162,8 @@ const UI = (() => {
   function logoMark(size) {
     const id = 'lg' + (gradSeq++);
     return `<svg class="logo__mark" style="width:${size || 38}px;height:${size || 38}px" viewBox="0 0 48 48" role="img" aria-label="BarTally">
-      <defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F7C14B"/><stop offset="1" stop-color="#E8940A"/></linearGradient></defs>
-      <rect width="48" height="48" rx="13" fill="#14141B" stroke="rgba(255,255,255,.1)"/>
+      <defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DFB86A"/><stop offset="1" stop-color="#A87B2F"/></linearGradient></defs>
+      <rect width="48" height="48" rx="13" fill="#142320" stroke="rgba(255,255,255,.1)"/>
       <g stroke="#EDEDF2" stroke-width="3.2" stroke-linecap="round">
         <path d="M14 14v20M21 14v20M28 14v20M35 14v20"/>
       </g>
@@ -240,7 +241,7 @@ const UI = (() => {
   function ring(pct, label) {
     const r = 26, c = 2 * Math.PI * r, off = c * (1 - Math.min(1, Math.max(0, pct)));
     return `<div class="ring"><svg viewBox="0 0 64 64" width="64" height="64">
-      <defs><linearGradient id="goldGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F7C14B"/><stop offset="1" stop-color="#E8940A"/></linearGradient></defs>
+      <defs><linearGradient id="goldGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DFB86A"/><stop offset="1" stop-color="#A87B2F"/></linearGradient></defs>
       <circle class="ring__bg" cx="32" cy="32" r="${r}"/>
       <circle class="ring__fg" cx="32" cy="32" r="${r}" stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"/>
     </svg><div class="ring__t">${label ?? Math.round(pct * 100) + '%'}</div></div>`;
@@ -252,7 +253,7 @@ const UI = (() => {
     const c = el(`<div><h2 style="font-size:18px;margin-bottom:12px">${esc(t('sell.scan'))}</h2>
       <div style="position:relative;border-radius:16px;overflow:hidden;background:#000;aspect-ratio:3/4">
         <video autoplay playsinline muted style="width:100%;height:100%;object-fit:cover"></video>
-        <div style="position:absolute;inset:0;border:2px solid rgba(245,166,35,.6);border-radius:16px;margin:14%;pointer-events:none"></div>
+        <div style="position:absolute;inset:0;border:2px solid rgba(201,154,75,.6);border-radius:16px;margin:14%;pointer-events:none"></div>
       </div>
       <div class="field mt4"><label>${esc(t('inv.barcode'))}</label><input type="text" inputmode="numeric" placeholder="0000000000000"></div>
       <button class="btn btn--gold btn--full" data-a="manual">${esc(t('g.confirm'))}</button></div>`);
@@ -333,12 +334,12 @@ const UI = (() => {
         th{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#888;text-align:left;padding:6px 8px;border-bottom:2px solid #e8c87a}
         td{padding:6px 8px;border-bottom:1px solid #eee;font-variant-numeric:tabular-nums}
         .neg{color:#C0392B;font-weight:600}.pos{color:#1E8E5A}
-        .brand{display:flex;align-items:center;gap:10px;margin-bottom:20px;padding-bottom:14px;border-bottom:3px solid #F5A623}
+        .brand{display:flex;align-items:center;gap:10px;margin-bottom:20px;padding-bottom:14px;border-bottom:3px solid #C99A4B}
         .brand b{font-size:16px} h2{font-size:14px;margin:18px 0 4px}
         .kpis{display:flex;gap:26px;margin:14px 0}.kpis div b{display:block;font-size:19px}
         .kpis div span{font-size:11px;color:#888}
       </style></head><body>
-      <div class="brand"><svg width="34" height="34" viewBox="0 0 48 48"><rect width="48" height="48" rx="13" fill="#14141B"/><g stroke="#EDEDF2" stroke-width="3.2" stroke-linecap="round"><path d="M14 14v20M21 14v20M28 14v20M35 14v20"/></g><path d="M10 31 39 17" stroke="#F5A623" stroke-width="3.6" stroke-linecap="round"/></svg>
+      <div class="brand"><svg width="34" height="34" viewBox="0 0 48 48"><rect width="48" height="48" rx="13" fill="#142320"/><g stroke="#EDEDF2" stroke-width="3.2" stroke-linecap="round"><path d="M14 14v20M21 14v20M28 14v20M35 14v20"/></g><path d="M10 31 39 17" stroke="#C99A4B" stroke-width="3.6" stroke-linecap="round"/></svg>
       <div><b>${esc(Store.state.settings.barName || 'BarTally')}</b><div style="color:#999;font-size:11px">${esc(title)}</div></div></div>
       ${bodyHtml}</body></html>`;
     f.addEventListener('load', () => setTimeout(() => { f.contentWindow.print(); setTimeout(() => f.remove(), 2000); }, 150));

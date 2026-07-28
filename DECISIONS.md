@@ -20,7 +20,17 @@
    soft voids + audit log, and owner areas sit behind a hashed PIN
    (SHA-256 + salt via WebCrypto). Honest limitation, fixed by Phase 2
    Supabase. Stated plainly in NEXT-STEPS.md.
-5. **Imagery: crafted vector product art + photographic atmosphere, one
+5. **[Superseded by v2, user request 2026-07-28] Imagery now: REAL product
+   photography** curated from licensed sources only — Open Food Facts
+   (CC-BY-SA), Wikimedia Commons, Openverse commercial-license search — 26
+   items covered, every image hand-reviewed, per-image credits in
+   PHOTO-CREDITS.md. Items with no acceptable licensed photo (hyper-local
+   Moroccan wines, demi-bouteilles) keep the crafted vector art; the owner
+   can replace any visual with an in-app camera photo. Brand marketing
+   packshots from brand sites remain off-limits (copyright). Visual identity
+   also rebuilt at user's request: bottle-glass green + brass + cream photo
+   tiles, Fraunces/Instrument Sans — replacing the ink+gold+glass look.
+   Original v1 decision: crafted vector product art + photographic atmosphere, one
    treatment.** Programmatic stock-photo scraping (Openverse/Commons) yields
    inconsistent quality that reads cheap, and official brand shots are
    copyrighted. Instead: hand-built glass-and-gradient bottle/dish art per

@@ -27,7 +27,7 @@
   /* hero */
   [data-screen=dashboard] .dash-hero__top{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--s3)}
   [data-screen=dashboard] .dash-hero__live{display:inline-flex;align-items:center;gap:8px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ok)}
-  [data-screen=dashboard] .dash-hero__num{font-size:58px;font-weight:700;line-height:1;letter-spacing:-.02em;background:var(--gold-grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:var(--gold-hi);filter:drop-shadow(0 4px 18px rgba(245,166,35,.18))}
+  [data-screen=dashboard] .dash-hero__num{font-size:58px;font-weight:700;line-height:1;letter-spacing:-.02em;background:var(--gold-grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:var(--gold-hi);filter:drop-shadow(0 4px 18px rgba(201,154,75,.18))}
   [data-screen=dashboard] .dash-hero__sub{color:var(--text-2);font-size:13px;margin-top:6px}
   /* sparkline: line draws, area fades, today dot pops */
   [data-screen=dashboard] .dash-spark__line{stroke-dasharray:1;stroke-dashoffset:1;animation:dash-draw .9s cubic-bezier(.4,.6,.3,1) .2s forwards}
@@ -66,7 +66,7 @@
   .dash-ntf__list{max-height:56dvh;overflow-y:auto;margin:0 -6px}
   .dash-ntf__row{display:flex;gap:12px;align-items:flex-start;padding:11px 10px;border-radius:14px}
   .dash-ntf__row+.dash-ntf__row{margin-top:4px}
-  .dash-ntf__row.is-unread{background:linear-gradient(90deg,var(--gold-soft),rgba(245,166,35,.02))}
+  .dash-ntf__row.is-unread{background:linear-gradient(90deg,var(--gold-soft),rgba(201,154,75,.02))}
   .dash-ntf__ic{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex:none}
   .dash-ntf__ic svg{width:19px;height:19px}
   .dash-ntf__ic--low{background:var(--warn-soft);color:var(--warn)}
@@ -75,7 +75,7 @@
   .dash-ntf__bd{flex:1;min-width:0}
   .dash-ntf__txt{display:block;font-size:13.5px;line-height:1.4}
   .dash-ntf__time{display:block;font-size:11.5px;color:var(--text-3);margin-top:3px}
-  .dash-ntf__dot{width:8px;height:8px;border-radius:50%;background:var(--gold);flex:none;margin-top:8px;box-shadow:0 0 8px rgba(245,166,35,.6)}
+  .dash-ntf__dot{width:8px;height:8px;border-radius:50%;background:var(--gold);flex:none;margin-top:8px;box-shadow:0 0 8px rgba(201,154,75,.6)}
   </style>`));
 
   let dashSeq = 0;
@@ -99,7 +99,7 @@
     return `<svg viewBox="0 0 ${W} ${H}" class="dash-spark" role="img" aria-label="${UI.esc(t('dash.7days'))}">
       <defs>
         <linearGradient id="${id}s" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0" stop-color="#F7C14B"/><stop offset="1" stop-color="#E8940A"/>
+          <stop offset="0" stop-color="#DFB86A"/><stop offset="1" stop-color="#A87B2F"/>
         </linearGradient>
         <linearGradient id="${id}a" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" style="stop-color:var(--series-1)" stop-opacity=".3"/>
