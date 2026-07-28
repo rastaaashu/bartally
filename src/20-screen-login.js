@@ -137,8 +137,24 @@
     return out;
   }
 
+  /* FR/EN switch, visible before login so anyone can flip the language */
+  function langToggle() {
+    return `<div class="lang-tgl" role="group" aria-label="Langue / Language">
+      <button type="button" data-lang="fr" class="${I18N.lang === 'fr' ? 'is-on' : ''}">FR</button>
+      <button type="button" data-lang="en" class="${I18N.lang === 'en' ? 'is-on' : ''}">EN</button>
+    </div>`;
+  }
+  document.addEventListener('click', e => {
+    const b = e.target.closest('.lang-tgl [data-lang]');
+    if (!b) return;
+    UI.haptic('light');
+    Store.setSettings({ lang: b.dataset.lang });
+    UI.refresh();
+  });
+
   function paintWelcome(el) {
     el.innerHTML = '';
+    el.insertAdjacentHTML('afterbegin', langToggle());
     const view = UI.el('<div class="grow" style="display:flex;flex-direction:column"></div>');
     el.appendChild(view);
     if (W.step === 0) paintHero(view, el);
@@ -422,6 +438,7 @@
 
   function paintLogin(el) {
     el.innerHTML = '';
+    el.insertAdjacentHTML('afterbegin', langToggle());
     if (L.view === 'pin' && L.target && L.target.type === 'emp') {
       const emp = Store.state.employees.find(x => x.id === L.target.id && x.active);
       if (!emp) resetL(); // employee deactivated meanwhile → back to grid
@@ -493,15 +510,21 @@
         </div>
         ${dotsHtml(nDots, L.pin.length)}
         <div class="bt-perr" data-err aria-live="polite"></div>
+        ${isOwner && Store.state.settings.demoMode ? `<div class="tt" style="text-align:center;margin-bottom:8px;color:var(--gold-hi)">${esc(t('login.demoPin'))}</div>` : ''}
         <div data-np></div>
         ${isOwner ? '' : `<button class="btn btn--gold btn--full mt3" data-a="pinok" ${L.pin.length >= 4 ? '' : 'disabled'}>${esc(t('g.confirm'))}</button>`}
+        ${isOwner ? `<button class="btn btn--line btn--full mt3" data-a="forgot" style="border:0;color:var(--text-3);font-size:13px">${esc(t('login.forgot'))}</button>` : ''}
       </div>`;
     UI.numpad(view.querySelector('[data-np]'), { decimal: false, onKey: k => onLoginKey(k, view, el) });
-    view.addEventListener('click', e => {
+    view.addEventListener('click', async e => {
       const b = e.target.closest('[data-a]');
       if (!b) return;
       if (b.dataset.a === 'back') { UI.haptic('light'); resetL(); paintLogin(el); }
       else if (b.dataset.a === 'pinok') submitPin(view, el);
+      else if (b.dataset.a === 'forgot') {
+        const yes = await UI.confirm(t('login.forgotHint'), { danger: true, title: t('login.forgot'), yes: t('set.reset') });
+        if (yes) { Store.resetAll(); }
+      }
     });
   }
 

@@ -194,6 +194,12 @@
 .tt{font-size:12px;color:var(--text-3)}
 .hidden{display:none!important}
 
+/* pre-login language switch */
+[data-screen=welcome],[data-screen=login]{position:relative}
+.lang-tgl{position:absolute;top:calc(var(--sat) + 14px);right:16px;z-index:6;display:flex;gap:2px;padding:3px;background:var(--surface-2);border:1px solid var(--hairline);border-radius:var(--r-pill)}
+.lang-tgl button{min-width:40px;height:30px;border-radius:var(--r-pill);font-size:12px;font-weight:700;color:var(--text-3);letter-spacing:.04em}
+.lang-tgl button.is-on{background:var(--gold-soft);color:var(--gold-hi)}
+
 /* count walkthrough must fit above the fold on short phones */
 @media (max-height:920px){
   [data-screen=count] .cw-art{width:78px!important;height:94px!important}
