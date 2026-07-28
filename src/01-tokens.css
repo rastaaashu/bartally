@@ -12,7 +12,7 @@ html{-webkit-text-size-adjust:100%}
   --hairline:rgba(236,231,214,.09);
   --hairline-strong:rgba(236,231,214,.17);
   /* paper — warm cream tiles where the product photography lives */
-  --paper:#F1EDE2;
+  --paper:#F7F5EF;
   --paper-2:#E7E1D2;
   --on-paper:#20241F;
   /* brass accent (kept under legacy --gold names so every component inherits) */

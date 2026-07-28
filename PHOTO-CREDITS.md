@@ -1,35 +1,139 @@
 # Photo credits
 
-Product photography bundled in BarTally comes exclusively from sources
-licensed for commercial reuse. Per-image source, license and author:
+Every product image in BarTally is a licensed photo (Open Food Facts CC-BY-SA,
+Wikimedia Commons, Openverse commercial-license) processed with background
+removal into a uniform catalog style. Half-bottle (37,5cl) tiles reuse the
+parent wine's photo at reduced scale. Where an exact brand photo wasn't
+available under license (Casablanca uses a generic green lager bottle; house
+wines use representative bottles), the owner replaces it in-app with a photo
+of the real bottle (Stock → article → Photo). Source list (raw files in the
+build workspace, per-source license/author):
 
-- **Spécial** — Wikimedia Commons (CC BY-SA 3.0) — Friejose — https://commons.wikimedia.org/wiki/File:Speciale_Flag.jpg
-- **Casablanca** — Wikimedia Commons (CC BY-SA 3.0) — Ekem — https://commons.wikimedia.org/wiki/File:2013.Casablanca.beer.jpg
-- **Budweiser** — Wikimedia Commons (Public domain) — Original uploader was Lindell005 at en.wikipedia — https://commons.wikimedia.org/wiki/File:A_bottle_of_Budweiser.JPG
-- **Smirnoff Ice** — Wikimedia Commons (CC BY-SA 4.0) — Arkke — https://commons.wikimedia.org/wiki/File:Smirnoff_Ice.jpg
-- **Red Bull** — Wikimedia Commons (CC BY-SA 4.0) — メイド理世 — https://commons.wikimedia.org/wiki/File:Red_Bull_Energy_Drink,_Dongguan,_China_1_May_2024.jpg
-- **Heineken** — Wikimedia Commons (CC BY-SA 4.0) — Koefbac — https://commons.wikimedia.org/wiki/File:Piwo_Heineken_-_du%C5%BCe_-_wrzesie%C5%84_2018.jpg
-- **Absolut** — Wikimedia Commons (CC BY-SA 3.0) — Edward Cwik — https://commons.wikimedia.org/wiki/File:Absolut_Vodka_(Blue).JPG
-- **Sahari** — BY-ND 2.0 — Lopezia/Sorokin — https://www.flickr.com/photos/9384523@N05/3566373695
-- **Champagne** — Wikimedia Commons (CC BY-SA 3.0) — Fotonovela — https://commons.wikimedia.org/wiki/File:GHMumm.JPG
-- **Black Label** — Wikimedia Commons (CC BY-SA 3.0) — Iceman7840 — https://commons.wikimedia.org/wiki/File:Johnnie_Walker_Black_Label.jpg
-- **Red Label** — Wikimedia Commons (CC BY-SA 3.0) — kallerna — https://commons.wikimedia.org/wiki/File:Johnnie_Walker_Red_Label.jpg
-- **Jack Daniel's** — CC0 1.0 — MyStockPhotos — https://www.flickr.com/photos/136375272@N05/21574364198
-- **Belvedere** — Wikimedia Commons (CC BY-SA 4.0) — Indrajit Das — https://commons.wikimedia.org/wiki/File:Belvedere_Vodka_01.jpg
-- **Gordon's** — Wikimedia Commons (CC BY 3.0) — AxelHH — https://commons.wikimedia.org/wiki/File:Gordons_London_Dry_Gin_im_Regal.jpg
-- **Ricard** — Wikimedia Commons (CC BY-SA 3.0) — Хрюша — https://commons.wikimedia.org/wiki/File:Ricard_Pastis_01_09.jpg
-- **Agavita** — Open Food Facts (CC-BY-SA 3.0) — product "Tequila Gold"
-- **Jägermeister** — Wikimedia Commons (Public domain) — No machine-readable author provided. Pieter1 assumed (based  — https://commons.wikimedia.org/wiki/File:Jagermeister_bottle.jpg
-- **Cognac** — Open Food Facts (CC-BY-SA 3.0) — product "Cognac VS"
-- **Martini Blanc** — Wikimedia Commons (Public domain) — Alex Chupryna — https://commons.wikimedia.org/wiki/File:Martini_Bianko.jpg
-- **Odyssée** — Wikimedia Commons (CC BY 2.0) — Evan Swigart from Chicago, USA — https://commons.wikimedia.org/wiki/File:Glass_of_White_Wine_shot_with_a_bottle_of_white_wine_-_Evan_Swigart.jpg
-- **Terroir Rouge** — Open Food Facts (CC-BY-SA 3.0) — product "Bourgogne 2008 - Pinot Noir"
-- **Terroir Rosé** — Open Food Facts (CC-BY-SA 3.0) — product "Rosé"
-- **Fromage** — Wikimedia Commons (CC BY-SA 3.0) —  — https://commons.wikimedia.org/wiki/File:Cheese_platter.jpg
-- **Foie** — Wikimedia Commons (CC BY-SA 4.0) — مصطفى ملو — https://commons.wikimedia.org/wiki/File:Boulfaf_2.jpg
-- **Viande Hachée** — BY 2.0 — jlastras — https://www.flickr.com/photos/22662305@N04/3211013032
-- **Pizza V/H** — Wikimedia Commons (CC BY-SA 3.0) — Valerio Capello at English Wikipedia — https://commons.wikimedia.org/wiki/File:Eq_it-na_pizza-margherita_sep2005_sml.jpg
-
-Items without suitable licensed photography use BarTally's own vector
-product art; the owner can replace any image with a phone photo in-app
-(Stock → item → Photo).
+- Spécial: 
+- Heineken: Wikimedia Commons (CC BY-SA 4.0) — Samhassert — https://commons.wikimedia.org/wiki/File:Desperados_original_25cl.jpg | BY 2.0 — Rob Marson — https://www.flickr.com/photos/35003991@N03/5674927751 | BY-SA 4.0 — Samhassert — https://commons.wikimedia.org/w/index.php?curid=95161072
+- Spécial Gold: Wikimedia Commons (Public domain) —  — https://commons.wikimedia.org/wiki/File:Name.jpg | Wikimedia Commons (Public domain) — Boston Public Library — https://commons.wikimedia.org/wiki/File:Stegmaier_Brewing_Company,_home_of_gold_medal_beer,_Wilkes-Barre,_Pennsylvania.jpg | Wikimedia Commons (Public domain) — Pub. by Edward I. Plottle Company, Scranton, PA. — https://commons.wikimedia.org/wiki/File:Stegmaier_Brewing_Company,_home_of_gold_medal_beer,_Wilkes-Barre,_Pennsylvania_(79969).jpg | BY 2.0 — pete. #hwcp — https://www.flickr.com/photos/13497267@N04/32681144483
+- Casablanca: Wikimedia Commons (CC BY-SA 3.0) — Friejose — https://commons.wikimedia.org/wiki/File:Speciale_Flag.jpg | Wikimedia Commons (CC BY-SA 3.0) — Ekem — https://commons.wikimedia.org/wiki/File:2013.Casablanca.beer.jpg | Wikimedia Commons (CC BY 2.0) — Phil Whitehouse from London, United Kingdom — https://commons.wikimedia.org/wiki/File:Murray%27s_Angry_Man_Pale_Ale,_OZ.jpg
+- Budweiser: Wikimedia Commons (Public domain) — Original uploader was Lindell005 at en.wikipedia — https://commons.wikimedia.org/wiki/File:A_bottle_of_Budweiser.JPG | Wikimedia Commons (CC0) — Miguel Andrade — https://commons.wikimedia.org/wiki/File:Budweiser_Lager.jpg | Wikimedia Commons (CC BY-SA 2.0) — Sam — https://commons.wikimedia.org/wiki/File:Budweiser_bottle_close-up.jpg | BY-ND 2.0 — Eldriva — https://www.flickr.com/photos/48133270@N04/11100701233
+- Smirnoff Ice: Wikimedia Commons (CC BY-SA 4.0) — Ildar Sagdejev (Specious) — https://commons.wikimedia.org/wiki/File:2008-03-09_Broken_glass_bottle.jpg | Wikimedia Commons (CC BY-SA 4.0) — Arkke — https://commons.wikimedia.org/wiki/File:Smirnoff_Ice.jpg | Wikimedia Commons (CC BY-SA 4.0) — Motokoka — https://commons.wikimedia.org/wiki/File:Smirnoff_Ice_Original_bought_in_Japan.jpg | BY-ND 2.0 — .Martin. — https://www.flickr.com/photos/84806883@N00/2223274872
+- Red Bull: Wikimedia Commons (CC BY-SA 4.0) — JonathanAaronBridgemohan — https://commons.wikimedia.org/wiki/File:Red_Bell_Energy_Drink_250ml_can.jpg | Open Food Facts (CC-BY-SA 3.0) — product "Red Bull Energy Blue Cans 25CL" | Open Food Facts (CC-BY-SA 3.0) — product "Red Bull Energy Cans 47,3CL" | Open Food Facts (CC-BY-SA 3.0) — product "Red Bull Energy Red Cans 25CL"
+- Soda: Wikimedia Commons (CC BY 2.0) — Patrick Fitzgerald from Atlanta, GA, USA — https://commons.wikimedia.org/wiki/File:Discarded_beverage_can_(29573613).jpg | Wikimedia Commons (CC BY-SA 4.0) — Raimond Spekking — https://commons.wikimedia.org/wiki/File:Flattened_beverage_can_with_German_-container_deposit-5144.jpg | Wikimedia Commons (CC BY-SA 4.0) — Wiki.cullin — https://commons.wikimedia.org/wiki/File:Finch_%26_Leedes_-_Indian_Tonic_-_Sparking_Flavoured_Drink_-_Can.jpg | BY-SA 2.0 — bellemarematt — https://www.flickr.com/photos/42595976@N06/4420347780
+- Ithaque: 
+- Eclipse: 
+- Volubilia: Wikimedia Commons (CC BY-SA 4.0) — Volubilia — https://commons.wikimedia.org/wiki/File:Les_premi%C3%A8res_c%C3%B4tes_du_Moyen_Atlas.JPG
+- Médaillon: 
+- Sahari: Wikimedia Commons (CC BY-SA 4.0) — Marianne Casamance — https://commons.wikimedia.org/wiki/File:Domaine_de_Sahari_rouge_et_ros%C3%A9_-_Maroc.jpg | BY-ND 2.0 — Lopezia/Sorokin — https://www.flickr.com/photos/9384523@N05/3566373695 | BY-SA 4.0 — Marianne Casamance — https://commons.wikimedia.org/w/index.php?curid=61335391
+- Terre Rouge: Wikimedia Commons (Public domain) — Richard Earlom — https://commons.wikimedia.org/wiki/File:Richard_Earlom,_The_plundering_of_the_King%27s_cellar,_Paris,_10th_August,_1793_(i.e.,_1792).jpg | Wikimedia Commons (CC BY-SA 2.0) — Alpha from Melbourne, Australia — https://commons.wikimedia.org/wiki/File:Duck_with_Grapes_-_tall_-_Green_Tangerine_VND169k_set_lunch_(4730428488).jpg | Wikimedia Commons (CC BY-SA 2.0) — Alpha from Melbourne, Australia — https://commons.wikimedia.org/wiki/File:Duck_with_Grapes_-_insides_-_Green_Tangerine_(4730428570).jpg | BY-SA 2.0 — avlxyz — https://www.flickr.com/photos/10559879@N00/4729783387
+- Terroir Rouge: Open Food Facts (CC-BY-SA 3.0) — product "Terroir de Chavrignac, bordeaux" | Open Food Facts (CC-BY-SA 3.0) — product "Pont du Rhône 2014" | Open Food Facts (CC-BY-SA 3.0) — product "Bourgogne 2008 - Pinot Noir" | Wikimedia Commons (CC BY-SA 4.0) — Olivier Lemoine (https://Photo-Terroir.fr) — https://commons.wikimedia.org/wiki/File:Prix_moyen_et_nombre_des_pi%C3%A8ces_en_vente_en_fonction_des_mill%C3%A9simes.png
+- Ferrande: Wikimedia Commons (Public domain) — Bloc Frères (BR) — https://commons.wikimedia.org/wiki/File:Castres_-_ch%C3%A2teau_Ferrande_1.jpg | Wikimedia Commons (Public domain) — UnknownUnknown  circa 1900-1920 — https://commons.wikimedia.org/wiki/File:Castres_-_ch%C3%A2teau_Ferrande_2.jpg | BY 2.0 — ell brown — https://www.flickr.com/photos/39415781@N06/3720772993 | BY 2.0 — ell brown — https://www.flickr.com/photos/39415781@N06/3720801607
+- Odyssée: Wikimedia Commons (CC BY 2.0) — Evan Swigart from Chicago, USA — https://commons.wikimedia.org/wiki/File:Glass_of_White_Wine_shot_with_a_bottle_of_white_wine_-_Evan_Swigart.jpg | Wikimedia Commons (CC BY 2.0) — Meanwell Packaging — https://commons.wikimedia.org/wiki/File:Packaging_a_wine_bottle_with_wood_wool.jpg | Wikimedia Commons (CC0) — DimiTalen — https://commons.wikimedia.org/wiki/File:Bottle_and_glass_of_Barefoot_white_zinfandel_wine,_2012.jpg | BY-ND 2.0 — rjmyint — https://www.flickr.com/photos/48614750@N06/4726413647
+- Médaillon Blanc: Wikimedia Commons (No restrictions) — Internet Archive Book Images — https://commons.wikimedia.org/wiki/File:Objets_d%27art,_tableaux_anciens,_livres_(1881)_(14783545415).jpg | Wikimedia Commons (CC BY-SA 4.0) — Aurélie Troccon et Manon Mauquin — https://commons.wikimedia.org/wiki/File:Marmelade_de_cloportes_-_mus%C3%A9e_HCL_-_pot_canon_-_pharmacie_%C3%A0_l%27H%C3%B4tel-Dieu.jpg | Wikimedia Commons (CC BY-SA 4.0) — Aurélie Troccon et Manon Mauquin — https://commons.wikimedia.org/wiki/File:Mithridate_-_mus%C3%A9e_HCL_-_pot_canon_-_pharmacie_%C3%A0_l%27H%C3%B4tel-Dieu.jpg
+- Terroir Blanc: Open Food Facts (CC-BY-SA 3.0) — product "Vin blanc Pont de Caylus" | Open Food Facts (CC-BY-SA 3.0) — product "Creme de morbier au vin blanc" | Open Food Facts (CC-BY-SA 3.0) — product "Assortiment raclette (nature, vin blanc, poivre) 600g" | Wikimedia Commons (CC BY-SA 4.0) — Olivier Lemoine (https://Photo-Terroir.fr) — https://commons.wikimedia.org/wiki/File:Soutirage_vin_blanc.jpg
+- Médaillon Rosé: Wikimedia Commons (No restrictions) — Internet Archive Book Images — https://commons.wikimedia.org/wiki/File:Objets_d%27art,_tableaux_anciens,_livres_(1881)_(14783545415).jpg | Wikimedia Commons (CC BY 2.0) — Ikon True Russian Vodka — https://commons.wikimedia.org/wiki/File:Rose_Lagoa.jpg | Wikimedia Commons (CC BY 2.0) — Designovum — https://commons.wikimedia.org/wiki/File:Ros%C3%A9_wine_Ros%C3%A9wein.jpg | Wikimedia Commons (CC BY-SA 3.0) — Globetrotter19 — https://commons.wikimedia.org/wiki/File:Train_station,_underpass,_Rose_grape,_wine_bottle,_2018_Balatonbogl%C3%A1r.jpg
+- Terroir Rosé: Open Food Facts (CC-BY-SA 3.0) — product "Rosé" | Open Food Facts (CC-BY-SA 3.0) — product "Bio Cuvee Le Soleiller Rose" | Open Food Facts (CC-BY-SA 3.0) — product "côte de Provence" | Wikimedia Commons (CC BY-SA 4.0) — Olivier Lemoine (https://Photo-Terroir.fr) — https://commons.wikimedia.org/wiki/File:Fermentation_vin_ros%C3%A9.jpg
+- 1/2 Médaillon: Wikimedia Commons (Public domain) — 
+Bibliothèque royale (France ; 14..-1792). Auteur du texte — https://commons.wikimedia.org/wiki/File:Catalogue_des_livres_sur_la_musique_conserv%C3%A9s_%C3%A0_la_Biblioth%C3%A8que_royale_-_%C3%A9labor%C3%A9_par_Paul_Louis_Roualle_de_Boisgelou_-_btv1b550058549_(005_of_109).jpg | Wikimedia Commons (Public domain) — 
+Bibliothèque royale (France ; 14..-1792). Auteur du texte — https://commons.wikimedia.org/wiki/File:Catalogue_des_livres_sur_la_musique_conserv%C3%A9s_%C3%A0_la_Biblioth%C3%A8que_royale_-_%C3%A9labor%C3%A9_par_Paul_Louis_Roualle_de_Boisgelou_-_btv1b550058549_(034_of_109).jpg | Wikimedia Commons (Public domain) — 
+Bibliothèque royale (France ; 14..-1792). Auteur du texte — https://commons.wikimedia.org/wiki/File:Catalogue_des_livres_sur_la_musique_conserv%C3%A9s_%C3%A0_la_Biblioth%C3%A8que_royale_-_%C3%A9labor%C3%A9_par_Paul_Louis_Roualle_de_Boisgelou_-_btv1b550058549_(035_of_109).jpg
+- 1/2 Eclipse: 
+- 1/2 Volubilia: 
+- 1/2 Sahari: 
+- 1/2 Terroir Rouge: Wikimedia Commons (CC BY-SA 4.0) — Pierre André Leclercq — https://commons.wikimedia.org/wiki/File:Villeneuve-d%27Ascq_Mus%C3%A9e_du_Terroir_(1).jpg
+- 1/2 Médaillon Blanc: Wikimedia Commons (CC BY-SA 3.0) — BERNARDOT Claude-Henry — https://commons.wikimedia.org/wiki/File:M0354_98-28-096_1.jpg | Wikimedia Commons (CC BY-SA 3.0) — BERNARDOT Claude-Henry — https://commons.wikimedia.org/wiki/File:M0354_98-28-103_1.jpg | Wikimedia Commons (CC BY-SA 3.0) — BERNARDOT Claude-Henry — https://commons.wikimedia.org/wiki/File:M0354_98-28-161_1.jpg
+- 1/2 Terroir Blanc: 
+- 1/2 Médaillon Rosé: Wikimedia Commons (CC0) — Unknown authorUnknown author — https://commons.wikimedia.org/wiki/File:Fragment_de_vase_Drag._37_orn%C3%A9,_AC2294.jpg | Wikimedia Commons (CC0) — Unknown — https://commons.wikimedia.org/wiki/File:Fragment_de_vase_Drag._37,_AC2173.jpg | Wikimedia Commons (CC0) — Unknown — https://commons.wikimedia.org/wiki/File:Fragment_de_vase_Drag._37,_AC2173(2).jpg
+- 1/2 Terroir Rosé: 
+- Champagne: Wikimedia Commons (CC BY-SA 3.0) — Fotonovela — https://commons.wikimedia.org/wiki/File:GHMumm.JPG | Wikimedia Commons (CC BY-SA 4.0) — Dacouar — https://commons.wikimedia.org/wiki/File:BOUTEILLE.jpg | Wikimedia Commons (CC BY-SA 4.0) — Antoinemartinguillaume — https://commons.wikimedia.org/wiki/File:Cuv%C3%A9e_Brut_Tradition.jpg | BY-SA 3.0 — Fotonovela — https://commons.wikimedia.org/w/index.php?curid=17854342
+- Black Label: Wikimedia Commons (CC BY-SA 3.0) — Newone http://blogtiengviet.net/NghiaHa — https://commons.wikimedia.org/wiki/File:Johnnie_Walker_Black_Label_Limited_edition2.JPG | Wikimedia Commons (CC BY-SA 3.0) — Rachmaninoff — https://commons.wikimedia.org/wiki/File:Johnnie_Walker_Black_Label_box.jpg | Wikimedia Commons (CC BY-SA 3.0) — Iceman7840 — https://commons.wikimedia.org/wiki/File:Johnnie_Walker_Black_Label.jpg | BY-SA 3.0 — Iceman7840 — https://commons.wikimedia.org/w/index.php?curid=16224778
+- Red Label: Open Food Facts (CC-BY-SA 3.0) — product "Red Label" | Open Food Facts (CC-BY-SA 3.0) — product "Red label." | Open Food Facts (CC-BY-SA 3.0) — product "Jhonnie walker red label 375ml" | Wikimedia Commons (CC BY-SA 3.0) — kallerna — https://commons.wikimedia.org/wiki/File:Johnnie_Walker_Red_Label.jpg
+- Absolut: Wikimedia Commons (CC BY-SA 3.0) — User:Johan Elisson. — https://commons.wikimedia.org/wiki/File:Absolut_Vodka_10_bottles.jpg | Wikimedia Commons (CC BY-SA 4.0) — Lewis Hulbert — https://commons.wikimedia.org/wiki/File:Absolut_Watering_Hole,_Christ_Church,_Barbados.jpg | Wikimedia Commons (CC BY-SA 4.0) — Jjanhone — https://commons.wikimedia.org/wiki/File:Absolut_Vodka_-pulloja.jpg | BY 2.0 — DINOCOMM - dinocomm@gmail.com — https://www.flickr.com/photos/34340177@N07/3385959880
+- Jack Daniel's: Wikimedia Commons (Public domain) — U.S. Navy photo by Mass Communication Specialist 1st Class T — https://commons.wikimedia.org/wiki/File:USS_Grenadier_(SS_525)_2.jpg | Wikimedia Commons (Public domain) — U.S. Navy photo by Mass Communication Specialist 1st Class T — https://commons.wikimedia.org/wiki/File:US_Navy_090518-N-7705S-027_This_bottle_of_Jack_Daniels_Old_No._7_whiskey_was_presented_to_retired_Navy_Capt._Ted_Davis_on_the_40th_anniversary_of_the_surfacing_of_a_Soviet_submarine.jpg | Wikimedia Commons (Public domain) — Unknown authorUnknown author — https://commons.wikimedia.org/wiki/File:Jack-daniels-hopkinsville-kentuckian-ad.jpg | CC0 1.0 — MyStockPhotos — https://www.flickr.com/photos/136375272@N05/21574364198
+- Belvedere: Wikimedia Commons (CC BY-SA 3.0 at) — Feel free to use my photos, but please mention me as the aut — https://commons.wikimedia.org/wiki/File:Oberes_Belvedere_Wien,_Panorama_Variante.jpg | Wikimedia Commons (CC BY 2.0) — Nan Palmero from San Antonio, TX, USA — https://commons.wikimedia.org/wiki/File:Belvedere_Vodka_at_Red_Square_in_Mandalay_Bay_(14858479551).jpg | Wikimedia Commons (CC BY-SA 4.0) — Indrajit Das — https://commons.wikimedia.org/wiki/File:Belvedere_Vodka_01.jpg | BY 2.0 — Fareham Wine — https://www.flickr.com/photos/62243473@N05/12362910453
+- Gordon's: Wikimedia Commons (CC BY 3.0) — AxelHH — https://commons.wikimedia.org/wiki/File:Gordons_London_Dry_Gin_im_Karton.jpg | Wikimedia Commons (CC BY 3.0) — AxelHH — https://commons.wikimedia.org/wiki/File:Gordons_London_Dry_Gin_im_Regal.jpg | Wikimedia Commons (CC BY-SA 3.0) — JIP — https://commons.wikimedia.org/wiki/File:Self-made_gin_grapefruit_long_drink.jpg | BY 2.0 — George M. Groutas — https://www.flickr.com/photos/22083482@N03/2940978102
+- Ricard: Wikimedia Commons (CC BY-SA 2.5) — AlMare — https://commons.wikimedia.org/wiki/File:Pastis_Ricard_Bottle.jpg | Wikimedia Commons (CC BY-SA 3.0) — Хрюша — https://commons.wikimedia.org/wiki/File:Ricard_Pastis_01_09.jpg | Wikimedia Commons (CC0) — Le Petit Journal — https://commons.wikimedia.org/wiki/File:Paul_Ricard_dans_Le_Petit_Journal_du_10_d%C3%A9cembre_1938.png | BY-SA 3.0 — Хрюша — https://commons.wikimedia.org/w/index.php?curid=17879936
+- Agavita: Open Food Facts (CC-BY-SA 3.0) — product "Tequila Gold" | Open Food Facts (CC-BY-SA 3.0) — product "Tequila" | Open Food Facts (CC-BY-SA 3.0) — product "Tequila Lager Beer 3 x Bottles" | Open Food Facts (CC-BY-SA 3.0) — product "Tequila Bottle"
+- Jägermeister: Open Food Facts (CC-BY-SA 3.0) — product "Jägermeister" | Open Food Facts (CC-BY-SA 3.0) — product "Jagermeister" | Open Food Facts (CC-BY-SA 3.0) — product "Jägermeister - Der Kräuterlikör" | Wikimedia Commons (Public domain) — No machine-readable author provided. Pieter1 assumed (based  — https://commons.wikimedia.org/wiki/File:Jagermeister_bottle.jpg
+- Cognac: Open Food Facts (CC-BY-SA 3.0) — product "Hennessy VS COGNAC" | Open Food Facts (CC-BY-SA 3.0) — product "Cognac VS" | Open Food Facts (CC-BY-SA 3.0) — product "Brandy Mincemeat with Cognac VS" | Wikimedia Commons (CC BY 2.0) — Wouter de Bruijn — https://commons.wikimedia.org/wiki/File:Meukow_VS.jpg
+- Martini Blanc: Wikimedia Commons (Public domain) — Alex Chupryna — https://commons.wikimedia.org/wiki/File:Martini_Bianko.jpg | Wikimedia Commons (Public domain) — Dry_Martini.jpg: Original uploader was Hayford Peirce at en. — https://commons.wikimedia.org/wiki/File:Dry_Martini-2.jpg | Wikimedia Commons (CC BY 2.0) — Kyle May — https://commons.wikimedia.org/wiki/File:Bright-Field_Lighting.jpg | BY-ND 2.0 — zone41 — https://www.flickr.com/photos/40611389@N00/3980873122
+- Fromage: Open Food Facts (CC-BY-SA 3.0) — product "Specialty Cheese Platter" | Open Food Facts (CC-BY-SA 3.0) — product "Cheese part platter" | Open Food Facts (CC-BY-SA 3.0) — product "Meat & Cheese Party Platter" | Wikimedia Commons (CC BY-SA 3.0) —  — https://commons.wikimedia.org/wiki/File:Cheese_platter.jpg
+- Viande Hachée: BY 2.0 — jlastras — https://www.flickr.com/photos/22662305@N04/3211013032 | Wikimedia Commons (CC BY-SA 3.0) — No machine-readable author provided. Rainer Zenz assumed (ba — https://commons.wikimedia.org/wiki/File:Hackfleisch-1.jpg | Wikimedia Commons (CC BY-SA 4.0) — IKennedyTown16 20 — https://commons.wikimedia.org/wiki/File:HK_food_steamed_Minced_mud_carp_%E9%AF%AA%E9%AD%9A_Dace_fish_meat_%E8%82%89%E9%AD%9A_Bean_Curd_Tufo_product_%E8%B1%86%E8%85%90%E8%A3%BD%E5%93%81_Chinese_spring_onion_Jan-2016_dinner_(3).JPG | Wikimedia Commons (CC BY-SA 4.0) — IKennedyTown16 20 — https://commons.wikimedia.org/wiki/File:HK_food_steamed_Minced_mud_carp_%E9%AF%AA%E9%AD%9A_Dace_fish_meat_%E8%82%89%E9%AD%9A_Bean_Curd_Tufo_product_%E8%B1%86%E8%85%90%E8%A3%BD%E5%93%81_Chinese_spring_onion_Jan-2016_dinner_(4).JPG
+- Foie: Wikimedia Commons (CC BY-SA 4.0) — Fzlaissi — https://commons.wikimedia.org/wiki/File:Poulet_daghmira_aux_oeufs_et_amandes_grill%C3%A9es.png | Wikimedia Commons (CC BY-SA 4.0) — E4024 — https://commons.wikimedia.org/wiki/File:Ci%C4%9Fer_kebab.jpg | Wikimedia Commons (CC BY-SA 4.0) — مصطفى ملو — https://commons.wikimedia.org/wiki/File:Boulfaf_2.jpg | Wikimedia Commons (CC BY-SA 4.0) — مصطفى ملو — https://commons.wikimedia.org/wiki/File:Boulfaf_1.jpg
+- Cervelle: 
+- Pizza V/H: Wikimedia Commons (CC BY-SA 3.0) — Valerio Capello at English Wikipedia — https://commons.wikimedia.org/wiki/File:Eq_it-na_pizza-margherita_sep2005_sml.jpg | Wikimedia Commons (CC BY-SA 4.0) — Petar Milošević — https://commons.wikimedia.org/wiki/File:Vegetarian_Pizza.jpg | Wikimedia Commons (CC BY-SA 4.0) — Rhododendrites — https://commons.wikimedia.org/wiki/File:L%26B_Spumoni_Gardens_pizza_(41436).jpg | BY-SA 2.0 — AlexanderVanLoon — https://www.flickr.com/photos/94609149@N05/10842122416
+- heineken-r-0: Wikimedia Commons (CC BY-SA 4.0) — Koefbac — https://commons.wikimedia.org/wiki/File:Piwo_Heineken_-_du%C5%BCe_-_wrzesie%C5%84_2018.jpg
+- heineken-r-1: Wikimedia Commons (CC BY-SA 2.0) — KlipschFan — https://commons.wikimedia.org/wiki/File:Heineken_(290165627).jpg
+- redbull-r-0: Wikimedia Commons (CC BY-SA 3.0) — Clock at Polish Wikipedia — https://commons.wikimedia.org/wiki/File:Energy_drinks_collection.jpg
+- redbull-r-1: Wikimedia Commons (CC BY-SA 4.0) — JonathanAaronBridgemohan — https://commons.wikimedia.org/wiki/File:Red_Bell_Energy_Drink_250ml_can.jpg
+- redbull-r-2: Wikimedia Commons (CC BY-SA 4.0) — Oto Zapletal — https://commons.wikimedia.org/wiki/File:Red_Bull_energy_drinks.jpg
+- redbull-r-3: Wikimedia Commons (CC BY-SA 4.0) — メイド理世 — https://commons.wikimedia.org/wiki/File:Red_Bull_Energy_Drink,_Dongguan,_China_1_May_2024.jpg
+- absolut-r-0: Wikimedia Commons (CC BY-SA 3.0) — Edward Cwik — https://commons.wikimedia.org/wiki/File:Absolut_Vodka_(Blue).JPG
+- absolut-r-1: Wikimedia Commons (Public domain) — The Absolut Company — https://commons.wikimedia.org/wiki/File:Absolut_logo_regular_blue.jpg
+- absolut-r-2: Wikimedia Commons (CC BY-SA 4.0) — NhRaomzui MMP — https://commons.wikimedia.org/wiki/File:HK_SKD_Sai_Kung_District_Lohas_Park_mall_shop_%E5%84%AA%E5%93%81_BestMart360_Store_wines_July_2021_SS2_02.jpg
+- g-red1-0: BY 2.0 — sh0dan — https://www.flickr.com/photos/12191709@N00/92783024
+- g-red1-1: BY 2.0 — Brett Jordan — https://www.flickr.com/photos/55497864@N00/4476240732
+- g-red1-2: BY 2.0 — Fareham Wine — https://www.flickr.com/photos/62243473@N05/15090747737
+- g-red1-3: BY 2.0 — stefano lubiana wines — https://www.flickr.com/photos/50979249@N06/9827998655
+- g-red2-0: Wikimedia Commons (CC BY-SA 2.0) — Beatrice Murch — https://commons.wikimedia.org/wiki/File:Uruguay_Merlot_wine.jpg
+- g-red2-1: Wikimedia Commons (CC BY-SA 3.0) — Jorge Royan — https://commons.wikimedia.org/wiki/File:Amsterdam_-_Merlot_and_Grapes_-_0312.jpg
+- g-red2-2: Wikimedia Commons (CC BY-SA 3.0) — Agne27 — https://commons.wikimedia.org/wiki/File:Stellenbosch_merlot.jpg
+- g-red2-3: Wikimedia Commons (CC BY 2.0) — THOR — https://commons.wikimedia.org/wiki/File:Estepa_Wine_(4545497552).jpg
+- g-red3-0: Wikimedia Commons (CC BY-SA 2.0) — Tammy Green — https://commons.wikimedia.org/wiki/File:Syrah_from_Sicily.jpg
+- g-red3-1: Wikimedia Commons (CC BY-SA 2.0) — Mark and Allegra Jaroski-Biava — https://commons.wikimedia.org/wiki/File:Ros%C3%A9_de_Syrah.jpg
+- g-red3-2: Wikimedia Commons (CC BY 2.0) — The original uploader was Bethling at English Wikipedia. — https://commons.wikimedia.org/wiki/File:Syrah_glass.jpg
+- g-red3-3: Wikimedia Commons (CC BY 2.0) — Naotake Murayama — https://commons.wikimedia.org/wiki/File:California_Wine_assortment_including_two_JoP_wineries-Ridge_%26_Montelena.jpg
+- g-red4-0: Wikimedia Commons (CC BY-SA 3.0) — Tomas er — https://commons.wikimedia.org/wiki/File:Three_Bordeaux_second_wines.jpg
+- g-red4-1: Wikimedia Commons (CC BY 2.0) — Colin — https://commons.wikimedia.org/wiki/File:Several_Bordeaux_wines.jpg
+- g-red4-2: Wikimedia Commons (CC0) — Mx. Granger — https://commons.wikimedia.org/wiki/File:Ch%C3%A2teau_Recougne_Bordeaux_Sup%C3%A9rieur_red_wine.jpg
+- g-red4-3: Wikimedia Commons (CC BY-SA 4.0) — Robert Lang — https://commons.wikimedia.org/wiki/File:Apteeker_Melchior_-_1_-_Autor_Robert_Lang_-_4717.jpg
+- g-red5-0: Wikimedia Commons (Public domain) — Hans Anetsberger — https://commons.wikimedia.org/wiki/File:Anetsberger_Stilleben_mit_Bierhumpen.jpg
+- g-red5-1: Wikimedia Commons (No restrictions) — Internet Archive Book Images — https://commons.wikimedia.org/wiki/File:American_bee_journal_(1881)_(17492211973).jpg
+- g-red5-2: Wikimedia Commons (No restrictions) — Internet Archive Book Images — https://commons.wikimedia.org/wiki/File:American_bee_journal_(1881)_(18113848711).jpg
+- g-red5-3: Wikimedia Commons (Public domain) — Henri Matisse — https://commons.wikimedia.org/wiki/File:Henri_Matisse_-_La_Deserte_(apr%C3%A8s_Jan_Davidsz_de_Heem)_-_63.2.17_-_Mus%C3%A9e_Matisse.jpg
+- g-white1-0: Wikimedia Commons (Public domain) — 
+Unknown artistUnknown artist — https://commons.wikimedia.org/wiki/File:Fragments,_Les_Buveurs,_ca._1785_(CH_18651603).jpg
+- g-white1-1: Wikimedia Commons (Public domain) — 
+Unknown artistUnknown artist — https://commons.wikimedia.org/wiki/File:Fragments,_Les_Buveurs,_ca._1785_(CH_18651603-2).jpg
+- g-white1-2: Wikimedia Commons (Public domain) — 
+Unknown artistUnknown artist — https://commons.wikimedia.org/wiki/File:Fragments,_Les_Buveurs,_ca._1785_(CH_18651603-3).jpg
+- g-white1-3: Wikimedia Commons (Public domain) — 
+Unknown artistUnknown artist — https://commons.wikimedia.org/wiki/File:Fragments,_Les_Buveurs,_ca._1785_(CH_18651603-4).jpg
+- g-white2-0: Wikimedia Commons (CC BY-SA 4.0) — Ras / Juha Makkonen — https://commons.wikimedia.org/wiki/File:Montana_Marlborough_Sauvignon_blanc_in_Iittala_Glass.jpg
+- g-white2-1: Wikimedia Commons (CC BY-SA 3.0) — Drinking — https://commons.wikimedia.org/wiki/File:Recanati_Sauvignon_blanc.jpg
+- g-white2-2: Wikimedia Commons (CC BY 2.0) — Simon Davison — https://commons.wikimedia.org/wiki/File:J._Lohr_Sauvignon_blanc_glass_and_bottle.jpg
+- g-white2-3: Wikimedia Commons (CC BY 2.0) — Michal Osmenda from Brussels, Belgium — https://commons.wikimedia.org/wiki/File:2010_Lass_Dich_Aufrichten_Sauvignon_Blanc_Trocken_(8600473907).jpg
+- g-rose1-0: BY 2.0 — AVID Vines — https://www.flickr.com/photos/75921150@N00/5761766104
+- g-rose1-1: BY 2.0 — jean-louis zimmermann — https://www.flickr.com/photos/40911451@N00/1101422937
+- g-rose1-2: BY 2.0 — Fareham Wine — https://www.flickr.com/photos/62243473@N05/14581621135
+- g-rose1-3: Wikimedia Commons (CC BY 2.0) — Designovum — https://commons.wikimedia.org/wiki/File:Ros%C3%A9_wine_Ros%C3%A9wein.jpg
+- g-gold-0: BY 2.0 — Smabs Sputzer (1956-2017) — https://www.flickr.com/photos/10413717@N08/5690916615
+- g-gold-1: BY 2.0 — gfairchild — https://www.flickr.com/photos/36770908@N08/4145407378
+- g-gold-2: BY 2.0 — jcsogo — https://www.flickr.com/photos/34746674@N00/3890487559
+- g-gold-3: BY 2.0 — Kuba Bożanowski — https://www.flickr.com/photos/31871979@N00/4073448035
+- g-soda-0: BY 2.0 — Omar.Bariffi — https://www.flickr.com/photos/31713068@N08/5867265511
+- g-soda-1: BY 2.0 — marcodede — https://www.flickr.com/photos/56361113@N00/116648094
+- g-soda-2: BY 2.0 — Robbie1 — https://www.flickr.com/photos/85278812@N00/3726661
+- g-soda-3: BY 2.0 — zeevveez — https://www.flickr.com/photos/29001414@N00/4912277759
+- s-absolut-0: Wikimedia Commons (CC BY-SA 4.0) — NhRaomzui MMP — https://commons.wikimedia.org/wiki/File:HK_SKD_Sai_Kung_District_Lohas_Park_mall_shop_%E5%84%AA%E5%93%81_BestMart360_Store_wines_July_2021_SS2_02.jpg
+- s-absolut-1: Wikimedia Commons (CC BY-SA 3.0) — Edward Cwik — https://commons.wikimedia.org/wiki/File:Absolut_Vodka_(Blue).JPG
+- s-absolut-2: Wikimedia Commons (Public domain) — The Absolut Company — https://commons.wikimedia.org/wiki/File:Absolut_logo_regular_blue.jpg
+- s-absolut-3: Wikimedia Commons (CC BY-SA 4.0) — NhRaomzui MMP — https://commons.wikimedia.org/wiki/File:HK_SKD_Sai_Kung_District_Lohas_Park_mall_shop_%E5%84%AA%E5%93%81_BestMart360_Store_wines_July_2021_SS2_02.jpg
+- s-redbull-0: Wikimedia Commons (CC BY-SA 4.0) — VincentLR — https://commons.wikimedia.org/wiki/File:Lattina_di_Red_Bull.jpg
+- s-smirnoff-0: Wikimedia Commons (CC BY-SA 4.0) — Ildar Sagdejev (Specious) — https://commons.wikimedia.org/wiki/File:2008-03-09_Broken_glass_bottle.jpg
+- s-smirnoff-1: Wikimedia Commons (CC BY-SA 2.0) — Brian MacLennan — https://commons.wikimedia.org/wiki/File:Old_Hydro_Electric_Bothy_-_geograph.org.uk_-_206892.jpg
+- s-smirnoff-2: Wikimedia Commons (CC BY-SA 4.0) — Arkke — https://commons.wikimedia.org/wiki/File:Smirnoff_Ice.jpg
+- s-smirnoff-3: Wikimedia Commons (CC BY-SA 4.0) — Motokoka — https://commons.wikimedia.org/wiki/File:Smirnoff_Ice_Original_bought_in_Japan.jpg
+- s-viande-0: Wikimedia Commons (CC BY-SA 2.0) — Alpha from Melbourne, Australia — https://commons.wikimedia.org/wiki/File:Dips,_Meze,_Main_menu_-_Cafe_Mint.jpg
+- s-viande-1: Wikimedia Commons (CC BY-SA 2.0) — Alpha from Melbourne, Australia — https://commons.wikimedia.org/wiki/File:Lemon_and_saffron_roasted_chicken_on_pilaf_rice_with_sesame_yoghurt_and_peach_relish_-_Cafe_Mint_AUD24.90_main_(3697197879).jpg
+- s-viande-2: Wikimedia Commons (CC BY 4.0) — Strawberrypotato — https://commons.wikimedia.org/wiki/File:Grilled_Kefta_Skewers.jpg
+- s-viande-3: BY-SA 2.0 — projectnada — https://www.flickr.com/photos/21970696@N06/2373471183
+- s-foie-0: Wikimedia Commons (CC BY-SA 4.0) — EgorovaSvetlana — https://commons.wikimedia.org/wiki/File:Jigar_Uzbek_Shashlik_from_Liver_and_Fat_Tail_Grilled_on_Skewers_on_Mangal_over_Charcoal_Outdoor_Barbecue_Newton_Massachusetts.jpg
+- s-foie-1: Wikimedia Commons (CC BY-SA 4.0) — EgorovaSvetlana — https://commons.wikimedia.org/wiki/File:Preparation_of_Jigar_Uzbek_Shashlik_from_Liver_and_Fat_Tail_Grilled_on_Skewers_on_Mangal_over_Charcoal_Outdoor_Barbecue_Newton_Massachusetts.jpg
+- s-foie-2: Wikimedia Commons (CC BY-SA 4.0) — EgorovaSvetlana — https://commons.wikimedia.org/wiki/File:Jigar_Uzbek_Shashlik_from_Liver_and_Fat_Tail_Grilled_on_Skewers_on_Mangal_over_Charcoal_Outdoor_barbecue_Newton_Massachusetts.jpg
+- s-foie-3: Wikimedia Commons (CC BY-SA 4.0) — EgorovaSvetlana — https://commons.wikimedia.org/wiki/File:Jigar_Uzbek_Shashlik_from_Liver_and_Fat_Tail_Grilled_on_Skewers_on_Mangal_over_Charcoal_outdoor_Barbecue_Newton_Massachusetts.jpg
+- s-cervelle-0: Wikimedia Commons (No restrictions) — Internet Archive Book Images — https://commons.wikimedia.org/wiki/File:The_Boston_Cooking_School_magazine_of_culinary_science_and_domestic_economics_(1905)_(14770090571).jpg
+- s-cervelle-1: Wikimedia Commons (CC BY-SA 4.0) — E4024 — https://commons.wikimedia.org/wiki/File:Kelle_(3_meats).jpg
+- s-cervelle-2: BY-SA 2.0 — avlxyz — https://www.flickr.com/photos/10559879@N00/4247031460
+- s-cervelle-3: BY 2.0 — Augapfel — https://www.flickr.com/photos/47038415@N00/1570029398
+- off-fromage-0: Open Food Facts (CC-BY-SA 3.0) — product "Galettes Boulgour & Sarrasin à l'Emmental"
+- off-fromage-1: Open Food Facts (CC-BY-SA 3.0) — product "Monaco Emmental"
+- off-fromage-2: Open Food Facts (CC-BY-SA 3.0) — product "Emmental râpé"
+- off-soda-0: Open Food Facts (CC-BY-SA 3.0) — product "Sprite 330 ml"
