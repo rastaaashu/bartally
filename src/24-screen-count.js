@@ -186,7 +186,7 @@
         <button class="scanbtn iconbtn iconbtn--plain" data-a="scan" aria-label="scan" style="width:32px;height:32px">${UI.icon('scan')}</button></div>
       <div class="cw-item">
         <div class="tile t56">${UI.art(it)}</div>
-        <div><div class="cw-name">${UI.esc(it.name)}</div><div class="cw-unit">${UI.esc(t('u.' + it.unit))}</div></div>
+        <div><div class="cw-name">${UI.esc(it.name)}</div><div class="cw-unit">${UI.esc(UI.stockText(it))}</div></div>
       </div>
       <div class="sum">
         <div class="sumcol"><div class="micro">${UI.esc(t('count.attendu'))}</div><div class="mid tnum">${UI.esc(UI.fmtQty(exp))}</div></div>

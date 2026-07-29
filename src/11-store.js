@@ -175,9 +175,13 @@ const SEED = {
     return this.items.map(([catId, name, unit, allowDecimal, threshold, mono], i) => ({
       id: 'it' + (i + 1).toString(36).padStart(2, '0'),
       catId, name, unit, allowDecimal, threshold, mono, isDemi: name.startsWith('1/2 '),
-      // spirits pour by the glass: 30 ml dose from a 700 ml bottle (owner-editable)
-      pours: catId === 'spirit' ? [30, 60] : null,
-      bottleMl: catId === 'spirit' ? 700 : null,
+      // real bottle sizes, and glass pours where a bar serves by the glass (owner-editable)
+      pours: catId === 'spirit' ? [30, 60] : (catId === 'rouge' || catId === 'blanc' || catId === 'rose' || catId === 'champ') ? [150] : null,
+      bottleMl: catId === 'spirit' ? 700
+        : (catId === 'rouge' || catId === 'blanc' || catId === 'rose') ? 750
+        : catId === 'demi' ? 375
+        : catId === 'champ' ? 750
+        : null,
       photo: null, barcode: null, pinned: ['Heineken', 'Spécial', 'Black Label', 'Casablanca', 'Red Bull', 'Ricard'].includes(name),
       cost: null, active: true, sort: i,
     }));
@@ -236,7 +240,11 @@ const Store = (() => {
         for (const it of state.items) {
           if (!it.mono && seedByName.has(it.name)) it.mono = seedByName.get(it.name);
           if (it.isDemi === undefined) it.isDemi = String(it.name || '').startsWith('1/2 ');
-          if (it.pours === undefined || (it.doseMl !== undefined && !it.pours)) { it.pours = (it.catId === 'spirit' || it.doseMl) ? [it.doseMl || 30, 60] : null; it.bottleMl = it.bottleMl || (it.catId === 'spirit' ? 700 : null); delete it.doseMl; }
+          if (it.bottleMl === undefined || it.bottleMl === null) {
+            const seeded = SEED.build().find(x => x.name === it.name);
+            if (seeded) { it.bottleMl = seeded.bottleMl; if (it.pours == null) it.pours = seeded.pours; }
+          }
+          if (it.doseMl !== undefined) { if (!it.pours) it.pours = [it.doseMl || 30, 60]; delete it.doseMl; }
         }
       }
     }
@@ -280,6 +288,22 @@ const Store = (() => {
     /* ---- helpers ---- */
     todayBd() { return Engine.bdOf(new Date(), state.settings.cutoffHour); },
     item(id) { return state.items.find(i => i.id === id); },
+    /** human bottle size: 700 → "70 cl", 1000 → "1 L", 375 → "37,5 cl" */
+    sizeLabel(ml) {
+      if (!ml) return '';
+      if (ml % 1000 === 0) return (ml / 1000) + ' L';
+      const cl = ml / 10;
+      return (Number.isInteger(cl) ? cl : String(cl).replace('.', ',')) + ' cl';
+    },
+    /** what the shelf actually looks like: sealed bottles + what is open right now */
+    shelf(itemId) {
+      const it = this.item(itemId);
+      const total = this.stock(itemId);
+      if (!it || !it.bottleMl) return { total, sealed: total, openMl: 0, ml: null };
+      const sealed = Math.floor(total + 1e-6);
+      const openMl = Math.round((total - sealed) * it.bottleMl);
+      return { total, sealed, openMl, ml: it.bottleMl };
+    },
     cat(id) { return state.categories.find(c => c.id === id); },
     catName(c) { return state.settings.lang === 'en' ? c.nameEn : c.nameFr; },
     stock(itemId) { return Engine.expected(state, itemId, this.todayBd()); },

@@ -267,7 +267,7 @@ I18N.extend({
     'ntf.variance': '{n} écart(s) détecté(s) — {top}',
     'ntf.countReminder': 'Pensez au comptage de la journée du {date}',
     // units short
-    'u.bouteille': 'bout.', 'u.canette': 'can.', 'u.portion': 'port.', 'u.verre': 'verre',
+    'u.open': 'ouverte', 'u.glass': 'verre', 'u.bouteille': 'bout.', 'u.canette': 'can.', 'u.portion': 'port.', 'u.verre': 'verre',
     // dates
     'd.mon': 'lun', 'd.tue': 'mar', 'd.wed': 'mer', 'd.thu': 'jeu', 'd.fri': 'ven', 'd.sat': 'sam', 'd.sun': 'dim',
   },
@@ -502,7 +502,7 @@ I18N.extend({
     'ntf.low': 'Low stock: {item} ({qty} {unit})',
     'ntf.variance': '{n} discrepancy(ies) — {top}',
     'ntf.countReminder': 'Don’t forget the count for {date}',
-    'u.bouteille': 'btl.', 'u.canette': 'can', 'u.portion': 'port.', 'u.verre': 'glass',
+    'u.open': 'open', 'u.glass': 'glass', 'u.bouteille': 'btl.', 'u.canette': 'can', 'u.portion': 'port.', 'u.verre': 'glass',
     'd.mon': 'Mon', 'd.tue': 'Tue', 'd.wed': 'Wed', 'd.thu': 'Thu', 'd.fri': 'Fri', 'd.sat': 'Sat', 'd.sun': 'Sun',
   },
 });

@@ -125,9 +125,9 @@
             <span class="row__art">${UI.art(it)}</span>
             <span class="row__body">
               <span class="row__t">${UI.esc(it.name)}</span>
-              <span class="row__s">${UI.esc(t('dash.thresh', { n: UI.fmtQty(it.threshold) }))}</span>
+              <span class="row__s">${UI.esc(UI.stockText(it))} · ${UI.esc(t('dash.thresh', { n: UI.fmtQty(it.threshold) }))}</span>
             </span>
-            <span class="row__end"><span class="num dash-lown">${UI.esc(UI.fmtQty(stock))}</span></span>
+            <span class="row__end"><span class="num dash-lown">${UI.esc(it.bottleMl ? String(Math.floor(stock + 1e-6)) : UI.fmtQty(stock))}</span></span>
           </button>`).join('')}</div>`
           : `<div class="sub2">${UI.esc(t('dash.lowNone'))}</div>`}
 

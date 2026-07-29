@@ -14,6 +14,7 @@
       'sell.glass_one': '{n} verre',
       'sell.glass_many': '{n} verres',
       'sell.doseTag': 'au verre · {ml} ml',
+      'sell.soldItem': 'Vendu : {item}',
       'sell.hint': 'Appuyez sur − à chaque article vendu. Maintenez pour aller vite.',
       'sell.left': 'en stock',
     },
@@ -27,6 +28,7 @@
       'sell.glass_one': '{n} glass',
       'sell.glass_many': '{n} glasses',
       'sell.doseTag': 'by the glass · {ml} ml',
+      'sell.soldItem': 'Sold: {item}',
       'sell.hint': 'Tap − for each item sold. Hold to go faster.',
       'sell.left': 'in stock',
     },
@@ -68,8 +70,16 @@
      A burst becomes ONE sale entry. */
   const Q = { pending: {}, timers: {}, hold: null, repeat: null };
 
-  const pendingQty = (it, p) => !p ? 0 : (isDose(it) ? p.reduce((a, b) => a + b, 0) / it.bottleMl : p);
-  const pendCount = (it, p) => !p ? 0 : (isDose(it) ? p.length : p);
+  /* dose items keep { ml:[…poured glasses…], whole:n }; plain items keep a number */
+  const pendingQty = (it, p) => !p ? 0
+    : (isDose(it) ? (p.whole || 0) + (p.ml || []).reduce((a, b) => a + b, 0) / it.bottleMl : p);
+  const pendCount = (it, p) => !p ? 0 : (isDose(it) ? (p.whole || 0) + (p.ml || []).length : p);
+  const pendLabel = (it, p) => {
+    const g = (p.ml || []).length, w = p.whole || 0, bits = [];
+    if (w) bits.push(w + ' × ' + Store.sizeLabel(it.bottleMl));
+    if (g) bits.push(I18N.plural('sell.glass', g));
+    return '−' + bits.join(' + ');
+  };
 
   function paint(id) {
     const el = document.querySelector(`[data-n="${CSS.escape(id)}"]`);
@@ -78,10 +88,10 @@
     const p = Q.pending[id];
     const n = pendCount(it, p);
     if (n && isDose(it)) {
-      el.textContent = '−' + I18N.plural('sell.glass', n);
+      el.textContent = pendLabel(it, p);
     } else {
-      const shown = Math.round((Store.stock(id) - pendingQty(it, p)) * 100) / 100;
-      el.textContent = UI.fmtQty(shown);
+      const shown = Math.round((Store.stock(id) - pendingQty(it, p)) * 1000) / 1000;
+      el.textContent = it.bottleMl ? String(Math.floor(shown + 1e-6)) : UI.fmtQty(shown);
     }
     el.classList.toggle('is-pend', !!n);
     el.classList.toggle('is-low', !n && Store.isLow(id));
@@ -96,7 +106,15 @@
   /** plain items: −/+ one unit */
   function bump(id, dir) {
     const it = Store.item(id); if (!it) return;
-    if (isDose(it)) { if (dir > 0) unpour(id); return; } // + on a dose row = undo last pour
+    if (isDose(it)) {
+      const p = (Q.pending[id] = Q.pending[id] || { ml: [], whole: 0 });
+      if (dir < 0) p.whole = (p.whole || 0) + 1;            // − = one whole bottle sold
+      else if (p.ml.length) p.ml.pop();                      // + undoes the last glass…
+      else if (p.whole) p.whole--;                           // …then the last bottle
+      else return;
+      arm(id);
+      return;
+    }
     const next = (Q.pending[id] || 0) + (dir < 0 ? 1 : -1);
     if (next < 0) return;
     Q.pending[id] = next;
@@ -105,13 +123,8 @@
   /** dose items: pour one glass of `ml` */
   function pour(id, ml) {
     const it = Store.item(id); if (!it || !isDose(it)) return;
-    (Q.pending[id] = Q.pending[id] || []).push(ml);
-    arm(id);
-  }
-  function unpour(id) {
-    const p = Q.pending[id];
-    if (!p || !p.length) return;
-    p.pop();
+    const p = (Q.pending[id] = Q.pending[id] || { ml: [], whole: 0 });
+    p.ml.push(ml);
     arm(id);
   }
 
@@ -121,15 +134,18 @@
     clearTimeout(Q.timers[id]);
     const it = Store.item(id); if (!it) return;
     if (isDose(it)) {
-      if (!p || !p.length) return;
-      const ml = p.reduce((a, b) => a + b, 0);
-      const qty = ml / it.bottleMl;
+      if (!p || (!p.ml.length && !p.whole)) return;
+      const ml = p.ml.reduce((a, b) => a + b, 0);
+      const qty = (p.whole || 0) + ml / it.bottleMl;
       const pours = {};
-      for (const m of p) pours[m] = (pours[m] || 0) + 1;
-      const entry = Store.logSale(id, qty, { glasses: p.length, pours });
+      for (const m of p.ml) pours[m] = (pours[m] || 0) + 1;
+      const meta = p.ml.length ? { glasses: p.ml.length, pours } : undefined;
+      const entry = Store.logSale(id, qty, meta);
       if (!entry) return;
-      const detail = Object.entries(pours).map(([m, n]) => `${n}×${m}ml`).join(' · ');
-      UI.toast(`${I18N.plural('sell.soldGlasses', p.length, { item: it.name })} (${detail})`, {
+      const bits = [];
+      if (p.whole) bits.push(`${p.whole} × ${Store.sizeLabel(it.bottleMl)}`);
+      for (const [m, n] of Object.entries(pours)) bits.push(`${n}×${m}ml`);
+      UI.toast(`${t('sell.soldItem', { item: it.name })} — ${bits.join(' · ')}`, {
         type: 'ok', action: { label: t('g.undo'), fn: () => Store.undoSale(entry.id) } });
       return;
     }
@@ -154,23 +170,22 @@
   function rowHtml(it) {
     const p = Q.pending[it.id];
     const n = pendCount(it, p);
-    const shown = Math.round((Store.stock(it.id) - pendingQty(it, p)) * 100) / 100;
+    const shown = Math.round((Store.stock(it.id) - pendingQty(it, p)) * 1000) / 1000;
     const low = !n && Store.isLow(it.id);
     const dose = isDose(it);
     const numHtml = `<span class="num sell-n${low ? ' is-low' : ''}${n ? ' is-pend' : ''}" data-n="${UI.esc(it.id)}">${
-      (n && dose) ? UI.esc('−' + I18N.plural('sell.glass', n)) : UI.esc(UI.fmtQty(shown))}</span>`;
+      (n && dose) ? UI.esc('−' + I18N.plural('sell.glass', n)) : UI.esc(it.bottleMl ? String(Math.floor(shown + 1e-6)) : UI.fmtQty(shown))}</span>`;
     return `<div class="row sell-row" data-row="${UI.esc(it.id)}">
       <span class="sell-main">
         <span class="row__art">${UI.art(it)}</span>
         <span class="row__body">
           <span class="row__t">${UI.esc(it.name)}</span>
-          <span class="row__s">${dose ? UI.esc(t('sell.doseTag', { ml: pourSizes(it).join('/') })) : UI.esc(t('u.' + it.unit))}</span>
+          <span class="row__s">${UI.esc(UI.stockText(it))}${dose ? ' · ' + UI.esc(t('sell.doseTag', { ml: pourSizes(it).join('/') })) : ''}</span>
         </span>
       </span>
       <span class="sell-adj">
-        ${dose
-          ? pourSizes(it).map(ml => `<button type="button" class="sell-btn is-primary sell-pour" data-pour="${ml}" data-id="${UI.esc(it.id)}" aria-label="${ml} ml"><b>${ml}</b><i>ml</i></button>`).join('')
-          : `<button type="button" class="sell-btn is-primary" data-adj="-1" data-id="${UI.esc(it.id)}" aria-label="−">−</button>`}
+        <button type="button" class="sell-btn is-primary" data-adj="-1" data-id="${UI.esc(it.id)}" aria-label="−">−</button>
+        ${dose ? pourSizes(it).map(ml => `<button type="button" class="sell-btn sell-pour" data-pour="${ml}" data-id="${UI.esc(it.id)}" aria-label="${ml} ml"><b>${ml}</b><i>ml</i></button>`).join('') : ''}
         ${numHtml}
         <button type="button" class="sell-btn" data-adj="1" data-id="${UI.esc(it.id)}" aria-label="+">+</button>
       </span>

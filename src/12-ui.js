@@ -187,6 +187,20 @@ const UI = (() => {
     </svg><div class="ring__t">${label ?? Math.round(pct * 100) + '%'}</div></div>`;
   }
 
+  /**
+   * Stock the way a bar reads it: "41 × 70 cl · ouverte 67 cl".
+   * mode 'short' → just the leading count, for tight rows.
+   */
+  function stockText(item, mode) {
+    const s = Store.shelf(item.id);
+    if (!s.ml) return fmtQty(s.total) + (mode === 'short' ? '' : ' ' + t('u.' + item.unit));
+    const size = Store.sizeLabel(s.ml);
+    const head = `${s.sealed} × ${size}`;
+    if (!s.openMl) return head;
+    const open = s.openMl >= 100 ? Store.sizeLabel(Math.round(s.openMl / 10) * 10) : s.openMl + ' ml';
+    return mode === 'short' ? `${head} + ${open}` : `${head} · ${t('u.open')} ${open}`;
+  }
+
   /* ---------- barcode scanning ---------- */
   const canScan = 'BarcodeDetector' in window && !!navigator.mediaDevices?.getUserMedia;
   async function scan({ onCode }) {
@@ -333,7 +347,7 @@ const UI = (() => {
     esc, el, t, icon, art, logoMark, toast, sheet, confirm: confirmBox, numpad, ring,
     canScan, scan, pickImage, download, csv, printHTML,
     fmtQty, fmtDate, fmtTime, money, haptic,
-    registerScreen, go, refresh, header,
+    registerScreen, go, refresh, header, stockText,
     get current() { return current; }, get params() { return currentParams; },
   };
 })();

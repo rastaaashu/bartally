@@ -121,7 +121,8 @@
     const pend = QUICK.pending[id] || 0;
     const el = document.querySelector(`[data-n="${CSS.escape(id)}"]`);
     if (!el) return;
-    el.textContent = UI.fmtQty(Math.round((Store.stock(id) + pend) * 100) / 100);
+    const v = Math.round((Store.stock(id) + pend) * 1000) / 1000;
+    el.textContent = it.bottleMl ? String(Math.floor(v + 1e-6)) : UI.fmtQty(v);
     el.classList.toggle('is-pend', !!pend);
     if (pend) el.classList.remove('is-low');
   }
@@ -172,7 +173,8 @@
 
   function rowHtml(it, off) {
     const pend = QUICK.pending[it.id] || 0;
-    const stock = Math.round((Store.stock(it.id) + pend) * 100) / 100;
+    const stockRaw = Math.round((Store.stock(it.id) + pend) * 1000) / 1000;
+    const stock = it.bottleMl ? Math.floor(stockRaw + 1e-6) : stockRaw;
     const low = !off && !pend && Store.isLow(it.id);
     const step = it.allowDecimal ? '0,5' : '1';
     return `<div class="row inv-row" data-row="${UI.esc(it.id)}">
@@ -180,7 +182,7 @@
         <span class="row__art">${UI.art(it)}</span>
         <span class="row__body">
           <span class="row__t">${UI.esc(displayName(it.name))}</span>
-          <span class="row__s">${UI.esc(unitLabel(it.unit))}</span>
+          <span class="row__s">${UI.esc(UI.stockText(it))}</span>
         </span>
       </button>
       ${off ? `<span class="row__end"><span class="num inv-n">${UI.esc(UI.fmtQty(stock))}</span></span>` : `

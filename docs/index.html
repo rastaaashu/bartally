@@ -728,7 +728,7 @@ I18N.extend({
     'ntf.variance': '{n} écart(s) détecté(s) — {top}',
     'ntf.countReminder': 'Pensez au comptage de la journée du {date}',
     // units short
-    'u.bouteille': 'bout.', 'u.canette': 'can.', 'u.portion': 'port.', 'u.verre': 'verre',
+    'u.open': 'ouverte', 'u.glass': 'verre', 'u.bouteille': 'bout.', 'u.canette': 'can.', 'u.portion': 'port.', 'u.verre': 'verre',
     // dates
     'd.mon': 'lun', 'd.tue': 'mar', 'd.wed': 'mer', 'd.thu': 'jeu', 'd.fri': 'ven', 'd.sat': 'sam', 'd.sun': 'dim',
   },
@@ -963,7 +963,7 @@ I18N.extend({
     'ntf.low': 'Low stock: {item} ({qty} {unit})',
     'ntf.variance': '{n} discrepancy(ies) — {top}',
     'ntf.countReminder': 'Don’t forget the count for {date}',
-    'u.bouteille': 'btl.', 'u.canette': 'can', 'u.portion': 'port.', 'u.verre': 'glass',
+    'u.open': 'open', 'u.glass': 'glass', 'u.bouteille': 'btl.', 'u.canette': 'can', 'u.portion': 'port.', 'u.verre': 'glass',
     'd.mon': 'Mon', 'd.tue': 'Tue', 'd.wed': 'Wed', 'd.thu': 'Thu', 'd.fri': 'Fri', 'd.sat': 'Sat', 'd.sun': 'Sun',
   },
 });
@@ -1146,9 +1146,13 @@ const SEED = {
     return this.items.map(([catId, name, unit, allowDecimal, threshold, mono], i) => ({
       id: 'it' + (i + 1).toString(36).padStart(2, '0'),
       catId, name, unit, allowDecimal, threshold, mono, isDemi: name.startsWith('1/2 '),
-      // spirits pour by the glass: 30 ml dose from a 700 ml bottle (owner-editable)
-      pours: catId === 'spirit' ? [30, 60] : null,
-      bottleMl: catId === 'spirit' ? 700 : null,
+      // real bottle sizes, and glass pours where a bar serves by the glass (owner-editable)
+      pours: catId === 'spirit' ? [30, 60] : (catId === 'rouge' || catId === 'blanc' || catId === 'rose' || catId === 'champ') ? [150] : null,
+      bottleMl: catId === 'spirit' ? 700
+        : (catId === 'rouge' || catId === 'blanc' || catId === 'rose') ? 750
+        : catId === 'demi' ? 375
+        : catId === 'champ' ? 750
+        : null,
       photo: null, barcode: null, pinned: ['Heineken', 'Spécial', 'Black Label', 'Casablanca', 'Red Bull', 'Ricard'].includes(name),
       cost: null, active: true, sort: i,
     }));
@@ -1207,7 +1211,11 @@ const Store = (() => {
         for (const it of state.items) {
           if (!it.mono && seedByName.has(it.name)) it.mono = seedByName.get(it.name);
           if (it.isDemi === undefined) it.isDemi = String(it.name || '').startsWith('1/2 ');
-          if (it.pours === undefined || (it.doseMl !== undefined && !it.pours)) { it.pours = (it.catId === 'spirit' || it.doseMl) ? [it.doseMl || 30, 60] : null; it.bottleMl = it.bottleMl || (it.catId === 'spirit' ? 700 : null); delete it.doseMl; }
+          if (it.bottleMl === undefined || it.bottleMl === null) {
+            const seeded = SEED.build().find(x => x.name === it.name);
+            if (seeded) { it.bottleMl = seeded.bottleMl; if (it.pours == null) it.pours = seeded.pours; }
+          }
+          if (it.doseMl !== undefined) { if (!it.pours) it.pours = [it.doseMl || 30, 60]; delete it.doseMl; }
         }
       }
     }
@@ -1251,6 +1259,22 @@ const Store = (() => {
     /* ---- helpers ---- */
     todayBd() { return Engine.bdOf(new Date(), state.settings.cutoffHour); },
     item(id) { return state.items.find(i => i.id === id); },
+    /** human bottle size: 700 → "70 cl", 1000 → "1 L", 375 → "37,5 cl" */
+    sizeLabel(ml) {
+      if (!ml) return '';
+      if (ml % 1000 === 0) return (ml / 1000) + ' L';
+      const cl = ml / 10;
+      return (Number.isInteger(cl) ? cl : String(cl).replace('.', ',')) + ' cl';
+    },
+    /** what the shelf actually looks like: sealed bottles + what is open right now */
+    shelf(itemId) {
+      const it = this.item(itemId);
+      const total = this.stock(itemId);
+      if (!it || !it.bottleMl) return { total, sealed: total, openMl: 0, ml: null };
+      const sealed = Math.floor(total + 1e-6);
+      const openMl = Math.round((total - sealed) * it.bottleMl);
+      return { total, sealed, openMl, ml: it.bottleMl };
+    },
     cat(id) { return state.categories.find(c => c.id === id); },
     catName(c) { return state.settings.lang === 'en' ? c.nameEn : c.nameFr; },
     stock(itemId) { return Engine.expected(state, itemId, this.todayBd()); },
@@ -1817,6 +1841,20 @@ const UI = (() => {
     </svg><div class="ring__t">${label ?? Math.round(pct * 100) + '%'}</div></div>`;
   }
 
+  /**
+   * Stock the way a bar reads it: "41 × 70 cl · ouverte 67 cl".
+   * mode 'short' → just the leading count, for tight rows.
+   */
+  function stockText(item, mode) {
+    const s = Store.shelf(item.id);
+    if (!s.ml) return fmtQty(s.total) + (mode === 'short' ? '' : ' ' + t('u.' + item.unit));
+    const size = Store.sizeLabel(s.ml);
+    const head = `${s.sealed} × ${size}`;
+    if (!s.openMl) return head;
+    const open = s.openMl >= 100 ? Store.sizeLabel(Math.round(s.openMl / 10) * 10) : s.openMl + ' ml';
+    return mode === 'short' ? `${head} + ${open}` : `${head} · ${t('u.open')} ${open}`;
+  }
+
   /* ---------- barcode scanning ---------- */
   const canScan = 'BarcodeDetector' in window && !!navigator.mediaDevices?.getUserMedia;
   async function scan({ onCode }) {
@@ -1963,7 +2001,7 @@ const UI = (() => {
     esc, el, t, icon, art, logoMark, toast, sheet, confirm: confirmBox, numpad, ring,
     canScan, scan, pickImage, download, csv, printHTML,
     fmtQty, fmtDate, fmtTime, money, haptic,
-    registerScreen, go, refresh, header,
+    registerScreen, go, refresh, header, stockText,
     get current() { return current; }, get params() { return currentParams; },
   };
 })();
@@ -2786,6 +2824,7 @@ const Sync = (() => {
       'sell.glass_one': '{n} verre',
       'sell.glass_many': '{n} verres',
       'sell.doseTag': 'au verre · {ml} ml',
+      'sell.soldItem': 'Vendu : {item}',
       'sell.hint': 'Appuyez sur − à chaque article vendu. Maintenez pour aller vite.',
       'sell.left': 'en stock',
     },
@@ -2799,6 +2838,7 @@ const Sync = (() => {
       'sell.glass_one': '{n} glass',
       'sell.glass_many': '{n} glasses',
       'sell.doseTag': 'by the glass · {ml} ml',
+      'sell.soldItem': 'Sold: {item}',
       'sell.hint': 'Tap − for each item sold. Hold to go faster.',
       'sell.left': 'in stock',
     },
@@ -2840,8 +2880,16 @@ const Sync = (() => {
      A burst becomes ONE sale entry. */
   const Q = { pending: {}, timers: {}, hold: null, repeat: null };
 
-  const pendingQty = (it, p) => !p ? 0 : (isDose(it) ? p.reduce((a, b) => a + b, 0) / it.bottleMl : p);
-  const pendCount = (it, p) => !p ? 0 : (isDose(it) ? p.length : p);
+  /* dose items keep { ml:[…poured glasses…], whole:n }; plain items keep a number */
+  const pendingQty = (it, p) => !p ? 0
+    : (isDose(it) ? (p.whole || 0) + (p.ml || []).reduce((a, b) => a + b, 0) / it.bottleMl : p);
+  const pendCount = (it, p) => !p ? 0 : (isDose(it) ? (p.whole || 0) + (p.ml || []).length : p);
+  const pendLabel = (it, p) => {
+    const g = (p.ml || []).length, w = p.whole || 0, bits = [];
+    if (w) bits.push(w + ' × ' + Store.sizeLabel(it.bottleMl));
+    if (g) bits.push(I18N.plural('sell.glass', g));
+    return '−' + bits.join(' + ');
+  };
 
   function paint(id) {
     const el = document.querySelector(`[data-n="${CSS.escape(id)}"]`);
@@ -2850,10 +2898,10 @@ const Sync = (() => {
     const p = Q.pending[id];
     const n = pendCount(it, p);
     if (n && isDose(it)) {
-      el.textContent = '−' + I18N.plural('sell.glass', n);
+      el.textContent = pendLabel(it, p);
     } else {
-      const shown = Math.round((Store.stock(id) - pendingQty(it, p)) * 100) / 100;
-      el.textContent = UI.fmtQty(shown);
+      const shown = Math.round((Store.stock(id) - pendingQty(it, p)) * 1000) / 1000;
+      el.textContent = it.bottleMl ? String(Math.floor(shown + 1e-6)) : UI.fmtQty(shown);
     }
     el.classList.toggle('is-pend', !!n);
     el.classList.toggle('is-low', !n && Store.isLow(id));
@@ -2868,7 +2916,15 @@ const Sync = (() => {
   /** plain items: −/+ one unit */
   function bump(id, dir) {
     const it = Store.item(id); if (!it) return;
-    if (isDose(it)) { if (dir > 0) unpour(id); return; } // + on a dose row = undo last pour
+    if (isDose(it)) {
+      const p = (Q.pending[id] = Q.pending[id] || { ml: [], whole: 0 });
+      if (dir < 0) p.whole = (p.whole || 0) + 1;            // − = one whole bottle sold
+      else if (p.ml.length) p.ml.pop();                      // + undoes the last glass…
+      else if (p.whole) p.whole--;                           // …then the last bottle
+      else return;
+      arm(id);
+      return;
+    }
     const next = (Q.pending[id] || 0) + (dir < 0 ? 1 : -1);
     if (next < 0) return;
     Q.pending[id] = next;
@@ -2877,13 +2933,8 @@ const Sync = (() => {
   /** dose items: pour one glass of `ml` */
   function pour(id, ml) {
     const it = Store.item(id); if (!it || !isDose(it)) return;
-    (Q.pending[id] = Q.pending[id] || []).push(ml);
-    arm(id);
-  }
-  function unpour(id) {
-    const p = Q.pending[id];
-    if (!p || !p.length) return;
-    p.pop();
+    const p = (Q.pending[id] = Q.pending[id] || { ml: [], whole: 0 });
+    p.ml.push(ml);
     arm(id);
   }
 
@@ -2893,15 +2944,18 @@ const Sync = (() => {
     clearTimeout(Q.timers[id]);
     const it = Store.item(id); if (!it) return;
     if (isDose(it)) {
-      if (!p || !p.length) return;
-      const ml = p.reduce((a, b) => a + b, 0);
-      const qty = ml / it.bottleMl;
+      if (!p || (!p.ml.length && !p.whole)) return;
+      const ml = p.ml.reduce((a, b) => a + b, 0);
+      const qty = (p.whole || 0) + ml / it.bottleMl;
       const pours = {};
-      for (const m of p) pours[m] = (pours[m] || 0) + 1;
-      const entry = Store.logSale(id, qty, { glasses: p.length, pours });
+      for (const m of p.ml) pours[m] = (pours[m] || 0) + 1;
+      const meta = p.ml.length ? { glasses: p.ml.length, pours } : undefined;
+      const entry = Store.logSale(id, qty, meta);
       if (!entry) return;
-      const detail = Object.entries(pours).map(([m, n]) => `${n}×${m}ml`).join(' · ');
-      UI.toast(`${I18N.plural('sell.soldGlasses', p.length, { item: it.name })} (${detail})`, {
+      const bits = [];
+      if (p.whole) bits.push(`${p.whole} × ${Store.sizeLabel(it.bottleMl)}`);
+      for (const [m, n] of Object.entries(pours)) bits.push(`${n}×${m}ml`);
+      UI.toast(`${t('sell.soldItem', { item: it.name })} — ${bits.join(' · ')}`, {
         type: 'ok', action: { label: t('g.undo'), fn: () => Store.undoSale(entry.id) } });
       return;
     }
@@ -2926,23 +2980,22 @@ const Sync = (() => {
   function rowHtml(it) {
     const p = Q.pending[it.id];
     const n = pendCount(it, p);
-    const shown = Math.round((Store.stock(it.id) - pendingQty(it, p)) * 100) / 100;
+    const shown = Math.round((Store.stock(it.id) - pendingQty(it, p)) * 1000) / 1000;
     const low = !n && Store.isLow(it.id);
     const dose = isDose(it);
     const numHtml = `<span class="num sell-n${low ? ' is-low' : ''}${n ? ' is-pend' : ''}" data-n="${UI.esc(it.id)}">${
-      (n && dose) ? UI.esc('−' + I18N.plural('sell.glass', n)) : UI.esc(UI.fmtQty(shown))}</span>`;
+      (n && dose) ? UI.esc('−' + I18N.plural('sell.glass', n)) : UI.esc(it.bottleMl ? String(Math.floor(shown + 1e-6)) : UI.fmtQty(shown))}</span>`;
     return `<div class="row sell-row" data-row="${UI.esc(it.id)}">
       <span class="sell-main">
         <span class="row__art">${UI.art(it)}</span>
         <span class="row__body">
           <span class="row__t">${UI.esc(it.name)}</span>
-          <span class="row__s">${dose ? UI.esc(t('sell.doseTag', { ml: pourSizes(it).join('/') })) : UI.esc(t('u.' + it.unit))}</span>
+          <span class="row__s">${UI.esc(UI.stockText(it))}${dose ? ' · ' + UI.esc(t('sell.doseTag', { ml: pourSizes(it).join('/') })) : ''}</span>
         </span>
       </span>
       <span class="sell-adj">
-        ${dose
-          ? pourSizes(it).map(ml => `<button type="button" class="sell-btn is-primary sell-pour" data-pour="${ml}" data-id="${UI.esc(it.id)}" aria-label="${ml} ml"><b>${ml}</b><i>ml</i></button>`).join('')
-          : `<button type="button" class="sell-btn is-primary" data-adj="-1" data-id="${UI.esc(it.id)}" aria-label="−">−</button>`}
+        <button type="button" class="sell-btn is-primary" data-adj="-1" data-id="${UI.esc(it.id)}" aria-label="−">−</button>
+        ${dose ? pourSizes(it).map(ml => `<button type="button" class="sell-btn sell-pour" data-pour="${ml}" data-id="${UI.esc(it.id)}" aria-label="${ml} ml"><b>${ml}</b><i>ml</i></button>`).join('') : ''}
         ${numHtml}
         <button type="button" class="sell-btn" data-adj="1" data-id="${UI.esc(it.id)}" aria-label="+">+</button>
       </span>
@@ -3150,9 +3203,9 @@ const Sync = (() => {
             <span class="row__art">${UI.art(it)}</span>
             <span class="row__body">
               <span class="row__t">${UI.esc(it.name)}</span>
-              <span class="row__s">${UI.esc(t('dash.thresh', { n: UI.fmtQty(it.threshold) }))}</span>
+              <span class="row__s">${UI.esc(UI.stockText(it))} · ${UI.esc(t('dash.thresh', { n: UI.fmtQty(it.threshold) }))}</span>
             </span>
-            <span class="row__end"><span class="num dash-lown">${UI.esc(UI.fmtQty(stock))}</span></span>
+            <span class="row__end"><span class="num dash-lown">${UI.esc(it.bottleMl ? String(Math.floor(stock + 1e-6)) : UI.fmtQty(stock))}</span></span>
           </button>`).join('')}</div>`
           : `<div class="sub2">${UI.esc(t('dash.lowNone'))}</div>`}
 
@@ -3314,7 +3367,8 @@ const Sync = (() => {
     const pend = QUICK.pending[id] || 0;
     const el = document.querySelector(`[data-n="${CSS.escape(id)}"]`);
     if (!el) return;
-    el.textContent = UI.fmtQty(Math.round((Store.stock(id) + pend) * 100) / 100);
+    const v = Math.round((Store.stock(id) + pend) * 1000) / 1000;
+    el.textContent = it.bottleMl ? String(Math.floor(v + 1e-6)) : UI.fmtQty(v);
     el.classList.toggle('is-pend', !!pend);
     if (pend) el.classList.remove('is-low');
   }
@@ -3365,7 +3419,8 @@ const Sync = (() => {
 
   function rowHtml(it, off) {
     const pend = QUICK.pending[it.id] || 0;
-    const stock = Math.round((Store.stock(it.id) + pend) * 100) / 100;
+    const stockRaw = Math.round((Store.stock(it.id) + pend) * 1000) / 1000;
+    const stock = it.bottleMl ? Math.floor(stockRaw + 1e-6) : stockRaw;
     const low = !off && !pend && Store.isLow(it.id);
     const step = it.allowDecimal ? '0,5' : '1';
     return `<div class="row inv-row" data-row="${UI.esc(it.id)}">
@@ -3373,7 +3428,7 @@ const Sync = (() => {
         <span class="row__art">${UI.art(it)}</span>
         <span class="row__body">
           <span class="row__t">${UI.esc(displayName(it.name))}</span>
-          <span class="row__s">${UI.esc(unitLabel(it.unit))}</span>
+          <span class="row__s">${UI.esc(UI.stockText(it))}</span>
         </span>
       </button>
       ${off ? `<span class="row__end"><span class="num inv-n">${UI.esc(UI.fmtQty(stock))}</span></span>` : `
@@ -3864,7 +3919,7 @@ const Sync = (() => {
         <button class="scanbtn iconbtn iconbtn--plain" data-a="scan" aria-label="scan" style="width:32px;height:32px">${UI.icon('scan')}</button></div>
       <div class="cw-item">
         <div class="tile t56">${UI.art(it)}</div>
-        <div><div class="cw-name">${UI.esc(it.name)}</div><div class="cw-unit">${UI.esc(t('u.' + it.unit))}</div></div>
+        <div><div class="cw-name">${UI.esc(it.name)}</div><div class="cw-unit">${UI.esc(UI.stockText(it))}</div></div>
       </div>
       <div class="sum">
         <div class="sumcol"><div class="micro">${UI.esc(t('count.attendu'))}</div><div class="mid tnum">${UI.esc(UI.fmtQty(exp))}</div></div>
