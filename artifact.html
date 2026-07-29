@@ -688,6 +688,8 @@ I18N.extend({
     'set.costs': 'Coûts (optionnel)',
     'set.costsHint': 'Renseignez le coût unitaire pour voir les pertes en {cur}. Visible par vous seul.',
     'set.currency': 'Devise',
+    'set.session': 'Session',
+    'set.sessionHint': 'Vous restez connecté sur ce téléphone jusqu’à déconnexion.',
     'set.data': 'Données',
     'set.backup': 'Exporter toutes les données',
     'set.backupHint': 'Fichier de sauvegarde complet (JSON) — gardez-le précieusement.',
@@ -914,6 +916,8 @@ I18N.extend({
     'set.costs': 'Costs (optional)',
     'set.costsHint': 'Enter unit costs to see losses in {cur}. Only you can see them.',
     'set.currency': 'Currency',
+    'set.session': 'Session',
+    'set.sessionHint': 'You stay signed in on this phone until you sign out.',
     'set.data': 'Data',
     'set.backup': 'Export all data',
     'set.backupHint': 'Full backup file (JSON) — keep it safe.',
@@ -1124,6 +1128,9 @@ const SEED = {
 };
 
 /* ---------- store ---------- */
+/** identifies this deployment's data; bump to force every device back to a clean login */
+const SITE_ID = 'kalinka-1';
+
 const Store = (() => {
   const KEY = 'bartally.v1';
   const LS = (typeof localStorage !== 'undefined') ? localStorage : { getItem: () => null, setItem: () => {}, removeItem: () => {} };
@@ -1151,6 +1158,14 @@ const Store = (() => {
     const raw = LS.getItem(KEY);
     if (raw) {
       const p = JSON.parse(raw);
+      // Data from another site/build (this browser reuses one storage area for every
+      // path on the domain) is discarded so the device always starts at this site's login.
+      const stamp = p?.settings?.siteId;
+      if (p && p.v === 1 && stamp !== SITE_ID && stamp !== SITE_ID + '-demo') {
+        LS.removeItem(KEY);
+        try { LS.removeItem('kalinka.outbox.v1'); } catch (e) {}
+        throw new Error('stale site data discarded');
+      }
       if (p && p.v === 1) {
         state = Object.assign(blank(), p, { settings: Object.assign(blank().settings, p.settings) });
         // migrations: category accents follow the current design tokens; monograms backfill
@@ -1165,7 +1180,7 @@ const Store = (() => {
         }
       }
     }
-  } catch (e) { console.error('load failed', e); }
+  } catch (e) { state = blank(); console.info('store:', e.message); }
 
   function save() {
     clearTimeout(saveTimer);
@@ -1419,6 +1434,7 @@ const Store = (() => {
     /* ---- setup ---- */
     async setupReal({ barName, ownerName, pin, employees, opening }) {
       state = blank();
+      state.settings.siteId = SITE_ID;
       state.categories = JSON.parse(JSON.stringify(SEED.categories));
       state.items = SEED.build();
       state.settings.barName = barName; state.settings.ownerName = ownerName || 'Patron';
@@ -1452,9 +1468,9 @@ const Store = (() => {
       state.settings.barName = 'Kalinka-la-Gaieté';
       state.settings.ownerName = 'Patron';
       await this.setOwnerPin('2580');
-      const bd = Engine.addDays(this.todayBd(), -1);
-      const c = { id: uid(), bd, status: 'closed', isOpening: true, startedAt: new Date().toISOString(), closedAt: new Date().toISOString(), closedBy: 'Patron', lines: state.items.map(it => ({ itemId: it.id, expected: 0, counted: 0, variance: 0, note: '' })) };
-      state.counts.push(c);
+      // no opening count: with no baseline the engine already computes
+      // stock = livraisons − ventes − pertes. The first real Comptage becomes the baseline.
+      state.settings.siteId = SITE_ID;
       state.settings.setupDone = true; state.settings.demoMode = false;
       state.session = null; // straight to the login screen
       this.audit('setup', 'settings', 'app', null, { mode: 'prod', items: state.items.length });
@@ -1465,7 +1481,7 @@ const Store = (() => {
       state.categories = JSON.parse(JSON.stringify(SEED.categories));
       state.items = SEED.build();
       state.settings.barName = 'Le Comptoir'; state.settings.ownerName = 'Karim';
-      state.settings.demoMode = true;
+      state.settings.demoMode = true; state.settings.siteId = SITE_ID + '-demo';
       await this.setOwnerPin('1234'); // before setupDone flips, so the owner-guard lets setup through
       state.settings.setupDone = true;
       const y = await this.addEmployeeRaw('Yassine');
@@ -1979,7 +1995,9 @@ const Sync = (() => {
     if (!row) return false;
     const st = Store.state;
     if (table === 'kv_settings') {
-      const keep = { lang: st.settings.lang };            // language stays per-device
+      if (!row.data || row.data.siteId !== SITE_ID) return false; // other site / legacy unstamped row
+      // language and the site stamp stay per-device
+      const keep = { lang: st.settings.lang, siteId: st.settings.siteId };
       const localTs = st.settings._syncTs || '';
       if ((row.updated_at || '') <= localTs) return false;
       Object.assign(st.settings, row.data, keep, { _syncTs: row.updated_at });
@@ -5038,6 +5056,12 @@ const Sync = (() => {
 
   function dataSec(s) {
     return `
+      <div class="sec"><div class="micro">${esc(t('set.session'))}</div></div>
+      <div class="row">
+        <span class="row__body"><span class="row__t">${esc(Store.me ? Store.me.name : '')}</span>
+          <span class="row__s">${esc(t('set.sessionHint'))}</span></span>
+        <button class="textbtn" data-a="logout">${esc(t('login.switchUser'))}</button>
+      </div>
       <div class="sec"><div class="micro">${esc(t('set.data'))}</div></div>
       <div class="row">
         <span class="row__body"><span class="row__t">${esc(t('set.backup'))}</span>
@@ -5114,6 +5138,7 @@ const Sync = (() => {
       UI.download('bartally-backup-' + Store.todayBd() + '.json', Store.exportJSON(), 'application/json');
       return;
     }
+    if (a === 'logout') { UI.haptic('light'); Store.logout(); return; }
     if (a === 'restore') { restoreFlow(); return; }
     if (a === 'demo-clear') {
       if (await UI.confirm(t('set.demoClearWarn'), { danger: true, title: t('set.demoClear'), yes: t('set.demoClear') })) Store.resetAll();

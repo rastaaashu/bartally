@@ -58,7 +58,9 @@ const Sync = (() => {
     if (!row) return false;
     const st = Store.state;
     if (table === 'kv_settings') {
-      const keep = { lang: st.settings.lang };            // language stays per-device
+      if (!row.data || row.data.siteId !== SITE_ID) return false; // other site / legacy unstamped row
+      // language and the site stamp stay per-device
+      const keep = { lang: st.settings.lang, siteId: st.settings.siteId };
       const localTs = st.settings._syncTs || '';
       if ((row.updated_at || '') <= localTs) return false;
       Object.assign(st.settings, row.data, keep, { _syncTs: row.updated_at });

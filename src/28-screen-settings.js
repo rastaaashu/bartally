@@ -351,6 +351,12 @@
 
   function dataSec(s) {
     return `
+      <div class="sec"><div class="micro">${esc(t('set.session'))}</div></div>
+      <div class="row">
+        <span class="row__body"><span class="row__t">${esc(Store.me ? Store.me.name : '')}</span>
+          <span class="row__s">${esc(t('set.sessionHint'))}</span></span>
+        <button class="textbtn" data-a="logout">${esc(t('login.switchUser'))}</button>
+      </div>
       <div class="sec"><div class="micro">${esc(t('set.data'))}</div></div>
       <div class="row">
         <span class="row__body"><span class="row__t">${esc(t('set.backup'))}</span>
@@ -427,6 +433,7 @@
       UI.download('bartally-backup-' + Store.todayBd() + '.json', Store.exportJSON(), 'application/json');
       return;
     }
+    if (a === 'logout') { UI.haptic('light'); Store.logout(); return; }
     if (a === 'restore') { restoreFlow(); return; }
     if (a === 'demo-clear') {
       if (await UI.confirm(t('set.demoClearWarn'), { danger: true, title: t('set.demoClear'), yes: t('set.demoClear') })) Store.resetAll();

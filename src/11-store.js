@@ -182,6 +182,9 @@ const SEED = {
 };
 
 /* ---------- store ---------- */
+/** identifies this deployment's data; bump to force every device back to a clean login */
+const SITE_ID = 'kalinka-1';
+
 const Store = (() => {
   const KEY = 'bartally.v1';
   const LS = (typeof localStorage !== 'undefined') ? localStorage : { getItem: () => null, setItem: () => {}, removeItem: () => {} };
@@ -209,6 +212,14 @@ const Store = (() => {
     const raw = LS.getItem(KEY);
     if (raw) {
       const p = JSON.parse(raw);
+      // Data from another site/build (this browser reuses one storage area for every
+      // path on the domain) is discarded so the device always starts at this site's login.
+      const stamp = p?.settings?.siteId;
+      if (p && p.v === 1 && stamp !== SITE_ID && stamp !== SITE_ID + '-demo') {
+        LS.removeItem(KEY);
+        try { LS.removeItem('kalinka.outbox.v1'); } catch (e) {}
+        throw new Error('stale site data discarded');
+      }
       if (p && p.v === 1) {
         state = Object.assign(blank(), p, { settings: Object.assign(blank().settings, p.settings) });
         // migrations: category accents follow the current design tokens; monograms backfill
@@ -223,7 +234,7 @@ const Store = (() => {
         }
       }
     }
-  } catch (e) { console.error('load failed', e); }
+  } catch (e) { state = blank(); console.info('store:', e.message); }
 
   function save() {
     clearTimeout(saveTimer);
@@ -477,6 +488,7 @@ const Store = (() => {
     /* ---- setup ---- */
     async setupReal({ barName, ownerName, pin, employees, opening }) {
       state = blank();
+      state.settings.siteId = SITE_ID;
       state.categories = JSON.parse(JSON.stringify(SEED.categories));
       state.items = SEED.build();
       state.settings.barName = barName; state.settings.ownerName = ownerName || 'Patron';
@@ -510,9 +522,9 @@ const Store = (() => {
       state.settings.barName = 'Kalinka-la-Gaieté';
       state.settings.ownerName = 'Patron';
       await this.setOwnerPin('2580');
-      const bd = Engine.addDays(this.todayBd(), -1);
-      const c = { id: uid(), bd, status: 'closed', isOpening: true, startedAt: new Date().toISOString(), closedAt: new Date().toISOString(), closedBy: 'Patron', lines: state.items.map(it => ({ itemId: it.id, expected: 0, counted: 0, variance: 0, note: '' })) };
-      state.counts.push(c);
+      // no opening count: with no baseline the engine already computes
+      // stock = livraisons − ventes − pertes. The first real Comptage becomes the baseline.
+      state.settings.siteId = SITE_ID;
       state.settings.setupDone = true; state.settings.demoMode = false;
       state.session = null; // straight to the login screen
       this.audit('setup', 'settings', 'app', null, { mode: 'prod', items: state.items.length });
@@ -523,7 +535,7 @@ const Store = (() => {
       state.categories = JSON.parse(JSON.stringify(SEED.categories));
       state.items = SEED.build();
       state.settings.barName = 'Le Comptoir'; state.settings.ownerName = 'Karim';
-      state.settings.demoMode = true;
+      state.settings.demoMode = true; state.settings.siteId = SITE_ID + '-demo';
       await this.setOwnerPin('1234'); // before setupDone flips, so the owner-guard lets setup through
       state.settings.setupDone = true;
       const y = await this.addEmployeeRaw('Yassine');
