@@ -2067,6 +2067,7 @@ const Sync = (() => {
   return {
     start() {
       if (started || !enabled()) return;
+      if (Store.state.settings.demoMode) return; // demo devices stay local-only, never pollute the site
       started = true;
       client = supabase.createClient(SYNC_CONFIG.url, SYNC_CONFIG.anon, { auth: { persistSession: false } });
       hook();
