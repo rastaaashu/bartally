@@ -74,6 +74,8 @@
   UI.registerScreen({
     id: 'dashboard',
     render(el) {
+      UI.go('sell'); return;
+      /* eslint-disable no-unreachable */
       if (!Store.isOwner) { UI.go(Store.state.session ? 'sell' : 'login'); return; }
       const st = Store.state;
       const today = Store.todayBd();

@@ -112,8 +112,7 @@
   const QUICK = {
     pending: {},   // itemId → delta not yet committed
     timers: {},    // itemId → commit timer
-    repeat: null,  // press-and-hold interval
-    holdTimer: null,
+    first: {},     // itemId → when this burst started, so it always lands
   };
 
   function paintQuick(id) {
@@ -134,16 +133,19 @@
     // never let a quick removal push the shelf below zero
     if (Store.stock(id) + next < 0) return;
     QUICK.pending[id] = next;
+    QUICK.first[id] = QUICK.first[id] || Date.now();
     UI.haptic('light');
-    UI.hold(1600);          // keep the list still while the finger is working
+    UI.hold(1400);          // keep the list still while the finger is working
     paintQuick(id);
     clearTimeout(QUICK.timers[id]);
-    QUICK.timers[id] = setTimeout(() => commit(id), 800);
+    const wait = Math.max(250, Math.min(700, 2000 - (Date.now() - QUICK.first[id])));
+    QUICK.timers[id] = setTimeout(() => commit(id), wait);
   }
 
   function commit(id) {
     const delta = QUICK.pending[id];
     delete QUICK.pending[id];
+    delete QUICK.first[id];
     clearTimeout(QUICK.timers[id]);
     if (!delta) return;
     const it = Store.item(id);
@@ -157,21 +159,6 @@
   }
   function commitAll() { for (const id of Object.keys(QUICK.pending)) commit(id); }
 
-  /* press-and-hold acceleration */
-  function startHold(id, dir) {
-    stopHold();
-    let speed = 320;
-    QUICK.holdTimer = setTimeout(function run() {
-      bump(id, dir);
-      speed = Math.max(70, speed - 45);
-      QUICK.repeat = setTimeout(run, speed);
-    }, 420);
-  }
-  function stopHold() {
-    clearTimeout(QUICK.holdTimer); clearTimeout(QUICK.repeat);
-    QUICK.holdTimer = QUICK.repeat = null;
-  }
-  window.addEventListener('pointerup', stopHold);   // once, not per render
 
   function rowHtml(it, off) {
     const pend = QUICK.pending[it.id] || 0;
@@ -440,7 +427,7 @@
           </button>`;
           if (open) html += `<div class="feed inv-off">${off.map(i => rowHtml(i, true)).join('')}</div>`;
         }
-        html += `<button type="button" class="textbtn" data-a="new">${UI.esc(t('inv.addItem'))}</button>`;
+        html += Store.isOwner ? `<button type="button" class="textbtn" data-a="new">${UI.esc(t('inv.addItem'))}</button>` : '';
         listEl.innerHTML = html;
       }
 
@@ -449,11 +436,8 @@
         const b = e.target.closest('[data-adj]');
         if (!b) return;
         e.preventDefault();
-        const id = b.dataset.id, dir = Number(b.dataset.adj);
-        bump(id, dir);
-        startHold(id, dir);
+        bump(b.dataset.id, Number(b.dataset.adj));
       });
-      for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) el.addEventListener(ev, stopHold);
 
       el.addEventListener('click', e => {
         if (e.target.closest('[data-adj]')) return; // handled on pointerdown

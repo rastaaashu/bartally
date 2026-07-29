@@ -33,7 +33,7 @@ I18N.extend({
     'g.error': 'Une erreur est survenue. Réessayez.',
     // tabs
     'tab.home': 'Accueil', 'tab.sell': 'Vendre', 'tab.stock': 'Stock', 'tab.count': 'Compter', 'tab.more': 'Plus',
-    'tab.history': 'Historique', 'tab.reports': 'Rapports',
+    'tab.history': 'Historique', 'tab.reports': 'Rapports', 'tab.day': 'Journée',
     // login
     'login.title': 'Qui êtes-vous ?',
     'login.subtitle': 'Choisissez votre profil pour commencer',
@@ -280,7 +280,7 @@ I18N.extend({
     'g.owner': 'Owner', 'g.staff': 'Staff', 'g.units': 'units', 'g.continue': 'Continue',
     'g.error': 'Something went wrong. Try again.',
     'tab.home': 'Home', 'tab.sell': 'Sell', 'tab.stock': 'Stock', 'tab.count': 'Count', 'tab.more': 'More',
-    'tab.history': 'History', 'tab.reports': 'Reports',
+    'tab.history': 'History', 'tab.reports': 'Reports', 'tab.day': 'Day',
     'login.title': 'Who are you?',
     'login.subtitle': 'Pick your profile to get started',
     'login.ownerPin': 'Owner PIN',

@@ -70,7 +70,7 @@
   /* pending sale per item: dose items keep a STACK of poured ml (so + undoes the
      last pour, whatever its size); plain items keep a tap count.
      A burst becomes ONE sale entry. */
-  const Q = { pending: {}, timers: {}, hold: null, repeat: null };
+  const Q = { pending: {}, timers: {}, first: {} };
 
   /* dose items keep { ml:[…poured glasses…], whole:n }; plain items keep a number */
   const pendingQty = (it, p) => !p ? 0
@@ -100,11 +100,14 @@
   }
 
   function arm(id) {
+    Q.first[id] = Q.first[id] || Date.now();
     UI.haptic('light');
-    UI.hold(1600);          // keep the list still while the finger is working
+    UI.hold(1400);          // keep the list still while the finger is working
     paint(id);
     clearTimeout(Q.timers[id]);
-    Q.timers[id] = setTimeout(() => commit(id), 800);
+    // reset on each tap, but never drift beyond 2s from the first tap of the burst
+    const wait = Math.max(250, Math.min(700, 2000 - (Date.now() - Q.first[id])));
+    Q.timers[id] = setTimeout(() => commit(id), wait);
   }
   /** plain items: −/+ one unit */
   function bump(id, dir) {
@@ -146,6 +149,7 @@
   function commit(id) {
     const p = Q.pending[id];
     delete Q.pending[id];
+    delete Q.first[id];
     clearTimeout(Q.timers[id]);
     const it = Store.item(id); if (!it) return;
     if (isDose(it)) {
@@ -171,17 +175,6 @@
       type: 'ok', action: { label: t('g.undo'), fn: () => Store.undoSale(entry.id) } });
   }
 
-  function startHold(id, dir) {
-    stopHold();
-    let speed = 320;
-    Q.hold = setTimeout(function run() {
-      bump(id, dir);
-      speed = Math.max(70, speed - 45);
-      Q.repeat = setTimeout(run, speed);
-    }, 420);
-  }
-  function stopHold() { clearTimeout(Q.hold); clearTimeout(Q.repeat); Q.hold = Q.repeat = null; }
-  window.addEventListener('pointerup', stopHold);   // once, not per render
 
   function rowHtml(it) {
     const p = Q.pending[it.id];
@@ -255,9 +248,7 @@
         if (!b) return;
         e.preventDefault();
         bump(b.dataset.id, Number(b.dataset.adj));
-        if (!isDose(Store.item(b.dataset.id) || {})) startHold(b.dataset.id, Number(b.dataset.adj));
       });
-      for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) el.addEventListener(ev, stopHold);
 
       el.addEventListener('click', e => {
         if (e.target.closest('[data-adj]') || e.target.closest('[data-pour]')) return;

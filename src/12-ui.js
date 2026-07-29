@@ -333,11 +333,12 @@ const UI = (() => {
     if (!def.bare) renderTabs(root);
   }
   /* reference: text-only bar, 4 root destinations; pushed screens carry a back link instead */
-  const TAB_ROOTS = ['dashboard', 'inventory', 'reports', 'settings'];
+  const TAB_ROOTS = ['sell', 'inventory', 'reports', 'settings'];
   function renderTabs(root) {
-    if (!Store.isOwner) return;              // staff: single screen, no tab chrome
-    if (!TAB_ROOTS.includes(current)) return; // pushed screens: no bar (per reference frame 02)
-    const tabs = [['dashboard', 'tab.home'], ['inventory', 'tab.stock'], ['reports', 'tab.reports'], ['settings', 'set.title']];
+    if (!Store.state.session) return;
+    if (!TAB_ROOTS.includes(current)) return; // pushed screens: no bar
+    const tabs = [['sell', 'tab.sell'], ['inventory', 'tab.stock'], ['reports', 'tab.day']];
+    if (Store.isOwner) tabs.push(['settings', 'set.title']);
     const bar = el(`<nav class="tabbar" aria-label="Navigation">${tabs.map(([id, key]) =>
       `<button class="tabbar__btn ${current === id ? 'is-on' : ''}" data-go="${id}"><span>${esc(t(key))}</span></button>`).join('')}</nav>`);
     bar.addEventListener('click', e => {

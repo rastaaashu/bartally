@@ -28,6 +28,9 @@
       'rep.jSold': '{n} vendus', 'rep.jIn': '+{n} livrés', 'rep.jOut': '−{n} retirés',
       'rep.noDaysJ': 'Rien pour l’instant',
       'rep.noDaysJSub': 'Chaque journée s’enregistre ici automatiquement dès la première vente ou livraison.',
+      'rep.todayHint': 'unités vendues aujourd’hui',
+      'rep.moves': '+{i} entrées · −{o} sorties',
+      'rep.noMoves': 'articles sous le seuil',
     },
     en: {
       'rep.openHint': 'Count in progress — close it to generate the report.',
@@ -54,6 +57,9 @@
       'rep.jSold': '{n} sold', 'rep.jIn': '+{n} in', 'rep.jOut': '−{n} out',
       'rep.noDaysJ': 'Nothing yet',
       'rep.noDaysJSub': 'Every day is recorded here automatically from the first sale or delivery.',
+      'rep.todayHint': 'units sold today',
+      'rep.moves': '+{i} in · −{o} out',
+      'rep.noMoves': 'items below threshold',
     },
   });
 
@@ -280,12 +286,29 @@
   function renderList(el) {
     const days = journalDays();
     const open = S().counts.find(c => c.status === 'open');
+    const today = Store.todayBd();
+    const soldToday = sumBd(S().sales, today, true);
+    const inToday = sumBd(S().restocks, today);
+    const outToday = sumBd(S().waste, today);
+    const lowN = Store.lowItems().length;
     let html = `
       <div class="topbar">
         ${UI.logoMark(26)}
-        <div class="micro tnum">${esc(UI.fmtDate(Store.todayBd()))}</div>
+        <div class="micro tnum">${esc(UI.fmtDate(today))}</div>
       </div>
-      <div class="h1">${esc(t('tab.reports'))}</div>`;
+      <div class="h1">${esc(t('tab.day'))}</div>
+      <div class="stats">
+        <div class="stat">
+          <div class="micro">${esc(t('rep.kSold'))}</div>
+          <div class="big tnum">${esc(fq(soldToday))}</div>
+          <div class="sub2">${esc(t('rep.todayHint'))}</div>
+        </div>
+        <div class="stat">
+          <div class="micro">${esc(t('dash.lowstock'))}</div>
+          <div class="big tnum ${lowN ? 'bad' : ''}">${lowN}</div>
+          <div class="sub2">${esc(inToday || outToday ? t('rep.moves', { i: fq(inToday), o: fq(outToday) }) : t('rep.noMoves'))}</div>
+        </div>
+      </div>`;
     if (open) {
       html += `<div class="row rep-open">
         <span class="livedot"></span>
@@ -513,8 +536,8 @@
     id: 'reports',
     render(el, params) {
       ensureCss();
-      if (!Store.isOwner) {
-        UI.go(Store.state.session ? 'sell' : 'login'); return;
+      if (!Store.state.session) {
+        UI.go('login'); return;
         setTimeout(() => UI.go(S().session ? 'sell' : 'login'), 0);
         return;
       }

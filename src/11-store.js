@@ -360,7 +360,7 @@ const Store = (() => {
       return this.undoSale(saleId);
     },
     logRestock(itemId, qty) {
-      if (!this.isOwner) return null;
+      if (!state.session) return null;
       const e = { id: uid(), itemId, qty, bd: this.todayBd(), at: new Date().toISOString(), by: this.me.name };
       state.restocks.unshift(e);
       this.audit('restock', 'restock', e.id, null, { itemId, qty });
@@ -371,7 +371,7 @@ const Store = (() => {
      *  + writes a delivery, − writes a declared removal (never silent: both are
      *  real, audited entries, so the variance engine stays honest). */
     adjustStock(itemId, delta) {
-      if (!this.isOwner || !delta) return null;
+      if (!state.session || !delta) return null;
       return delta > 0
         ? this.logRestock(itemId, delta)
         : this.logWaste(itemId, -delta, QUICK_REASON);

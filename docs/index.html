@@ -494,7 +494,7 @@ I18N.extend({
     'g.error': 'Une erreur est survenue. Réessayez.',
     // tabs
     'tab.home': 'Accueil', 'tab.sell': 'Vendre', 'tab.stock': 'Stock', 'tab.count': 'Compter', 'tab.more': 'Plus',
-    'tab.history': 'Historique', 'tab.reports': 'Rapports',
+    'tab.history': 'Historique', 'tab.reports': 'Rapports', 'tab.day': 'Journée',
     // login
     'login.title': 'Qui êtes-vous ?',
     'login.subtitle': 'Choisissez votre profil pour commencer',
@@ -741,7 +741,7 @@ I18N.extend({
     'g.owner': 'Owner', 'g.staff': 'Staff', 'g.units': 'units', 'g.continue': 'Continue',
     'g.error': 'Something went wrong. Try again.',
     'tab.home': 'Home', 'tab.sell': 'Sell', 'tab.stock': 'Stock', 'tab.count': 'Count', 'tab.more': 'More',
-    'tab.history': 'History', 'tab.reports': 'Reports',
+    'tab.history': 'History', 'tab.reports': 'Reports', 'tab.day': 'Day',
     'login.title': 'Who are you?',
     'login.subtitle': 'Pick your profile to get started',
     'login.ownerPin': 'Owner PIN',
@@ -1331,7 +1331,7 @@ const Store = (() => {
       return this.undoSale(saleId);
     },
     logRestock(itemId, qty) {
-      if (!this.isOwner) return null;
+      if (!state.session) return null;
       const e = { id: uid(), itemId, qty, bd: this.todayBd(), at: new Date().toISOString(), by: this.me.name };
       state.restocks.unshift(e);
       this.audit('restock', 'restock', e.id, null, { itemId, qty });
@@ -1342,7 +1342,7 @@ const Store = (() => {
      *  + writes a delivery, − writes a declared removal (never silent: both are
      *  real, audited entries, so the variance engine stays honest). */
     adjustStock(itemId, delta) {
-      if (!this.isOwner || !delta) return null;
+      if (!state.session || !delta) return null;
       return delta > 0
         ? this.logRestock(itemId, delta)
         : this.logWaste(itemId, -delta, QUICK_REASON);
@@ -1987,11 +1987,12 @@ const UI = (() => {
     if (!def.bare) renderTabs(root);
   }
   /* reference: text-only bar, 4 root destinations; pushed screens carry a back link instead */
-  const TAB_ROOTS = ['dashboard', 'inventory', 'reports', 'settings'];
+  const TAB_ROOTS = ['sell', 'inventory', 'reports', 'settings'];
   function renderTabs(root) {
-    if (!Store.isOwner) return;              // staff: single screen, no tab chrome
-    if (!TAB_ROOTS.includes(current)) return; // pushed screens: no bar (per reference frame 02)
-    const tabs = [['dashboard', 'tab.home'], ['inventory', 'tab.stock'], ['reports', 'tab.reports'], ['settings', 'set.title']];
+    if (!Store.state.session) return;
+    if (!TAB_ROOTS.includes(current)) return; // pushed screens: no bar
+    const tabs = [['sell', 'tab.sell'], ['inventory', 'tab.stock'], ['reports', 'tab.day']];
+    if (Store.isOwner) tabs.push(['settings', 'set.title']);
     const bar = el(`<nav class="tabbar" aria-label="Navigation">${tabs.map(([id, key]) =>
       `<button class="tabbar__btn ${current === id ? 'is-on' : ''}" data-go="${id}"><span>${esc(t(key))}</span></button>`).join('')}</nav>`);
     bar.addEventListener('click', e => {
@@ -2895,7 +2896,7 @@ const Sync = (() => {
   /* pending sale per item: dose items keep a STACK of poured ml (so + undoes the
      last pour, whatever its size); plain items keep a tap count.
      A burst becomes ONE sale entry. */
-  const Q = { pending: {}, timers: {}, hold: null, repeat: null };
+  const Q = { pending: {}, timers: {}, first: {} };
 
   /* dose items keep { ml:[…poured glasses…], whole:n }; plain items keep a number */
   const pendingQty = (it, p) => !p ? 0
@@ -2925,11 +2926,14 @@ const Sync = (() => {
   }
 
   function arm(id) {
+    Q.first[id] = Q.first[id] || Date.now();
     UI.haptic('light');
-    UI.hold(1600);          // keep the list still while the finger is working
+    UI.hold(1400);          // keep the list still while the finger is working
     paint(id);
     clearTimeout(Q.timers[id]);
-    Q.timers[id] = setTimeout(() => commit(id), 800);
+    // reset on each tap, but never drift beyond 2s from the first tap of the burst
+    const wait = Math.max(250, Math.min(700, 2000 - (Date.now() - Q.first[id])));
+    Q.timers[id] = setTimeout(() => commit(id), wait);
   }
   /** plain items: −/+ one unit */
   function bump(id, dir) {
@@ -2971,6 +2975,7 @@ const Sync = (() => {
   function commit(id) {
     const p = Q.pending[id];
     delete Q.pending[id];
+    delete Q.first[id];
     clearTimeout(Q.timers[id]);
     const it = Store.item(id); if (!it) return;
     if (isDose(it)) {
@@ -2996,17 +3001,6 @@ const Sync = (() => {
       type: 'ok', action: { label: t('g.undo'), fn: () => Store.undoSale(entry.id) } });
   }
 
-  function startHold(id, dir) {
-    stopHold();
-    let speed = 320;
-    Q.hold = setTimeout(function run() {
-      bump(id, dir);
-      speed = Math.max(70, speed - 45);
-      Q.repeat = setTimeout(run, speed);
-    }, 420);
-  }
-  function stopHold() { clearTimeout(Q.hold); clearTimeout(Q.repeat); Q.hold = Q.repeat = null; }
-  window.addEventListener('pointerup', stopHold);   // once, not per render
 
   function rowHtml(it) {
     const p = Q.pending[it.id];
@@ -3080,9 +3074,7 @@ const Sync = (() => {
         if (!b) return;
         e.preventDefault();
         bump(b.dataset.id, Number(b.dataset.adj));
-        if (!isDose(Store.item(b.dataset.id) || {})) startHold(b.dataset.id, Number(b.dataset.adj));
       });
-      for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) el.addEventListener(ev, stopHold);
 
       el.addEventListener('click', e => {
         if (e.target.closest('[data-adj]') || e.target.closest('[data-pour]')) return;
@@ -3182,6 +3174,8 @@ const Sync = (() => {
   UI.registerScreen({
     id: 'dashboard',
     render(el) {
+      UI.go('sell'); return;
+      /* eslint-disable no-unreachable */
       if (!Store.isOwner) { UI.go(Store.state.session ? 'sell' : 'login'); return; }
       const st = Store.state;
       const today = Store.todayBd();
@@ -3388,8 +3382,7 @@ const Sync = (() => {
   const QUICK = {
     pending: {},   // itemId → delta not yet committed
     timers: {},    // itemId → commit timer
-    repeat: null,  // press-and-hold interval
-    holdTimer: null,
+    first: {},     // itemId → when this burst started, so it always lands
   };
 
   function paintQuick(id) {
@@ -3410,16 +3403,19 @@ const Sync = (() => {
     // never let a quick removal push the shelf below zero
     if (Store.stock(id) + next < 0) return;
     QUICK.pending[id] = next;
+    QUICK.first[id] = QUICK.first[id] || Date.now();
     UI.haptic('light');
-    UI.hold(1600);          // keep the list still while the finger is working
+    UI.hold(1400);          // keep the list still while the finger is working
     paintQuick(id);
     clearTimeout(QUICK.timers[id]);
-    QUICK.timers[id] = setTimeout(() => commit(id), 800);
+    const wait = Math.max(250, Math.min(700, 2000 - (Date.now() - QUICK.first[id])));
+    QUICK.timers[id] = setTimeout(() => commit(id), wait);
   }
 
   function commit(id) {
     const delta = QUICK.pending[id];
     delete QUICK.pending[id];
+    delete QUICK.first[id];
     clearTimeout(QUICK.timers[id]);
     if (!delta) return;
     const it = Store.item(id);
@@ -3433,21 +3429,6 @@ const Sync = (() => {
   }
   function commitAll() { for (const id of Object.keys(QUICK.pending)) commit(id); }
 
-  /* press-and-hold acceleration */
-  function startHold(id, dir) {
-    stopHold();
-    let speed = 320;
-    QUICK.holdTimer = setTimeout(function run() {
-      bump(id, dir);
-      speed = Math.max(70, speed - 45);
-      QUICK.repeat = setTimeout(run, speed);
-    }, 420);
-  }
-  function stopHold() {
-    clearTimeout(QUICK.holdTimer); clearTimeout(QUICK.repeat);
-    QUICK.holdTimer = QUICK.repeat = null;
-  }
-  window.addEventListener('pointerup', stopHold);   // once, not per render
 
   function rowHtml(it, off) {
     const pend = QUICK.pending[it.id] || 0;
@@ -3716,7 +3697,7 @@ const Sync = (() => {
           </button>`;
           if (open) html += `<div class="feed inv-off">${off.map(i => rowHtml(i, true)).join('')}</div>`;
         }
-        html += `<button type="button" class="textbtn" data-a="new">${UI.esc(t('inv.addItem'))}</button>`;
+        html += Store.isOwner ? `<button type="button" class="textbtn" data-a="new">${UI.esc(t('inv.addItem'))}</button>` : '';
         listEl.innerHTML = html;
       }
 
@@ -3725,11 +3706,8 @@ const Sync = (() => {
         const b = e.target.closest('[data-adj]');
         if (!b) return;
         e.preventDefault();
-        const id = b.dataset.id, dir = Number(b.dataset.adj);
-        bump(id, dir);
-        startHold(id, dir);
+        bump(b.dataset.id, Number(b.dataset.adj));
       });
-      for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) el.addEventListener(ev, stopHold);
 
       el.addEventListener('click', e => {
         if (e.target.closest('[data-adj]')) return; // handled on pointerdown
@@ -4383,6 +4361,9 @@ const Sync = (() => {
       'rep.jSold': '{n} vendus', 'rep.jIn': '+{n} livrés', 'rep.jOut': '−{n} retirés',
       'rep.noDaysJ': 'Rien pour l’instant',
       'rep.noDaysJSub': 'Chaque journée s’enregistre ici automatiquement dès la première vente ou livraison.',
+      'rep.todayHint': 'unités vendues aujourd’hui',
+      'rep.moves': '+{i} entrées · −{o} sorties',
+      'rep.noMoves': 'articles sous le seuil',
     },
     en: {
       'rep.openHint': 'Count in progress — close it to generate the report.',
@@ -4409,6 +4390,9 @@ const Sync = (() => {
       'rep.jSold': '{n} sold', 'rep.jIn': '+{n} in', 'rep.jOut': '−{n} out',
       'rep.noDaysJ': 'Nothing yet',
       'rep.noDaysJSub': 'Every day is recorded here automatically from the first sale or delivery.',
+      'rep.todayHint': 'units sold today',
+      'rep.moves': '+{i} in · −{o} out',
+      'rep.noMoves': 'items below threshold',
     },
   });
 
@@ -4635,12 +4619,29 @@ const Sync = (() => {
   function renderList(el) {
     const days = journalDays();
     const open = S().counts.find(c => c.status === 'open');
+    const today = Store.todayBd();
+    const soldToday = sumBd(S().sales, today, true);
+    const inToday = sumBd(S().restocks, today);
+    const outToday = sumBd(S().waste, today);
+    const lowN = Store.lowItems().length;
     let html = `
       <div class="topbar">
         ${UI.logoMark(26)}
-        <div class="micro tnum">${esc(UI.fmtDate(Store.todayBd()))}</div>
+        <div class="micro tnum">${esc(UI.fmtDate(today))}</div>
       </div>
-      <div class="h1">${esc(t('tab.reports'))}</div>`;
+      <div class="h1">${esc(t('tab.day'))}</div>
+      <div class="stats">
+        <div class="stat">
+          <div class="micro">${esc(t('rep.kSold'))}</div>
+          <div class="big tnum">${esc(fq(soldToday))}</div>
+          <div class="sub2">${esc(t('rep.todayHint'))}</div>
+        </div>
+        <div class="stat">
+          <div class="micro">${esc(t('dash.lowstock'))}</div>
+          <div class="big tnum ${lowN ? 'bad' : ''}">${lowN}</div>
+          <div class="sub2">${esc(inToday || outToday ? t('rep.moves', { i: fq(inToday), o: fq(outToday) }) : t('rep.noMoves'))}</div>
+        </div>
+      </div>`;
     if (open) {
       html += `<div class="row rep-open">
         <span class="livedot"></span>
@@ -4868,8 +4869,8 @@ const Sync = (() => {
     id: 'reports',
     render(el, params) {
       ensureCss();
-      if (!Store.isOwner) {
-        UI.go(Store.state.session ? 'sell' : 'login'); return;
+      if (!Store.state.session) {
+        UI.go('login'); return;
         setTimeout(() => UI.go(S().session ? 'sell' : 'login'), 0);
         return;
       }
@@ -5776,7 +5777,7 @@ const App = {
       return;
     }
     if (!st.session) return UI.go('login');
-    UI.go(Store.isOwner ? 'dashboard' : 'sell');
+    UI.go('sell');
   },
   countReminder() {
     const st = Store.state;

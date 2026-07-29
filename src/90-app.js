@@ -96,7 +96,7 @@ const App = {
       return;
     }
     if (!st.session) return UI.go('login');
-    UI.go(Store.isOwner ? 'dashboard' : 'sell');
+    UI.go('sell');
   },
   countReminder() {
     const st = Store.state;
