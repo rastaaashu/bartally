@@ -391,6 +391,8 @@ a{color:var(--brass);text-decoration:none}
 const SYNC_CONFIG = {
   url: 'https://oayrdregspxgssfgehrb.supabase.co',
   anon: 'sb_publishable_HS42W6M7lE1iYrC1QAljQA_Ru3ApqiO', // publishable by design; RLS governs access
+  // VAPID public key — identifies this app to the browser push services. Public by design.
+  vapid: 'BJs8q6M1uBhqC_tCrkrU9VjBdMVg0zaj80lPnqcYj6TG2Wuo_867qmOgucNMg7SP0p8AVIur1O7iYALNPi1rO-Y',
 };
 
 /* == 04-supabase-lib.js == */
@@ -2135,7 +2137,33 @@ const Sync = (() => {
     wrap('setSettings', (o, patch) => { const r = o(patch); if (!patch || !('lang' in patch) || Object.keys(patch).length > 1) enqueueSettings(); return r; });
   }
 
+  /* ---------- Web Push registration ----------
+     Stores this phone's push subscription so the scheduled sender can reach it
+     even when the app is closed. Owner devices get the stock alerts. */
+  function urlB64ToU8(base64) {
+    const pad = '='.repeat((4 - base64.length % 4) % 4);
+    const raw = atob((base64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
+    return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+  }
+  async function registerPush() {
+    try {
+      if (!client || !SYNC_CONFIG.vapid) return false;
+      if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return false;
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false;
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription()
+        || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToU8(SYNC_CONFIG.vapid) });
+      const json = sub.toJSON();
+      const id = json.endpoint.slice(-40);
+      const { error } = await client.from('push_subs').upsert(
+        [{ id, data: json, owner: Store.isOwner, updated_at: new Date().toISOString() }], { onConflict: 'id' });
+      if (error) { console.warn('push sub', error.message); return false; }
+      return true;
+    } catch (e) { console.warn('push', e.message); return false; }
+  }
+
   return {
+    registerPush,
     start() {
       if (started || !enabled()) return;
       if (Store.state.settings.demoMode) return; // demo devices stay local-only, never pollute the site
@@ -2147,6 +2175,10 @@ const Sync = (() => {
       if (Store.state.settings.setupDone) go();
       else { const off = Store.on(w => { if (Store.state.settings.setupDone) { off(); go(); } }); }
       window.addEventListener('online', () => flush());
+      // (re)register this phone for push whenever a session starts and on boot
+      const tryPush = () => { registerPush(); };
+      setTimeout(tryPush, 2500);
+      Store.on(w => { if (w === 'session' && Store.state.session) setTimeout(tryPush, 800); });
     },
     get active() { return started; },
   };
@@ -5548,7 +5580,11 @@ const App = {
         c.addEventListener('click', async e => {
           if (e.target.closest('[data-a=on]')) {
             const p = await Notification.requestPermission();
-            if (p === 'granted') { Store.setSettings({ notifGranted: true }); UI.toast(t('ntf.enabled'), { type: 'ok' }); }
+            if (p === 'granted') {
+              Store.setSettings({ notifGranted: true });
+              if (typeof Sync !== 'undefined') Sync.registerPush();
+              UI.toast(t('ntf.enabled'), { type: 'ok' });
+            }
             sh.close();
           } else if (e.target.closest('[data-a=later]')) sh.close();
         });

@@ -145,7 +145,33 @@ const Sync = (() => {
     wrap('setSettings', (o, patch) => { const r = o(patch); if (!patch || !('lang' in patch) || Object.keys(patch).length > 1) enqueueSettings(); return r; });
   }
 
+  /* ---------- Web Push registration ----------
+     Stores this phone's push subscription so the scheduled sender can reach it
+     even when the app is closed. Owner devices get the stock alerts. */
+  function urlB64ToU8(base64) {
+    const pad = '='.repeat((4 - base64.length % 4) % 4);
+    const raw = atob((base64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
+    return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+  }
+  async function registerPush() {
+    try {
+      if (!client || !SYNC_CONFIG.vapid) return false;
+      if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return false;
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false;
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription()
+        || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToU8(SYNC_CONFIG.vapid) });
+      const json = sub.toJSON();
+      const id = json.endpoint.slice(-40);
+      const { error } = await client.from('push_subs').upsert(
+        [{ id, data: json, owner: Store.isOwner, updated_at: new Date().toISOString() }], { onConflict: 'id' });
+      if (error) { console.warn('push sub', error.message); return false; }
+      return true;
+    } catch (e) { console.warn('push', e.message); return false; }
+  }
+
   return {
+    registerPush,
     start() {
       if (started || !enabled()) return;
       if (Store.state.settings.demoMode) return; // demo devices stay local-only, never pollute the site
@@ -157,6 +183,10 @@ const Sync = (() => {
       if (Store.state.settings.setupDone) go();
       else { const off = Store.on(w => { if (Store.state.settings.setupDone) { off(); go(); } }); }
       window.addEventListener('online', () => flush());
+      // (re)register this phone for push whenever a session starts and on boot
+      const tryPush = () => { registerPush(); };
+      setTimeout(tryPush, 2500);
+      Store.on(w => { if (w === 'session' && Store.state.session) setTimeout(tryPush, 800); });
     },
     get active() { return started; },
   };

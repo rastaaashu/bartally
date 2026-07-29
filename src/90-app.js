@@ -70,7 +70,11 @@ const App = {
         c.addEventListener('click', async e => {
           if (e.target.closest('[data-a=on]')) {
             const p = await Notification.requestPermission();
-            if (p === 'granted') { Store.setSettings({ notifGranted: true }); UI.toast(t('ntf.enabled'), { type: 'ok' }); }
+            if (p === 'granted') {
+              Store.setSettings({ notifGranted: true });
+              if (typeof Sync !== 'undefined') Sync.registerPush();
+              UI.toast(t('ntf.enabled'), { type: 'ok' });
+            }
             sh.close();
           } else if (e.target.closest('[data-a=later]')) sh.close();
         });
