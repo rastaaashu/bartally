@@ -17,6 +17,7 @@
       'count.editLine': 'Modifier',
       'count.ownerOnly': 'Réservé au patron',
       'count.viewReport': 'Voir le rapport',
+      'count.frozen': 'Journée clôturée — rapport définitif, non modifiable.',
     },
     en: {
       'count.h1': 'Variance',
@@ -32,6 +33,7 @@
       'count.editLine': 'Edit',
       'count.ownerOnly': 'Owner only',
       'count.viewReport': 'View report',
+      'count.frozen': 'Day closed — final report, cannot be edited.',
     },
   });
 
@@ -148,7 +150,7 @@
         </div>
         <div class="bottomstack">
           <button class="btn btn--ghost" data-a="report">${UI.esc(t('count.viewReport'))}</button>
-          <button class="textbtn" data-a="reopen">${UI.esc(t('count.reopen'))}</button>
+          <div class="sub2" style="text-align:center">${UI.esc(t('count.frozen'))}</div>
         </div>`;
       return;
     }
@@ -279,14 +281,6 @@
         const a = b.dataset.a;
         if (a === 'back') UI.go('dashboard');
         else if (a === 'report') UI.go('reports', { day: Store.todayBd() });
-        else if (a === 'reopen') {
-          const closedToday = Store.state.counts.find(x => x.bd === Store.todayBd() && x.status === 'closed');
-          if (closedToday && await UI.confirm(t('count.reopenWarn'), { danger: true })) {
-            Store.reopenCount(closedToday.id);
-            V.mode = 'review'; V.buf = '';
-            UI.refresh();
-          }
-        }
         else if (a === 'start') {
           const oc = Store.openCount();
           V.mode = 'walk'; V.buf = '';

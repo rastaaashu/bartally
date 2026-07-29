@@ -9,6 +9,11 @@
       'sell.validate': 'Valider la vente',
       'sell.lock': 'Verrouiller',
       'sell.sold': 'Vendu : {n} × {item}',
+      'sell.soldGlasses_one': 'Vendu : {n} verre × {item}',
+      'sell.soldGlasses_many': 'Vendu : {n} verres × {item}',
+      'sell.glass_one': '{n} verre',
+      'sell.glass_many': '{n} verres',
+      'sell.doseTag': 'au verre · {ml} ml',
       'sell.hint': 'Appuyez sur − à chaque article vendu. Maintenez pour aller vite.',
       'sell.left': 'en stock',
     },
@@ -17,6 +22,11 @@
       'sell.validate': 'Confirm sale',
       'sell.lock': 'Lock',
       'sell.sold': 'Sold: {n} × {item}',
+      'sell.soldGlasses_one': 'Sold: {n} glass × {item}',
+      'sell.soldGlasses_many': 'Sold: {n} glasses × {item}',
+      'sell.glass_one': '{n} glass',
+      'sell.glass_many': '{n} glasses',
+      'sell.doseTag': 'by the glass · {ml} ml',
       'sell.hint': 'Tap − for each item sold. Hold to go faster.',
       'sell.left': 'in stock',
     },
@@ -38,51 +48,96 @@
   [data-screen=sell] .sell-btn:active{background:var(--surface2);color:var(--t1)}
   [data-screen=sell] .sell-btn.is-primary{border-color:rgba(232,177,78,.4);color:var(--brass)}
   [data-screen=sell] .sell-n{min-width:44px;text-align:center;font-size:17px}
-  [data-screen=sell] .sell-n.is-pend{color:var(--brass)}
+  [data-screen=sell] .sell-n.is-pend{color:var(--brass);font-size:12px;min-width:56px}
   [data-screen=sell] .sell-n.is-low{color:var(--bad)}
+  [data-screen=sell] .sell-pour{flex-direction:column;gap:0;width:42px}
+  [data-screen=sell] .sell-pour b{font:600 15px var(--f-display);line-height:1.1}
+  [data-screen=sell] .sell-pour i{font:500 8.5px var(--f-ui);font-style:normal;letter-spacing:.04em;color:var(--t3)}
   </style>`));
 
   const V = { q: '', cat: 'all' };
   const norm = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
-  /* pending sale units per item; a burst of taps becomes ONE sale entry */
+  /** spirits pour by the glass: each pour button = one dose of that size;
+      the bottle count moves by the exact fraction (ml / bottle ml) */
+  const isDose = it => !!(Array.isArray(it.pours) && it.pours.length && it.bottleMl);
+  const pourSizes = it => it.pours.filter(p => p > 0);
+
+  /* pending sale per item: dose items keep a STACK of poured ml (so + undoes the
+     last pour, whatever its size); plain items keep a tap count.
+     A burst becomes ONE sale entry. */
   const Q = { pending: {}, timers: {}, hold: null, repeat: null };
+
+  const pendingQty = (it, p) => !p ? 0 : (isDose(it) ? p.reduce((a, b) => a + b, 0) / it.bottleMl : p);
+  const pendCount = (it, p) => !p ? 0 : (isDose(it) ? p.length : p);
 
   function paint(id) {
     const el = document.querySelector(`[data-n="${CSS.escape(id)}"]`);
     if (!el) return;
-    const pend = Q.pending[id] || 0;
-    const shown = Math.round((Store.stock(id) - pend) * 100) / 100;
-    el.textContent = UI.fmtQty(shown);
-    el.classList.toggle('is-pend', !!pend);
-    el.classList.toggle('is-low', !pend && Store.isLow(id));
+    const it = Store.item(id); if (!it) return;
+    const p = Q.pending[id];
+    const n = pendCount(it, p);
+    if (n && isDose(it)) {
+      el.textContent = '−' + I18N.plural('sell.glass', n);
+    } else {
+      const shown = Math.round((Store.stock(id) - pendingQty(it, p)) * 100) / 100;
+      el.textContent = UI.fmtQty(shown);
+    }
+    el.classList.toggle('is-pend', !!n);
+    el.classList.toggle('is-low', !n && Store.isLow(id));
   }
 
-  function bump(id, dir) {
-    const it = Store.item(id); if (!it) return;
-    const step = it.allowDecimal ? 0.5 : 1;
-    // dir −1 = one more sold; dir +1 only walks back what is still uncommitted
-    const next = Math.round(((Q.pending[id] || 0) + (dir < 0 ? step : -step)) * 100) / 100;
-    if (next < 0) return;
-    Q.pending[id] = next;
+  function arm(id) {
     UI.haptic('light');
     paint(id);
     clearTimeout(Q.timers[id]);
     Q.timers[id] = setTimeout(() => commit(id), 900);
   }
+  /** plain items: −/+ one unit */
+  function bump(id, dir) {
+    const it = Store.item(id); if (!it) return;
+    if (isDose(it)) { if (dir > 0) unpour(id); return; } // + on a dose row = undo last pour
+    const next = (Q.pending[id] || 0) + (dir < 0 ? 1 : -1);
+    if (next < 0) return;
+    Q.pending[id] = next;
+    arm(id);
+  }
+  /** dose items: pour one glass of `ml` */
+  function pour(id, ml) {
+    const it = Store.item(id); if (!it || !isDose(it)) return;
+    (Q.pending[id] = Q.pending[id] || []).push(ml);
+    arm(id);
+  }
+  function unpour(id) {
+    const p = Q.pending[id];
+    if (!p || !p.length) return;
+    p.pop();
+    arm(id);
+  }
 
   function commit(id) {
-    const qty = Q.pending[id];
+    const p = Q.pending[id];
     delete Q.pending[id];
     clearTimeout(Q.timers[id]);
-    if (!qty) return;
-    const it = Store.item(id);
-    const entry = Store.logSale(id, qty);
+    const it = Store.item(id); if (!it) return;
+    if (isDose(it)) {
+      if (!p || !p.length) return;
+      const ml = p.reduce((a, b) => a + b, 0);
+      const qty = ml / it.bottleMl;
+      const pours = {};
+      for (const m of p) pours[m] = (pours[m] || 0) + 1;
+      const entry = Store.logSale(id, qty, { glasses: p.length, pours });
+      if (!entry) return;
+      const detail = Object.entries(pours).map(([m, n]) => `${n}×${m}ml`).join(' · ');
+      UI.toast(`${I18N.plural('sell.soldGlasses', p.length, { item: it.name })} (${detail})`, {
+        type: 'ok', action: { label: t('g.undo'), fn: () => Store.undoSale(entry.id) } });
+      return;
+    }
+    if (!p) return;
+    const entry = Store.logSale(id, p);
     if (!entry) return;
-    UI.toast(t('sell.sold', { n: UI.fmtQty(qty), item: it.name }), {
-      type: 'ok',
-      action: { label: t('g.undo'), fn: () => Store.undoSale(entry.id) },
-    });
+    UI.toast(t('sell.sold', { n: UI.fmtQty(p), item: it.name }), {
+      type: 'ok', action: { label: t('g.undo'), fn: () => Store.undoSale(entry.id) } });
   }
 
   function startHold(id, dir) {
@@ -97,20 +152,26 @@
   function stopHold() { clearTimeout(Q.hold); clearTimeout(Q.repeat); Q.hold = Q.repeat = null; }
 
   function rowHtml(it) {
-    const pend = Q.pending[it.id] || 0;
-    const shown = Math.round((Store.stock(it.id) - pend) * 100) / 100;
-    const low = !pend && Store.isLow(it.id);
+    const p = Q.pending[it.id];
+    const n = pendCount(it, p);
+    const shown = Math.round((Store.stock(it.id) - pendingQty(it, p)) * 100) / 100;
+    const low = !n && Store.isLow(it.id);
+    const dose = isDose(it);
+    const numHtml = `<span class="num sell-n${low ? ' is-low' : ''}${n ? ' is-pend' : ''}" data-n="${UI.esc(it.id)}">${
+      (n && dose) ? UI.esc('−' + I18N.plural('sell.glass', n)) : UI.esc(UI.fmtQty(shown))}</span>`;
     return `<div class="row sell-row" data-row="${UI.esc(it.id)}">
       <span class="sell-main">
         <span class="row__art">${UI.art(it)}</span>
         <span class="row__body">
           <span class="row__t">${UI.esc(it.name)}</span>
-          <span class="row__s">${UI.esc(t('u.' + it.unit))}</span>
+          <span class="row__s">${dose ? UI.esc(t('sell.doseTag', { ml: pourSizes(it).join('/') })) : UI.esc(t('u.' + it.unit))}</span>
         </span>
       </span>
       <span class="sell-adj">
-        <button type="button" class="sell-btn is-primary" data-adj="-1" data-id="${UI.esc(it.id)}" aria-label="−">−</button>
-        <span class="num sell-n${low ? ' is-low' : ''}${pend ? ' is-pend' : ''}" data-n="${UI.esc(it.id)}">${UI.esc(UI.fmtQty(shown))}</span>
+        ${dose
+          ? pourSizes(it).map(ml => `<button type="button" class="sell-btn is-primary sell-pour" data-pour="${ml}" data-id="${UI.esc(it.id)}" aria-label="${ml} ml"><b>${ml}</b><i>ml</i></button>`).join('')
+          : `<button type="button" class="sell-btn is-primary" data-adj="-1" data-id="${UI.esc(it.id)}" aria-label="−">−</button>`}
+        ${numHtml}
         <button type="button" class="sell-btn" data-adj="1" data-id="${UI.esc(it.id)}" aria-label="+">+</button>
       </span>
     </div>`;
@@ -157,17 +218,19 @@
       });
 
       el.addEventListener('pointerdown', e => {
+        const pb = e.target.closest('[data-pour]');
+        if (pb) { e.preventDefault(); pour(pb.dataset.id, Number(pb.dataset.pour)); return; }
         const b = e.target.closest('[data-adj]');
         if (!b) return;
         e.preventDefault();
         bump(b.dataset.id, Number(b.dataset.adj));
-        startHold(b.dataset.id, Number(b.dataset.adj));
+        if (!isDose(Store.item(b.dataset.id) || {})) startHold(b.dataset.id, Number(b.dataset.adj));
       });
       for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) el.addEventListener(ev, stopHold);
       window.addEventListener('pointerup', stopHold);
 
       el.addEventListener('click', e => {
-        if (e.target.closest('[data-adj]')) return;
+        if (e.target.closest('[data-adj]') || e.target.closest('[data-pour]')) return;
         const cat = e.target.closest('[data-cat]');
         if (cat) { V.cat = cat.dataset.cat; UI.haptic('light'); UI.refresh(); return; }
         const a = e.target.closest('[data-a]');

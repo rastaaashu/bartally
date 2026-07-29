@@ -39,7 +39,7 @@ const Engine = {
       }
       s += e.qty;
     }
-    return Math.round(s * 100) / 100;
+    return Math.round(s * 1000) / 1000;
   },
   /**
    * expected(item, targetBd) = counted at baseline + restocks − sales − waste since baseline, up to targetBd inclusive.
@@ -56,7 +56,7 @@ const Engine = {
     const r = this.sumSince(state.restocks, itemId, base, targetBd, { skipVoided: false, cutIso });
     const s = this.sumSince(state.sales, itemId, base, targetBd, { cutIso });
     const w = this.sumSince(state.waste, itemId, base, targetBd, { skipVoided: false, cutIso });
-    return Math.round((start + r - s - w) * 100) / 100;
+    return Math.round((start + r - s - w) * 1000) / 1000;
   },
   /** sales velocity: avg non-void units/day over the last `days` FULL business days
    *  (today's partial day excluded); young bars divide by days actually traded */
@@ -175,6 +175,9 @@ const SEED = {
     return this.items.map(([catId, name, unit, allowDecimal, threshold, mono], i) => ({
       id: 'it' + (i + 1).toString(36).padStart(2, '0'),
       catId, name, unit, allowDecimal, threshold, mono, isDemi: name.startsWith('1/2 '),
+      // spirits pour by the glass: 30 ml dose from a 700 ml bottle (owner-editable)
+      pours: catId === 'spirit' ? [30, 60] : null,
+      bottleMl: catId === 'spirit' ? 700 : null,
       photo: null, barcode: null, pinned: ['Heineken', 'Spécial', 'Black Label', 'Casablanca', 'Red Bull', 'Ricard'].includes(name),
       cost: null, active: true, sort: i,
     }));
@@ -233,6 +236,7 @@ const Store = (() => {
         for (const it of state.items) {
           if (!it.mono && seedByName.has(it.name)) it.mono = seedByName.get(it.name);
           if (it.isDemi === undefined) it.isDemi = String(it.name || '').startsWith('1/2 ');
+          if (it.pours === undefined || (it.doseMl !== undefined && !it.pours)) { it.pours = (it.catId === 'spirit' || it.doseMl) ? [it.doseMl || 30, 60] : null; it.bottleMl = it.bottleMl || (it.catId === 'spirit' ? 700 : null); delete it.doseMl; }
         }
       }
     }
@@ -302,19 +306,25 @@ const Store = (() => {
     },
 
     /* ---- staff + owner actions ---- */
-    logSale(itemId, qty) {
+    logSale(itemId, qty, meta) {
       if (!state.session) return null;
-      const e = { id: uid(), itemId, qty, bd: this.todayBd(), at: new Date().toISOString(), by: this.me.name, byId: state.session.userId, voidedAt: null, voidedBy: null };
+      const e = { id: uid(), itemId, qty: Math.round(qty * 1000) / 1000, bd: this.todayBd(), at: new Date().toISOString(), by: this.me.name, byId: state.session.userId, voidedAt: null, voidedBy: null };
+      if (meta && meta.glasses) { e.glasses = meta.glasses; if (meta.pours) e.pours = meta.pours; }
       state.sales.unshift(e);
       state.recents = [itemId, ...state.recents.filter(r => r !== itemId)].slice(0, 8);
       this.checkLow(itemId);
       emit('sales');
       return e;
     },
+    /** true once a business day has a closed (non-opening) count — its report is frozen */
+    isDayClosed(bd) {
+      return state.counts.some(c => c.bd === bd && c.status === 'closed' && !c.isOpening);
+    },
     /** staff undo: only own entry, only within grace window (UI enforces 6s); recorded as void */
     undoSale(saleId) {
       const e = state.sales.find(s => s.id === saleId);
       if (!e || e.voidedAt) return false;
+      if (this.isDayClosed(e.bd)) return false; // closed report is the source of truth
       if (!this.isOwner && e.byId !== state.session?.userId) return false;
       e.voidedAt = new Date().toISOString(); e.voidedBy = this.me.name;
       this.audit('void_sale', 'sale', saleId, { qty: e.qty, itemId: e.itemId }, null);
@@ -404,14 +414,10 @@ const Store = (() => {
       emit('counts');
       return c;
     },
-    reopenCount(countId) {
-      const c = state.counts.find(x => x.id === countId);
-      if (!c || c.status !== 'closed' || !this.isOwner || c.isOpening) return false;
-      c.status = 'open'; this.audit('reopen_count', 'count', c.id, { closedAt: c.closedAt }, null);
-      c.closedAt = null; c.closedBy = null;
-      emit('counts');
-      return true;
-    },
+    /** permanently disabled: a closed daily report is immutable — the source of
+     *  truth. Mistakes are corrected forward (Livraison / Casse today), never by
+     *  rewriting history. The database enforces the same rule with triggers. */
+    reopenCount() { return false; },
     closedCounts() { return state.counts.filter(c => c.status === 'closed' && !c.isOpening).sort((a, b) => a.bd < b.bd ? 1 : -1); },
 
     /* ---- items & categories (owner) ---- */
@@ -429,7 +435,7 @@ const Store = (() => {
         if (words.length >= 2) return (words[0][0] + '.' + words[1][0]).toUpperCase();
         return clean.replace(/[^A-Za-zÀ-ÿ]/g, '').slice(0, 3).toUpperCase();
       })();
-      const it = { id: uid(), catId: data.catId, name: data.name, unit: data.unit || 'bouteille', allowDecimal: !!data.allowDecimal, threshold: data.threshold ?? 6, mono, isDemi: String(data.name || '').startsWith('1/2 '), photo: data.photo || null, barcode: data.barcode || null, pinned: !!data.pinned, cost: data.cost ?? null, active: true, sort: state.items.length };
+      const it = { id: uid(), catId: data.catId, name: data.name, unit: data.unit || 'bouteille', allowDecimal: !!data.allowDecimal, threshold: data.threshold ?? 6, mono, isDemi: String(data.name || '').startsWith('1/2 '), pours: data.pours ?? (data.allowDecimal ? [30, 60] : null), bottleMl: data.bottleMl ?? (data.allowDecimal ? 700 : null), photo: data.photo || null, barcode: data.barcode || null, pinned: !!data.pinned, cost: data.cost ?? null, active: true, sort: state.items.length };
       state.items.push(it);
       this.audit('add_item', 'item', it.id, null, { name: it.name });
       emit('items'); return it;

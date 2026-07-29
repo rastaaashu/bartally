@@ -1005,7 +1005,7 @@ const Engine = {
       }
       s += e.qty;
     }
-    return Math.round(s * 100) / 100;
+    return Math.round(s * 1000) / 1000;
   },
   /**
    * expected(item, targetBd) = counted at baseline + restocks − sales − waste since baseline, up to targetBd inclusive.
@@ -1022,7 +1022,7 @@ const Engine = {
     const r = this.sumSince(state.restocks, itemId, base, targetBd, { skipVoided: false, cutIso });
     const s = this.sumSince(state.sales, itemId, base, targetBd, { cutIso });
     const w = this.sumSince(state.waste, itemId, base, targetBd, { skipVoided: false, cutIso });
-    return Math.round((start + r - s - w) * 100) / 100;
+    return Math.round((start + r - s - w) * 1000) / 1000;
   },
   /** sales velocity: avg non-void units/day over the last `days` FULL business days
    *  (today's partial day excluded); young bars divide by days actually traded */
@@ -1141,6 +1141,9 @@ const SEED = {
     return this.items.map(([catId, name, unit, allowDecimal, threshold, mono], i) => ({
       id: 'it' + (i + 1).toString(36).padStart(2, '0'),
       catId, name, unit, allowDecimal, threshold, mono, isDemi: name.startsWith('1/2 '),
+      // spirits pour by the glass: 30 ml dose from a 700 ml bottle (owner-editable)
+      pours: catId === 'spirit' ? [30, 60] : null,
+      bottleMl: catId === 'spirit' ? 700 : null,
       photo: null, barcode: null, pinned: ['Heineken', 'Spécial', 'Black Label', 'Casablanca', 'Red Bull', 'Ricard'].includes(name),
       cost: null, active: true, sort: i,
     }));
@@ -1199,6 +1202,7 @@ const Store = (() => {
         for (const it of state.items) {
           if (!it.mono && seedByName.has(it.name)) it.mono = seedByName.get(it.name);
           if (it.isDemi === undefined) it.isDemi = String(it.name || '').startsWith('1/2 ');
+          if (it.pours === undefined || (it.doseMl !== undefined && !it.pours)) { it.pours = (it.catId === 'spirit' || it.doseMl) ? [it.doseMl || 30, 60] : null; it.bottleMl = it.bottleMl || (it.catId === 'spirit' ? 700 : null); delete it.doseMl; }
         }
       }
     }
@@ -1268,19 +1272,25 @@ const Store = (() => {
     },
 
     /* ---- staff + owner actions ---- */
-    logSale(itemId, qty) {
+    logSale(itemId, qty, meta) {
       if (!state.session) return null;
-      const e = { id: uid(), itemId, qty, bd: this.todayBd(), at: new Date().toISOString(), by: this.me.name, byId: state.session.userId, voidedAt: null, voidedBy: null };
+      const e = { id: uid(), itemId, qty: Math.round(qty * 1000) / 1000, bd: this.todayBd(), at: new Date().toISOString(), by: this.me.name, byId: state.session.userId, voidedAt: null, voidedBy: null };
+      if (meta && meta.glasses) { e.glasses = meta.glasses; if (meta.pours) e.pours = meta.pours; }
       state.sales.unshift(e);
       state.recents = [itemId, ...state.recents.filter(r => r !== itemId)].slice(0, 8);
       this.checkLow(itemId);
       emit('sales');
       return e;
     },
+    /** true once a business day has a closed (non-opening) count — its report is frozen */
+    isDayClosed(bd) {
+      return state.counts.some(c => c.bd === bd && c.status === 'closed' && !c.isOpening);
+    },
     /** staff undo: only own entry, only within grace window (UI enforces 6s); recorded as void */
     undoSale(saleId) {
       const e = state.sales.find(s => s.id === saleId);
       if (!e || e.voidedAt) return false;
+      if (this.isDayClosed(e.bd)) return false; // closed report is the source of truth
       if (!this.isOwner && e.byId !== state.session?.userId) return false;
       e.voidedAt = new Date().toISOString(); e.voidedBy = this.me.name;
       this.audit('void_sale', 'sale', saleId, { qty: e.qty, itemId: e.itemId }, null);
@@ -1370,14 +1380,10 @@ const Store = (() => {
       emit('counts');
       return c;
     },
-    reopenCount(countId) {
-      const c = state.counts.find(x => x.id === countId);
-      if (!c || c.status !== 'closed' || !this.isOwner || c.isOpening) return false;
-      c.status = 'open'; this.audit('reopen_count', 'count', c.id, { closedAt: c.closedAt }, null);
-      c.closedAt = null; c.closedBy = null;
-      emit('counts');
-      return true;
-    },
+    /** permanently disabled: a closed daily report is immutable — the source of
+     *  truth. Mistakes are corrected forward (Livraison / Casse today), never by
+     *  rewriting history. The database enforces the same rule with triggers. */
+    reopenCount() { return false; },
     closedCounts() { return state.counts.filter(c => c.status === 'closed' && !c.isOpening).sort((a, b) => a.bd < b.bd ? 1 : -1); },
 
     /* ---- items & categories (owner) ---- */
@@ -1395,7 +1401,7 @@ const Store = (() => {
         if (words.length >= 2) return (words[0][0] + '.' + words[1][0]).toUpperCase();
         return clean.replace(/[^A-Za-zÀ-ÿ]/g, '').slice(0, 3).toUpperCase();
       })();
-      const it = { id: uid(), catId: data.catId, name: data.name, unit: data.unit || 'bouteille', allowDecimal: !!data.allowDecimal, threshold: data.threshold ?? 6, mono, isDemi: String(data.name || '').startsWith('1/2 '), photo: data.photo || null, barcode: data.barcode || null, pinned: !!data.pinned, cost: data.cost ?? null, active: true, sort: state.items.length };
+      const it = { id: uid(), catId: data.catId, name: data.name, unit: data.unit || 'bouteille', allowDecimal: !!data.allowDecimal, threshold: data.threshold ?? 6, mono, isDemi: String(data.name || '').startsWith('1/2 '), pours: data.pours ?? (data.allowDecimal ? [30, 60] : null), bottleMl: data.bottleMl ?? (data.allowDecimal ? 700 : null), photo: data.photo || null, barcode: data.barcode || null, pinned: !!data.pinned, cost: data.cost ?? null, active: true, sort: state.items.length };
       state.items.push(it);
       this.audit('add_item', 'item', it.id, null, { name: it.name });
       emit('items'); return it;
@@ -2770,6 +2776,11 @@ const Sync = (() => {
       'sell.validate': 'Valider la vente',
       'sell.lock': 'Verrouiller',
       'sell.sold': 'Vendu : {n} × {item}',
+      'sell.soldGlasses_one': 'Vendu : {n} verre × {item}',
+      'sell.soldGlasses_many': 'Vendu : {n} verres × {item}',
+      'sell.glass_one': '{n} verre',
+      'sell.glass_many': '{n} verres',
+      'sell.doseTag': 'au verre · {ml} ml',
       'sell.hint': 'Appuyez sur − à chaque article vendu. Maintenez pour aller vite.',
       'sell.left': 'en stock',
     },
@@ -2778,6 +2789,11 @@ const Sync = (() => {
       'sell.validate': 'Confirm sale',
       'sell.lock': 'Lock',
       'sell.sold': 'Sold: {n} × {item}',
+      'sell.soldGlasses_one': 'Sold: {n} glass × {item}',
+      'sell.soldGlasses_many': 'Sold: {n} glasses × {item}',
+      'sell.glass_one': '{n} glass',
+      'sell.glass_many': '{n} glasses',
+      'sell.doseTag': 'by the glass · {ml} ml',
       'sell.hint': 'Tap − for each item sold. Hold to go faster.',
       'sell.left': 'in stock',
     },
@@ -2799,51 +2815,96 @@ const Sync = (() => {
   [data-screen=sell] .sell-btn:active{background:var(--surface2);color:var(--t1)}
   [data-screen=sell] .sell-btn.is-primary{border-color:rgba(232,177,78,.4);color:var(--brass)}
   [data-screen=sell] .sell-n{min-width:44px;text-align:center;font-size:17px}
-  [data-screen=sell] .sell-n.is-pend{color:var(--brass)}
+  [data-screen=sell] .sell-n.is-pend{color:var(--brass);font-size:12px;min-width:56px}
   [data-screen=sell] .sell-n.is-low{color:var(--bad)}
+  [data-screen=sell] .sell-pour{flex-direction:column;gap:0;width:42px}
+  [data-screen=sell] .sell-pour b{font:600 15px var(--f-display);line-height:1.1}
+  [data-screen=sell] .sell-pour i{font:500 8.5px var(--f-ui);font-style:normal;letter-spacing:.04em;color:var(--t3)}
   </style>`));
 
   const V = { q: '', cat: 'all' };
   const norm = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
-  /* pending sale units per item; a burst of taps becomes ONE sale entry */
+  /** spirits pour by the glass: each pour button = one dose of that size;
+      the bottle count moves by the exact fraction (ml / bottle ml) */
+  const isDose = it => !!(Array.isArray(it.pours) && it.pours.length && it.bottleMl);
+  const pourSizes = it => it.pours.filter(p => p > 0);
+
+  /* pending sale per item: dose items keep a STACK of poured ml (so + undoes the
+     last pour, whatever its size); plain items keep a tap count.
+     A burst becomes ONE sale entry. */
   const Q = { pending: {}, timers: {}, hold: null, repeat: null };
+
+  const pendingQty = (it, p) => !p ? 0 : (isDose(it) ? p.reduce((a, b) => a + b, 0) / it.bottleMl : p);
+  const pendCount = (it, p) => !p ? 0 : (isDose(it) ? p.length : p);
 
   function paint(id) {
     const el = document.querySelector(`[data-n="${CSS.escape(id)}"]`);
     if (!el) return;
-    const pend = Q.pending[id] || 0;
-    const shown = Math.round((Store.stock(id) - pend) * 100) / 100;
-    el.textContent = UI.fmtQty(shown);
-    el.classList.toggle('is-pend', !!pend);
-    el.classList.toggle('is-low', !pend && Store.isLow(id));
+    const it = Store.item(id); if (!it) return;
+    const p = Q.pending[id];
+    const n = pendCount(it, p);
+    if (n && isDose(it)) {
+      el.textContent = '−' + I18N.plural('sell.glass', n);
+    } else {
+      const shown = Math.round((Store.stock(id) - pendingQty(it, p)) * 100) / 100;
+      el.textContent = UI.fmtQty(shown);
+    }
+    el.classList.toggle('is-pend', !!n);
+    el.classList.toggle('is-low', !n && Store.isLow(id));
   }
 
-  function bump(id, dir) {
-    const it = Store.item(id); if (!it) return;
-    const step = it.allowDecimal ? 0.5 : 1;
-    // dir −1 = one more sold; dir +1 only walks back what is still uncommitted
-    const next = Math.round(((Q.pending[id] || 0) + (dir < 0 ? step : -step)) * 100) / 100;
-    if (next < 0) return;
-    Q.pending[id] = next;
+  function arm(id) {
     UI.haptic('light');
     paint(id);
     clearTimeout(Q.timers[id]);
     Q.timers[id] = setTimeout(() => commit(id), 900);
   }
+  /** plain items: −/+ one unit */
+  function bump(id, dir) {
+    const it = Store.item(id); if (!it) return;
+    if (isDose(it)) { if (dir > 0) unpour(id); return; } // + on a dose row = undo last pour
+    const next = (Q.pending[id] || 0) + (dir < 0 ? 1 : -1);
+    if (next < 0) return;
+    Q.pending[id] = next;
+    arm(id);
+  }
+  /** dose items: pour one glass of `ml` */
+  function pour(id, ml) {
+    const it = Store.item(id); if (!it || !isDose(it)) return;
+    (Q.pending[id] = Q.pending[id] || []).push(ml);
+    arm(id);
+  }
+  function unpour(id) {
+    const p = Q.pending[id];
+    if (!p || !p.length) return;
+    p.pop();
+    arm(id);
+  }
 
   function commit(id) {
-    const qty = Q.pending[id];
+    const p = Q.pending[id];
     delete Q.pending[id];
     clearTimeout(Q.timers[id]);
-    if (!qty) return;
-    const it = Store.item(id);
-    const entry = Store.logSale(id, qty);
+    const it = Store.item(id); if (!it) return;
+    if (isDose(it)) {
+      if (!p || !p.length) return;
+      const ml = p.reduce((a, b) => a + b, 0);
+      const qty = ml / it.bottleMl;
+      const pours = {};
+      for (const m of p) pours[m] = (pours[m] || 0) + 1;
+      const entry = Store.logSale(id, qty, { glasses: p.length, pours });
+      if (!entry) return;
+      const detail = Object.entries(pours).map(([m, n]) => `${n}×${m}ml`).join(' · ');
+      UI.toast(`${I18N.plural('sell.soldGlasses', p.length, { item: it.name })} (${detail})`, {
+        type: 'ok', action: { label: t('g.undo'), fn: () => Store.undoSale(entry.id) } });
+      return;
+    }
+    if (!p) return;
+    const entry = Store.logSale(id, p);
     if (!entry) return;
-    UI.toast(t('sell.sold', { n: UI.fmtQty(qty), item: it.name }), {
-      type: 'ok',
-      action: { label: t('g.undo'), fn: () => Store.undoSale(entry.id) },
-    });
+    UI.toast(t('sell.sold', { n: UI.fmtQty(p), item: it.name }), {
+      type: 'ok', action: { label: t('g.undo'), fn: () => Store.undoSale(entry.id) } });
   }
 
   function startHold(id, dir) {
@@ -2858,20 +2919,26 @@ const Sync = (() => {
   function stopHold() { clearTimeout(Q.hold); clearTimeout(Q.repeat); Q.hold = Q.repeat = null; }
 
   function rowHtml(it) {
-    const pend = Q.pending[it.id] || 0;
-    const shown = Math.round((Store.stock(it.id) - pend) * 100) / 100;
-    const low = !pend && Store.isLow(it.id);
+    const p = Q.pending[it.id];
+    const n = pendCount(it, p);
+    const shown = Math.round((Store.stock(it.id) - pendingQty(it, p)) * 100) / 100;
+    const low = !n && Store.isLow(it.id);
+    const dose = isDose(it);
+    const numHtml = `<span class="num sell-n${low ? ' is-low' : ''}${n ? ' is-pend' : ''}" data-n="${UI.esc(it.id)}">${
+      (n && dose) ? UI.esc('−' + I18N.plural('sell.glass', n)) : UI.esc(UI.fmtQty(shown))}</span>`;
     return `<div class="row sell-row" data-row="${UI.esc(it.id)}">
       <span class="sell-main">
         <span class="row__art">${UI.art(it)}</span>
         <span class="row__body">
           <span class="row__t">${UI.esc(it.name)}</span>
-          <span class="row__s">${UI.esc(t('u.' + it.unit))}</span>
+          <span class="row__s">${dose ? UI.esc(t('sell.doseTag', { ml: pourSizes(it).join('/') })) : UI.esc(t('u.' + it.unit))}</span>
         </span>
       </span>
       <span class="sell-adj">
-        <button type="button" class="sell-btn is-primary" data-adj="-1" data-id="${UI.esc(it.id)}" aria-label="−">−</button>
-        <span class="num sell-n${low ? ' is-low' : ''}${pend ? ' is-pend' : ''}" data-n="${UI.esc(it.id)}">${UI.esc(UI.fmtQty(shown))}</span>
+        ${dose
+          ? pourSizes(it).map(ml => `<button type="button" class="sell-btn is-primary sell-pour" data-pour="${ml}" data-id="${UI.esc(it.id)}" aria-label="${ml} ml"><b>${ml}</b><i>ml</i></button>`).join('')
+          : `<button type="button" class="sell-btn is-primary" data-adj="-1" data-id="${UI.esc(it.id)}" aria-label="−">−</button>`}
+        ${numHtml}
         <button type="button" class="sell-btn" data-adj="1" data-id="${UI.esc(it.id)}" aria-label="+">+</button>
       </span>
     </div>`;
@@ -2918,17 +2985,19 @@ const Sync = (() => {
       });
 
       el.addEventListener('pointerdown', e => {
+        const pb = e.target.closest('[data-pour]');
+        if (pb) { e.preventDefault(); pour(pb.dataset.id, Number(pb.dataset.pour)); return; }
         const b = e.target.closest('[data-adj]');
         if (!b) return;
         e.preventDefault();
         bump(b.dataset.id, Number(b.dataset.adj));
-        startHold(b.dataset.id, Number(b.dataset.adj));
+        if (!isDose(Store.item(b.dataset.id) || {})) startHold(b.dataset.id, Number(b.dataset.adj));
       });
       for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) el.addEventListener(ev, stopHold);
       window.addEventListener('pointerup', stopHold);
 
       el.addEventListener('click', e => {
-        if (e.target.closest('[data-adj]')) return;
+        if (e.target.closest('[data-adj]') || e.target.closest('[data-pour]')) return;
         const cat = e.target.closest('[data-cat]');
         if (cat) { V.cat = cat.dataset.cat; UI.haptic('light'); UI.refresh(); return; }
         const a = e.target.closest('[data-a]');
@@ -3133,6 +3202,10 @@ const Sync = (() => {
       'inv.activeCount_one': '{n} article actif',
       'inv.activeCount_many': '{n} articles actifs',
       'inv.inactiveN': 'Inactifs — {n}',
+      'inv.bottleMl': 'Bouteille (ml)',
+      'inv.pourA': 'Verre A (ml)',
+      'inv.pourB': 'Verre B (ml)',
+      'inv.pourHint': 'Renseignez les ml pour vendre au verre : chaque verre déduit sa fraction de bouteille automatiquement.',
     },
     en: {
       'inv.nameRequired': 'Enter the item name',
@@ -3145,6 +3218,10 @@ const Sync = (() => {
       'inv.activeCount_one': '{n} active item',
       'inv.activeCount_many': '{n} active items',
       'inv.inactiveN': 'Inactive — {n}',
+      'inv.bottleMl': 'Bottle (ml)',
+      'inv.pourA': 'Glass A (ml)',
+      'inv.pourB': 'Glass B (ml)',
+      'inv.pourHint': 'Set the ml to sell by the glass: each glass deducts its bottle fraction automatically.',
     },
   });
 
@@ -3176,6 +3253,7 @@ const Sync = (() => {
   [data-sheet=inv] h2{font-size:18px;margin-bottom:16px}
   [data-sheet=inv] .sheetrow{margin-bottom:16px}
   [data-sheet=inv] .inv2col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  [data-sheet=inv] .inv3col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
   [data-sheet=inv] .inv-hint{font-size:11px;color:var(--t3);margin:-8px 0 16px}
   [data-sheet=inv] .inv-swgroup{border-top:1px solid var(--hair);border-bottom:1px solid var(--hair);margin-bottom:16px}
   [data-sheet=inv] .inv-photo{display:flex;align-items:center;gap:16px}
@@ -3313,11 +3391,11 @@ const Sync = (() => {
       ? {
           name: '',
           catId: (catFilter !== 'all' && Store.cat(catFilter)) ? catFilter : (cats[0] ? cats[0].id : 'biere'),
-          unit: 'bouteille', allowDecimal: false, threshold: 6, pinned: false, cost: null, photo: null, barcode: null,
+          unit: 'bouteille', allowDecimal: false, threshold: 6, pinned: false, cost: null, photo: null, barcode: null, pours: null, bottleMl: null,
         }
       : {
           name: src.name, catId: src.catId, unit: src.unit, allowDecimal: !!src.allowDecimal,
-          threshold: src.threshold, pinned: !!src.pinned, cost: src.cost, photo: src.photo, barcode: src.barcode,
+          threshold: src.threshold, pinned: !!src.pinned, cost: src.cost, photo: src.photo, barcode: src.barcode, pours: src.pours ? [...src.pours] : null, bottleMl: src.bottleMl ?? null,
         };
     if (isNew) {
       if (d.catId === 'cuisine') d.unit = 'portion';
@@ -3344,6 +3422,12 @@ const Sync = (() => {
         <div class="field"><label>${UI.esc(t('inv.cost', { cur }))}</label><input data-f="cost" type="number" min="0" step="any" inputmode="decimal" value="${d.cost ?? ''}"></div>
       </div>
       <div class="inv-hint">${UI.esc(t('inv.costHint'))}</div>
+      <div class="inv3col">
+        <div class="field"><label>${UI.esc(t('inv.bottleMl'))}</label><input data-f="bml" type="number" min="0" step="any" inputmode="numeric" value="${d.bottleMl ?? ''}"></div>
+        <div class="field"><label>${UI.esc(t('inv.pourA'))}</label><input data-f="p1" type="number" min="0" step="any" inputmode="numeric" value="${d.pours && d.pours[0] ? d.pours[0] : ''}"></div>
+        <div class="field"><label>${UI.esc(t('inv.pourB'))}</label><input data-f="p2" type="number" min="0" step="any" inputmode="numeric" value="${d.pours && d.pours[1] ? d.pours[1] : ''}"></div>
+      </div>
+      <div class="inv-hint">${UI.esc(t('inv.pourHint'))}</div>
       <div class="inv-swgroup">
         <div class="switchrow">
           <div><div class="switchrow__t">${UI.esc(t('inv.decimal'))}</div><div class="switchrow__s">${UI.esc(t('inv.decimalHint'))}</div></div>
@@ -3434,7 +3518,11 @@ const Sync = (() => {
         const unit = c.querySelector('[data-f=unit]').value;
         const thr = parseNum(c.querySelector('[data-f=thr]').value);
         const cost = parseNum(c.querySelector('[data-f=cost]').value);
-        const patch = { name, catId, unit, allowDecimal: d.allowDecimal, pinned: d.pinned, cost, threshold: thr };
+        const bml = parseNum(c.querySelector('[data-f=bml]').value);
+        const p1 = parseNum(c.querySelector('[data-f=p1]').value);
+        const p2 = parseNum(c.querySelector('[data-f=p2]').value);
+        const pours = [p1, p2].filter(v => v && v > 0);
+        const patch = { name, catId, unit, allowDecimal: d.allowDecimal, pinned: d.pinned, cost, threshold: thr, bottleMl: bml || null, pours: pours.length ? pours : null };
         if (isNew) {
           if (thr == null) delete patch.threshold; // store default applies
           Store.saveItem(patch); // monogram derived by the store — no drawn art
@@ -3602,6 +3690,7 @@ const Sync = (() => {
       'count.editLine': 'Modifier',
       'count.ownerOnly': 'Réservé au patron',
       'count.viewReport': 'Voir le rapport',
+      'count.frozen': 'Journée clôturée — rapport définitif, non modifiable.',
     },
     en: {
       'count.h1': 'Variance',
@@ -3617,6 +3706,7 @@ const Sync = (() => {
       'count.editLine': 'Edit',
       'count.ownerOnly': 'Owner only',
       'count.viewReport': 'View report',
+      'count.frozen': 'Day closed — final report, cannot be edited.',
     },
   });
 
@@ -3733,7 +3823,7 @@ const Sync = (() => {
         </div>
         <div class="bottomstack">
           <button class="btn btn--ghost" data-a="report">${UI.esc(t('count.viewReport'))}</button>
-          <button class="textbtn" data-a="reopen">${UI.esc(t('count.reopen'))}</button>
+          <div class="sub2" style="text-align:center">${UI.esc(t('count.frozen'))}</div>
         </div>`;
       return;
     }
@@ -3864,14 +3954,6 @@ const Sync = (() => {
         const a = b.dataset.a;
         if (a === 'back') UI.go('dashboard');
         else if (a === 'report') UI.go('reports', { day: Store.todayBd() });
-        else if (a === 'reopen') {
-          const closedToday = Store.state.counts.find(x => x.bd === Store.todayBd() && x.status === 'closed');
-          if (closedToday && await UI.confirm(t('count.reopenWarn'), { danger: true })) {
-            Store.reopenCount(closedToday.id);
-            V.mode = 'review'; V.buf = '';
-            UI.refresh();
-          }
-        }
         else if (a === 'start') {
           const oc = Store.openCount();
           V.mode = 'walk'; V.buf = '';
@@ -4516,7 +4598,7 @@ const Sync = (() => {
     return `<div class="row ${s.voidedAt ? 'rep-void' : ''}">
       <span class="feedtick" style="background:${tickOf(s.itemId)}"></span>
       <span class="row__body">
-        <span class="row__t">${esc(it?.name || '?')}<span class="qtybubble">×${esc(fq(s.qty))}</span></span>
+        <span class="row__t">${esc(it?.name || '?')}<span class="qtybubble">${s.glasses ? esc(Object.entries(s.pours || { '?': s.glasses }).map(([m, n]) => n + '×' + m + 'ml').join(' · ')) : '×' + esc(fq(s.qty))}</span></span>
       </span>
       <span class="rep-meta">
         <span class="rep-time">${esc(UI.fmtTime(s.at))}</span>
@@ -4524,7 +4606,9 @@ const Sync = (() => {
       </span>
       ${s.voidedAt
         ? `<span class="rep-tag">${esc(t('rep.voidedTag'))}</span>`
-        : `<button class="rep-cancel" data-void="${esc(s.id)}" aria-label="${esc(t('rep.void'))}">${esc(t('rep.voidBtn'))}</button>`}
+        : Store.isDayClosed(s.bd)
+          ? ''
+          : `<button class="rep-cancel" data-void="${esc(s.id)}" aria-label="${esc(t('rep.void'))}">${esc(t('rep.voidBtn'))}</button>`}
     </div>`;
   }
   function restockRow(r) {
@@ -4607,7 +4691,7 @@ const Sync = (() => {
         <div class="micro tnum">${esc(UI.fmtDate(bd))}</div>
       </div>
       <div class="h1">${esc(longDate(bd))}</div>
-      ${c.closedAt ? `<div class="sub2">${esc(t('rep.closedBy', { name: c.closedBy || '', time: UI.fmtTime(c.closedAt) }))}</div>` : ''}
+      ${c.closedAt ? `<div class="sub2">${esc(t('rep.closedBy', { name: c.closedBy || '', time: UI.fmtTime(c.closedAt) }))} · ${esc(t('count.frozen'))}</div>` : ''}
       <div class="sum">
         <div class="sumcol"><div class="micro">${esc(t('rep.kSold'))}</div><div class="mid tnum">${esc(fq(sold))}</div></div>
         <div class="sumcol"><div class="micro">${esc(t('rep.kRest'))}</div><div class="mid tnum">${esc(fq(rest))}</div></div>

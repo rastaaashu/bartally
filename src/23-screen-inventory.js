@@ -14,6 +14,10 @@
       'inv.activeCount_one': '{n} article actif',
       'inv.activeCount_many': '{n} articles actifs',
       'inv.inactiveN': 'Inactifs — {n}',
+      'inv.bottleMl': 'Bouteille (ml)',
+      'inv.pourA': 'Verre A (ml)',
+      'inv.pourB': 'Verre B (ml)',
+      'inv.pourHint': 'Renseignez les ml pour vendre au verre : chaque verre déduit sa fraction de bouteille automatiquement.',
     },
     en: {
       'inv.nameRequired': 'Enter the item name',
@@ -26,6 +30,10 @@
       'inv.activeCount_one': '{n} active item',
       'inv.activeCount_many': '{n} active items',
       'inv.inactiveN': 'Inactive — {n}',
+      'inv.bottleMl': 'Bottle (ml)',
+      'inv.pourA': 'Glass A (ml)',
+      'inv.pourB': 'Glass B (ml)',
+      'inv.pourHint': 'Set the ml to sell by the glass: each glass deducts its bottle fraction automatically.',
     },
   });
 
@@ -57,6 +65,7 @@
   [data-sheet=inv] h2{font-size:18px;margin-bottom:16px}
   [data-sheet=inv] .sheetrow{margin-bottom:16px}
   [data-sheet=inv] .inv2col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  [data-sheet=inv] .inv3col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
   [data-sheet=inv] .inv-hint{font-size:11px;color:var(--t3);margin:-8px 0 16px}
   [data-sheet=inv] .inv-swgroup{border-top:1px solid var(--hair);border-bottom:1px solid var(--hair);margin-bottom:16px}
   [data-sheet=inv] .inv-photo{display:flex;align-items:center;gap:16px}
@@ -194,11 +203,11 @@
       ? {
           name: '',
           catId: (catFilter !== 'all' && Store.cat(catFilter)) ? catFilter : (cats[0] ? cats[0].id : 'biere'),
-          unit: 'bouteille', allowDecimal: false, threshold: 6, pinned: false, cost: null, photo: null, barcode: null,
+          unit: 'bouteille', allowDecimal: false, threshold: 6, pinned: false, cost: null, photo: null, barcode: null, pours: null, bottleMl: null,
         }
       : {
           name: src.name, catId: src.catId, unit: src.unit, allowDecimal: !!src.allowDecimal,
-          threshold: src.threshold, pinned: !!src.pinned, cost: src.cost, photo: src.photo, barcode: src.barcode,
+          threshold: src.threshold, pinned: !!src.pinned, cost: src.cost, photo: src.photo, barcode: src.barcode, pours: src.pours ? [...src.pours] : null, bottleMl: src.bottleMl ?? null,
         };
     if (isNew) {
       if (d.catId === 'cuisine') d.unit = 'portion';
@@ -225,6 +234,12 @@
         <div class="field"><label>${UI.esc(t('inv.cost', { cur }))}</label><input data-f="cost" type="number" min="0" step="any" inputmode="decimal" value="${d.cost ?? ''}"></div>
       </div>
       <div class="inv-hint">${UI.esc(t('inv.costHint'))}</div>
+      <div class="inv3col">
+        <div class="field"><label>${UI.esc(t('inv.bottleMl'))}</label><input data-f="bml" type="number" min="0" step="any" inputmode="numeric" value="${d.bottleMl ?? ''}"></div>
+        <div class="field"><label>${UI.esc(t('inv.pourA'))}</label><input data-f="p1" type="number" min="0" step="any" inputmode="numeric" value="${d.pours && d.pours[0] ? d.pours[0] : ''}"></div>
+        <div class="field"><label>${UI.esc(t('inv.pourB'))}</label><input data-f="p2" type="number" min="0" step="any" inputmode="numeric" value="${d.pours && d.pours[1] ? d.pours[1] : ''}"></div>
+      </div>
+      <div class="inv-hint">${UI.esc(t('inv.pourHint'))}</div>
       <div class="inv-swgroup">
         <div class="switchrow">
           <div><div class="switchrow__t">${UI.esc(t('inv.decimal'))}</div><div class="switchrow__s">${UI.esc(t('inv.decimalHint'))}</div></div>
@@ -315,7 +330,11 @@
         const unit = c.querySelector('[data-f=unit]').value;
         const thr = parseNum(c.querySelector('[data-f=thr]').value);
         const cost = parseNum(c.querySelector('[data-f=cost]').value);
-        const patch = { name, catId, unit, allowDecimal: d.allowDecimal, pinned: d.pinned, cost, threshold: thr };
+        const bml = parseNum(c.querySelector('[data-f=bml]').value);
+        const p1 = parseNum(c.querySelector('[data-f=p1]').value);
+        const p2 = parseNum(c.querySelector('[data-f=p2]').value);
+        const pours = [p1, p2].filter(v => v && v > 0);
+        const patch = { name, catId, unit, allowDecimal: d.allowDecimal, pinned: d.pinned, cost, threshold: thr, bottleMl: bml || null, pours: pours.length ? pours : null };
         if (isNew) {
           if (thr == null) delete patch.threshold; // store default applies
           Store.saveItem(patch); // monogram derived by the store — no drawn art

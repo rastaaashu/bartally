@@ -334,7 +334,7 @@
     return `<div class="row ${s.voidedAt ? 'rep-void' : ''}">
       <span class="feedtick" style="background:${tickOf(s.itemId)}"></span>
       <span class="row__body">
-        <span class="row__t">${esc(it?.name || '?')}<span class="qtybubble">×${esc(fq(s.qty))}</span></span>
+        <span class="row__t">${esc(it?.name || '?')}<span class="qtybubble">${s.glasses ? esc(Object.entries(s.pours || { '?': s.glasses }).map(([m, n]) => n + '×' + m + 'ml').join(' · ')) : '×' + esc(fq(s.qty))}</span></span>
       </span>
       <span class="rep-meta">
         <span class="rep-time">${esc(UI.fmtTime(s.at))}</span>
@@ -342,7 +342,9 @@
       </span>
       ${s.voidedAt
         ? `<span class="rep-tag">${esc(t('rep.voidedTag'))}</span>`
-        : `<button class="rep-cancel" data-void="${esc(s.id)}" aria-label="${esc(t('rep.void'))}">${esc(t('rep.voidBtn'))}</button>`}
+        : Store.isDayClosed(s.bd)
+          ? ''
+          : `<button class="rep-cancel" data-void="${esc(s.id)}" aria-label="${esc(t('rep.void'))}">${esc(t('rep.voidBtn'))}</button>`}
     </div>`;
   }
   function restockRow(r) {
@@ -425,7 +427,7 @@
         <div class="micro tnum">${esc(UI.fmtDate(bd))}</div>
       </div>
       <div class="h1">${esc(longDate(bd))}</div>
-      ${c.closedAt ? `<div class="sub2">${esc(t('rep.closedBy', { name: c.closedBy || '', time: UI.fmtTime(c.closedAt) }))}</div>` : ''}
+      ${c.closedAt ? `<div class="sub2">${esc(t('rep.closedBy', { name: c.closedBy || '', time: UI.fmtTime(c.closedAt) }))} · ${esc(t('count.frozen'))}</div>` : ''}
       <div class="sum">
         <div class="sumcol"><div class="micro">${esc(t('rep.kSold'))}</div><div class="mid tnum">${esc(fq(sold))}</div></div>
         <div class="sumcol"><div class="micro">${esc(t('rep.kRest'))}</div><div class="mid tnum">${esc(fq(rest))}</div></div>

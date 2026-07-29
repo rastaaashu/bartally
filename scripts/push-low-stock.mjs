@@ -19,9 +19,13 @@ const rows = async t => (await api(`${t}?select=*`)).map(r => r.data ?? r);
 
 /* ---- same stock rules as the app: baseline count + deliveries − sales − waste ---- */
 const pad = n => String(n).padStart(2, '0');
+const TZ = process.env.BAR_TZ || 'Africa/Casablanca';
 function businessDate(cutoff) {
-  const d = new Date();
-  if (d.getUTCHours() < cutoff) d.setUTCDate(d.getUTCDate() - 1);
+  // the bar's local clock, not the runner's: a 01:30 sale belongs to the previous evening
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23' }).formatToParts(new Date());
+  const get = t => Number(parts.find(x => x.type === t).value);
+  const d = new Date(Date.UTC(get('year'), get('month') - 1, get('day')));
+  if (get('hour') < cutoff) d.setUTCDate(d.getUTCDate() - 1);
   return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
 }
 function baseline(counts, bd) {
@@ -45,7 +49,7 @@ function sumSince(entries, itemId, base, bd, { skipVoided = true, cutIso = null 
     }
     s += e.qty;
   }
-  return Math.round(s * 100) / 100;
+  return Math.round(s * 1000) / 1000;
 }
 function expected(st, itemId, bd) {
   const base = baseline(st.counts, bd);
@@ -57,7 +61,7 @@ function expected(st, itemId, bd) {
   const r = sumSince(st.restocks, itemId, base, bd, { skipVoided: false, cutIso });
   const s = sumSince(st.sales, itemId, base, bd, { cutIso });
   const w = sumSince(st.waste, itemId, base, bd, { skipVoided: false, cutIso });
-  return Math.round((start + r - s - w) * 100) / 100;
+  return Math.round((start + r - s - w) * 1000) / 1000;
 }
 
 const [items, sales, restocks, waste, counts, settingsRows, subsRaw, logRaw] = await Promise.all(
