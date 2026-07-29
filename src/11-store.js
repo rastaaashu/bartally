@@ -238,6 +238,8 @@ const Store = (() => {
     Engine, SEED,
     get state() { return state; },
     on(fn) { listeners.add(fn); return () => listeners.delete(fn); },
+    /** immediate write-through (used by the sync layer after remote merges) */
+    persistNow() { clearTimeout(saveTimer); try { LS.setItem(KEY, JSON.stringify(state)); } catch (e) {} },
 
     /* ---- session & auth ---- */
     get me() { return state.session ? (state.session.role === 'owner' ? { id: 'owner', name: state.settings.ownerName || 'Patron', role: 'owner' } : state.employees.find(e => e.id === state.session.userId)) : null; },

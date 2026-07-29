@@ -47,6 +47,7 @@ const App = {
     });
     this.route();
     this.countReminder();
+    if (typeof Sync !== 'undefined') Sync.start();
     // PWA service worker (no-op where sw.js doesn't exist, e.g. artifact preview)
     if ('serviceWorker' in navigator && location.protocol === 'https:') {
       navigator.serviceWorker.register('sw.js').catch(() => {});
