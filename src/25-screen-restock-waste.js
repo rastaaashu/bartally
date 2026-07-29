@@ -27,7 +27,7 @@
 
   document.head.appendChild(UI.el(`<style>
   [data-screen=restock] .topbar,[data-screen=waste] .topbar{display:flex;justify-content:space-between;align-items:center;min-height:26px}
-  [data-screen=restock] .h1,[data-screen=waste] .h1{font:600 24px/1.2 var(--f-display);letter-spacing:-.01em;margin-top:8px}
+  [data-screen=restock] .h1,[data-screen=waste] .h1{font:600 28px/1.2 var(--f-display);letter-spacing:-.01em;margin-top:8px}
   </style>`));
 
   /* transient per-screen UI state — survives store-driven re-renders (rule 9) */

@@ -55,7 +55,7 @@
 
   document.head.appendChild(UI.el(`<style>
   [data-screen=settings] .topbar{display:flex;justify-content:space-between;align-items:center;min-height:26px}
-  [data-screen=settings] .h1{font:600 24px/1.2 var(--f-display);letter-spacing:-.01em;margin-top:8px}
+  [data-screen=settings] .h1{font:600 28px/1.2 var(--f-display);letter-spacing:-.01em;margin-top:8px}
   [data-screen=settings] .row .textbtn{flex:none;padding:16px 0 16px 12px}
   [data-screen=settings] .stg-in{width:160px;height:40px;flex:none;padding:0 12px;text-align:right;border-radius:var(--r-ctl);border:1px solid var(--hair);background:var(--surface2);color:var(--t1);font-size:14px}
   [data-screen=settings] .stg-in--s{width:88px;text-transform:uppercase}

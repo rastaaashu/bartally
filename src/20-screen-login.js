@@ -38,7 +38,7 @@
   document.head.appendChild(UI.el(`<style>
   [data-screen=welcome] .topbar,[data-screen=login] .topbar{display:flex;justify-content:space-between;align-items:center;min-height:26px}
   [data-screen=welcome] .wiz-top{padding-right:88px}
-  [data-screen=welcome] .h1,[data-screen=login] .h1{font:600 24px/1.2 var(--f-display);letter-spacing:-.01em;margin-top:8px}
+  [data-screen=welcome] .h1,[data-screen=login] .h1{font:600 28px/1.2 var(--f-display);letter-spacing:-.01em;margin-top:8px}
   [data-screen=welcome] .stepof{font-variant-numeric:tabular-nums}
   [data-screen=welcome] .fade{animation:lgw-fade .25s ease-out}
   [data-screen=welcome] .hero{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:8px}

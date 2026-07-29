@@ -40,22 +40,22 @@
   /* scoped styles: screen + its sheets — hairlines and whitespace only, 4pt grid, kit radii */
   document.head.appendChild(UI.el(`<style>
   [data-screen=inventory] .topbar{display:flex;justify-content:space-between;align-items:center;min-height:26px}
-  [data-screen=inventory] .h1{font:600 24px/1.2 var(--f-display);letter-spacing:-.01em;margin-top:8px}
+  [data-screen=inventory] .h1{font:600 28px/1.2 var(--f-display);letter-spacing:-.01em;margin-top:8px}
   [data-screen=inventory] button.row{width:100%;text-align:left}
-  [data-screen=inventory] .row__s{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase}
+  [data-screen=inventory] .row__s{font-size:13px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--t2)}
   [data-screen=inventory] .row__end{display:flex;flex-direction:column;align-items:flex-end}
-  [data-screen=inventory] .inv-n{font-size:16px;line-height:1.2}
+  [data-screen=inventory] .inv-n{font-size:19px;line-height:1.2}
   [data-screen=inventory] .inv-row{padding:0}
   [data-screen=inventory] .inv-open{flex:1;min-width:0;display:flex;align-items:center;gap:12px;text-align:left;padding:6px 0}
   [data-screen=inventory] .inv-adj{display:flex;align-items:center;gap:2px;flex:none;margin-left:8px}
-  [data-screen=inventory] .inv-btn{width:38px;height:38px;border-radius:10px;border:1px solid var(--hair);
-    background:var(--surface);color:var(--t2);font:500 19px var(--f-display);line-height:1;
+  [data-screen=inventory] .inv-btn{width:44px;height:44px;border-radius:10px;border:1px solid var(--hair);
+    background:var(--surface);color:var(--t2);font:500 22px var(--f-display);line-height:1;
     display:flex;align-items:center;justify-content:center;touch-action:none;user-select:none;transition:background .1s,color .1s}
   [data-screen=inventory] .inv-btn:active{background:var(--surface2);color:var(--t1)}
-  [data-screen=inventory] .inv-adj .inv-n{min-width:46px;text-align:center;font-size:17px}
+  [data-screen=inventory] .inv-adj .inv-n{min-width:50px;text-align:center;font-size:19px}
   [data-screen=inventory] .inv-n.is-pend{color:var(--brass)}
   [data-screen=inventory] .inv-n.is-low{color:var(--bad)}
-  [data-screen=inventory] .inv-low{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--bad);margin-top:2px}
+  [data-screen=inventory] .inv-low{font-size:11.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--bad);margin-top:2px}
   [data-screen=inventory] .feed{margin-top:4px}
   [data-screen=inventory] .grouprow{margin-top:16px}
   [data-screen=inventory] .inv-off .row{opacity:.55}

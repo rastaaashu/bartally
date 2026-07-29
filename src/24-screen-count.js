@@ -39,7 +39,7 @@
 
   document.head.appendChild(UI.el(`<style>
   [data-screen=count] .topbar{display:flex;justify-content:space-between;align-items:center;min-height:26px}
-  [data-screen=count] .h1{font:600 24px/1.2 var(--f-display);letter-spacing:-.01em;margin-top:8px}
+  [data-screen=count] .h1{font:600 28px/1.2 var(--f-display);letter-spacing:-.01em;margin-top:8px}
   [data-screen=count] .cw-item{display:flex;align-items:center;gap:12px;margin-top:20px}
   [data-screen=count] .cw-name{font-size:16px;font-weight:600}
   [data-screen=count] .cw-unit{font-size:11px;color:var(--t3);margin-top:2px;text-transform:uppercase;letter-spacing:.07em;font-weight:600}

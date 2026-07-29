@@ -45,7 +45,7 @@ body{
   background:var(--bg);
   color:var(--t1);
   font-family:var(--f-ui);
-  font-size:14px;line-height:1.45;
+  font-size:15px;line-height:1.5;
   -webkit-font-smoothing:antialiased;
   overscroll-behavior-y:none;
   touch-action:manipulation;
@@ -54,7 +54,7 @@ body{
 .num,.tnum{font-family:var(--f-display);font-weight:600;font-variant-numeric:tabular-nums;font-feature-settings:'tnum' 1}
 .sg{font-family:var(--f-display)}
 h1,h2,h3{font-family:var(--f-display);font-weight:600;letter-spacing:-.01em;text-wrap:balance}
-.eyebrow,.micro{font-family:var(--f-ui);font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--t3)}
+.eyebrow,.micro{font-family:var(--f-ui);font-size:12.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--t2)}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 input,select,textarea{font:inherit;color:inherit}
 img,svg{display:block;max-width:100%}

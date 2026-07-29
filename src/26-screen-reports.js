@@ -108,23 +108,23 @@
     if (cssIn) return; cssIn = true;
     document.head.appendChild(UI.el(`<style>
 [data-screen=reports] .topbar{display:flex;justify-content:space-between;align-items:center;min-height:26px}
-[data-screen=reports] .h1{font:600 24px/1.2 var(--f-display);letter-spacing:-.01em;margin-top:8px}
+[data-screen=reports] .h1{font:600 28px/1.2 var(--f-display);letter-spacing:-.01em;margin-top:8px}
 [data-screen=reports] .rep-open{margin-top:16px}
 [data-screen=reports] .rep-cont{flex:none;padding:10px 0 10px 12px;font-size:13px;font-weight:600;color:var(--brass);text-align:right}
 [data-screen=reports] .rep-th3,[data-screen=reports] .rep-drow{grid-template-columns:1fr 64px 84px}
-[data-screen=reports] .rep-drow{display:grid;min-height:56px;align-items:center;border-bottom:1px solid var(--hair);width:100%;text-align:left;font-size:14px}
+[data-screen=reports] .rep-drow{display:grid;min-height:60px;align-items:center;border-bottom:1px solid var(--hair);width:100%;text-align:left;font-size:15.5px}
 [data-screen=reports] .rep-dd{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:8px}
-[data-screen=reports] .rep-sum{display:block;font-size:11px;font-weight:400;color:var(--t3);margin-top:2px;font-variant-numeric:tabular-nums}
+[data-screen=reports] .rep-sum{display:block;font-size:12.5px;font-weight:400;color:var(--t3);margin-top:2px;font-variant-numeric:tabular-nums}
 [data-screen=reports] .rep-drow{padding:8px 0}
 [data-screen=reports] .rep-dvar{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
-[data-screen=reports] .rep-nvar{font-size:10px;font-weight:600;color:var(--bad)}
+[data-screen=reports] .rep-nvar{font-size:11.5px;font-weight:600;color:var(--bad)}
 [data-screen=reports] .rep-okline{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--hair)}
 [data-screen=reports] .rep-okline svg{width:20px;height:20px;flex:none;color:var(--ok)}
 [data-screen=reports] .rep-okline .row__t{color:var(--ok)}
 [data-screen=reports] .row__t .qtybubble{margin-left:6px}
 [data-screen=reports] .rep-meta{flex:none;text-align:right}
-[data-screen=reports] .rep-time{display:block;font:500 12px var(--f-display);color:var(--t3);font-variant-numeric:tabular-nums}
-[data-screen=reports] .rep-by{display:block;font-size:11px;color:var(--t3);margin-top:2px}
+[data-screen=reports] .rep-time{display:block;font:500 13px var(--f-display);color:var(--t3);font-variant-numeric:tabular-nums}
+[data-screen=reports] .rep-by{display:block;font-size:12.5px;color:var(--t3);margin-top:2px}
 [data-screen=reports] .rep-cancel{flex:none;padding:8px 0 8px 4px;font-size:12px;font-weight:500;color:var(--t2)}
 [data-screen=reports] .rep-tag{flex:none;font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--t3)}
 [data-screen=reports] .rep-void .row__t,[data-screen=reports] .rep-void .qtybubble{text-decoration:line-through;opacity:.55}

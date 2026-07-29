@@ -38,7 +38,7 @@
 
   document.head.appendChild(UI.el(`<style>
   [data-screen=sell] .topbar{display:flex;justify-content:space-between;align-items:center;min-height:26px}
-  [data-screen=sell] .h1{font:600 24px/1.2 var(--f-display);letter-spacing:-.01em;margin-top:8px}
+  [data-screen=sell] .h1{font:600 28px/1.2 var(--f-display);letter-spacing:-.01em;margin-top:8px}
   [data-screen=sell] .topside{display:flex;align-items:center;gap:8px}
   [data-screen=sell] .lockbtn{font-size:13px;font-weight:500;color:var(--t3)}
   [data-screen=sell] .scanbtn{width:32px;height:32px;border:0;display:flex;align-items:center;justify-content:center;color:var(--t3)}
@@ -46,17 +46,17 @@
   [data-screen=sell] .sell-row{padding:0}
   [data-screen=sell] .sell-main{flex:1;min-width:0;display:flex;align-items:center;gap:12px;padding:7px 0;text-align:left}
   [data-screen=sell] .sell-adj{display:flex;align-items:center;gap:2px;flex:none;margin-left:8px}
-  [data-screen=sell] .sell-btn{width:44px;height:44px;border-radius:10px;border:1px solid var(--hair);
+  [data-screen=sell] .sell-btn{width:46px;height:46px;border-radius:10px;border:1px solid var(--hair);
     background:var(--surface);color:var(--t2);font:500 22px var(--f-display);line-height:1;
     display:flex;align-items:center;justify-content:center;touch-action:none;user-select:none;transition:background .1s,color .1s}
   [data-screen=sell] .sell-btn:active{background:var(--surface2);color:var(--t1)}
   [data-screen=sell] .sell-btn.is-primary{border-color:rgba(232,177,78,.4);color:var(--brass)}
-  [data-screen=sell] .sell-n{min-width:44px;text-align:center;font-size:17px}
-  [data-screen=sell] .sell-n.is-pend{color:var(--brass);font-size:12px;min-width:56px}
+  [data-screen=sell] .sell-n{min-width:48px;text-align:center;font-size:19px}
+  [data-screen=sell] .sell-n.is-pend{color:var(--brass);font-size:13px;min-width:62px;line-height:1.25}
   [data-screen=sell] .sell-n.is-low{color:var(--bad)}
-  [data-screen=sell] .sell-pour{flex-direction:column;gap:0;width:42px}
-  [data-screen=sell] .sell-pour b{font:600 15px var(--f-display);line-height:1.1}
-  [data-screen=sell] .sell-pour i{font:500 8.5px var(--f-ui);font-style:normal;letter-spacing:.04em;color:var(--t3)}
+  [data-screen=sell] .sell-pour{flex-direction:column;gap:0;width:44px}
+  [data-screen=sell] .sell-pour b{font:600 16px var(--f-display);line-height:1.1}
+  [data-screen=sell] .sell-pour i{font:600 9.5px var(--f-ui);font-style:normal;letter-spacing:.04em;color:var(--t3)}
   </style>`));
 
   const V = { q: '', cat: 'all' };

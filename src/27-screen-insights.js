@@ -12,7 +12,7 @@
 
   document.head.appendChild(UI.el(`<style>
     [data-screen=insights] .topbar{display:flex;justify-content:space-between;align-items:center;min-height:26px}
-    [data-screen=insights] .h1{font:600 24px/1.2 var(--f-display);letter-spacing:-.01em;margin-top:8px}
+    [data-screen=insights] .h1{font:600 28px/1.2 var(--f-display);letter-spacing:-.01em;margin-top:8px}
     [data-screen=insights] .seg{margin-top:16px}
     [data-screen=insights] .ins-chart{display:block;width:100%;height:auto;margin-top:12px}
     [data-screen=insights] .ins-tick{fill:var(--t3);font-size:10px}
