@@ -10,7 +10,7 @@
       'rep.from': 'Du', 'rep.to': 'Au', 'rep.colDate': 'Date',
       'rep.soldLbl': 'unités vendues', 'rep.restocked': 'unités livrées', 'rep.wasted': 'unités perdues',
       'rep.notFound': 'Rapport introuvable',
-      'rep.notFoundSub': 'Aucun comptage clôturé pour cette date.',
+      'rep.notFoundSub': 'Journée en cours — clôturez le comptage pour figer les écarts.',
       'rep.cleanN_one': '{n} article juste', 'rep.cleanN_many': '{n} articles justes',
       'rep.noSales': 'Aucune vente enregistrée ce jour-là.',
       'rep.noRestocks': 'Aucune livraison ce jour-là.',
@@ -19,11 +19,15 @@
       'rep.rangeEmpty': 'Aucune journée clôturée dans cette période.',
       'rep.auto': 'Non compté — valeur attendue conservée',
       'rep.closedBy': 'Clôturé par {name} à {time}',
-      'rep.days': 'Journées',
+      'rep.days': 'Journal',
       'rep.kSold': 'Vendu', 'rep.kRest': 'Livré',
       'rep.voidBtn': 'Annuler',
       'rep.varN_one': '{n} écart', 'rep.varN_many': '{n} écarts',
       'rep.exportRangeBtn': 'Exporter une période',
+      'rep.dayOpen': 'en cours',
+      'rep.jSold': '{n} vendus', 'rep.jIn': '+{n} livrés', 'rep.jOut': '−{n} retirés',
+      'rep.noDaysJ': 'Rien pour l’instant',
+      'rep.noDaysJSub': 'Chaque journée s’enregistre ici automatiquement dès la première vente ou livraison.',
     },
     en: {
       'rep.openHint': 'Count in progress — close it to generate the report.',
@@ -32,7 +36,7 @@
       'rep.from': 'From', 'rep.to': 'To', 'rep.colDate': 'Date',
       'rep.soldLbl': 'units sold', 'rep.restocked': 'units delivered', 'rep.wasted': 'units lost',
       'rep.notFound': 'Report not found',
-      'rep.notFoundSub': 'No closed count for this date.',
+      'rep.notFoundSub': 'Day in progress — close the count to lock in variances.',
       'rep.cleanN_one': '{n} item spot-on', 'rep.cleanN_many': '{n} items spot-on',
       'rep.noSales': 'No sales recorded that day.',
       'rep.noRestocks': 'No deliveries that day.',
@@ -46,6 +50,10 @@
       'rep.voidBtn': 'Void',
       'rep.varN_one': '{n} discrepancy', 'rep.varN_many': '{n} discrepancies',
       'rep.exportRangeBtn': 'Export a date range',
+      'rep.dayOpen': 'open',
+      'rep.jSold': '{n} sold', 'rep.jIn': '+{n} in', 'rep.jOut': '−{n} out',
+      'rep.noDaysJ': 'Nothing yet',
+      'rep.noDaysJSub': 'Every day is recorded here automatically from the first sale or delivery.',
     },
   });
 
@@ -100,6 +108,8 @@
 [data-screen=reports] .rep-th3,[data-screen=reports] .rep-drow{grid-template-columns:1fr 64px 84px}
 [data-screen=reports] .rep-drow{display:grid;min-height:56px;align-items:center;border-bottom:1px solid var(--hair);width:100%;text-align:left;font-size:14px}
 [data-screen=reports] .rep-dd{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:8px}
+[data-screen=reports] .rep-sum{display:block;font-size:11px;font-weight:400;color:var(--t3);margin-top:2px;font-variant-numeric:tabular-nums}
+[data-screen=reports] .rep-drow{padding:8px 0}
 [data-screen=reports] .rep-dvar{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
 [data-screen=reports] .rep-nvar{font-size:10px;font-weight:600;color:var(--bad)}
 [data-screen=reports] .rep-okline{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--hair)}
@@ -228,24 +238,47 @@
   }
 
   /* ---------- list mode (root tab) ---------- */
-  function dayRow(c) {
-    const sold = sumBd(S().sales, c.bd, true);
-    const vt = varTotal(c);
-    const nVar = c.lines.filter(l => l.variance !== 0).length;
-    /* any nonzero line ⇒ danger-colored discrepancy count — a day never looks clean by netting out */
-    const vHtml = nVar === 0
-      ? `<span class="d faint tnum">${esc(sgn(0))}</span>`
-      : `<span class="d ${vt < 0 ? 'bad' : vt > 0 ? 'good' : 'bad'} tnum">${esc(sgn(vt))}</span>
-         <span class="rep-nvar tnum">${esc(I18N.plural('rep.varN', nVar, { n: nVar }))}</span>`;
-    return `<button class="rep-drow" data-day="${esc(c.bd)}">
-      <span class="rep-dd">${esc(longDate(c.bd))}</span>
+  /** every business day that saw activity — the automatic daily journal.
+   *  A day appears the moment anything happens on it; closing a count adds its variance. */
+  function journalDays() {
+    const st = S(), seen = new Set();
+    for (const arr of [st.sales, st.restocks, st.waste]) for (const e of arr) seen.add(e.bd);
+    for (const c of st.counts) if (!c.isOpening) seen.add(c.bd);
+    seen.add(Store.todayBd());
+    return [...seen].sort().reverse();
+  }
+
+  function dayRow(bd) {
+    const c = Store.closedCounts().find(x => x.bd === bd);
+    const sold = sumBd(S().sales, bd, true);
+    const inQ = sumBd(S().restocks, bd);
+    const outQ = sumBd(S().waste, bd);
+    const today = bd === Store.todayBd();
+    let vHtml;
+    if (!c) {
+      vHtml = `<span class="d faint tnum">${today ? esc(t('rep.dayOpen')) : '—'}</span>`;
+    } else {
+      const vt = varTotal(c);
+      const nVar = c.lines.filter(l => l.variance !== 0).length;
+      /* any nonzero line ⇒ danger-colored count — a day never looks clean by netting out */
+      vHtml = nVar === 0
+        ? `<span class="d faint tnum">${esc(sgn(0))}</span>`
+        : `<span class="d ${vt > 0 ? 'good' : 'bad'} tnum">${esc(sgn(vt))}</span>
+           <span class="rep-nvar tnum">${esc(I18N.plural('rep.varN', nVar, { n: nVar }))}</span>`;
+    }
+    const bits = [];
+    if (sold) bits.push(t('rep.jSold', { n: fq(sold) }));
+    if (inQ) bits.push(t('rep.jIn', { n: fq(inQ) }));
+    if (outQ) bits.push(t('rep.jOut', { n: fq(outQ) }));
+    return `<button class="rep-drow" data-day="${esc(bd)}">
+      <span class="rep-dd">${esc(longDate(bd))}${bits.length ? `<span class="rep-sum">${esc(bits.join(' · '))}</span>` : ''}</span>
       <span class="r v2 tnum">${esc(fq(sold))}</span>
       <span class="rep-dvar">${vHtml}</span>
     </button>`;
   }
 
   function renderList(el) {
-    const days = Store.closedCounts();
+    const days = journalDays();
     const open = S().counts.find(c => c.status === 'open');
     let html = `
       <div class="topbar">
@@ -263,13 +296,10 @@
         <span class="row__end"><button class="textbtn rep-cont" data-a="count">${esc(t('g.continue'))}</button></span>
       </div>`;
     }
-    html += `<button class="grouprow${open ? '' : ' mt4'}" data-a="insights">
-      <span class="micro">${esc(t('ins.title'))}</span><span class="chev">›</span>
-    </button>`;
     if (!days.length) {
       html += `<div class="empty grow">
-        <div class="empty__t">${esc(t('rep.noDays'))}</div>
-        <div class="empty__s">${esc(t('rep.noDaysSub'))}</div>
+        <div class="empty__t">${esc(t('rep.noDaysJ'))}</div>
+        <div class="empty__s">${esc(t('rep.noDaysJSub'))}</div>
       </div>`;
     } else {
       html += `<div class="sec"><div class="micro">${esc(t('rep.days'))}</div><div class="micro tnum">${days.length}</div></div>
@@ -343,6 +373,21 @@
     </div>`;
   }
 
+  /** movement lists for a day, used both in a closed-day report and in a still-open day */
+  function dayActivityHtml(bd) {
+    const st = S();
+    const sales = st.sales.filter(s => s.bd === bd).sort((a, b) => a.at < b.at ? -1 : 1);
+    const rest = st.restocks.filter(r => r.bd === bd).sort((a, b) => a.at < b.at ? -1 : 1);
+    const wst = st.waste.filter(w => w.bd === bd).sort((a, b) => a.at < b.at ? -1 : 1);
+    let h = `<div class="sec"><div class="micro">${esc(t('rep.sales'))}</div><div class="micro tnum">${sales.length}</div></div>`;
+    h += sales.length ? `<div class="feed">${sales.map(saleRow).join('')}</div>` : `<div class="sub2">${esc(t('rep.noSales'))}</div>`;
+    h += `<div class="sec"><div class="micro">${esc(t('rep.restocks'))}</div><div class="micro tnum">${rest.length}</div></div>`;
+    h += rest.length ? `<div class="feed">${rest.map(restockRow).join('')}</div>` : `<div class="sub2">${esc(t('rep.noRestocks'))}</div>`;
+    h += `<div class="sec"><div class="micro">${esc(t('rep.waste'))}</div><div class="micro tnum">${wst.length}</div></div>`;
+    h += wst.length ? `<div class="feed">${wst.map(wasteRow).join('')}</div>` : `<div class="sub2">${esc(t('rep.noWaste'))}</div>`;
+    return h;
+  }
+
   function renderDay(el, bd) {
     if (lastDay !== bd) { lastDay = bd; cleanOpen = false; }
     const c = Store.closedCounts().find(x => x.bd === bd);
@@ -352,11 +397,14 @@
           <button class="back" data-a="back">‹ ${esc(t('tab.reports'))}</button>
           <div class="micro tnum">${esc(UI.fmtDate(bd))}</div>
         </div>
-        <div class="empty grow">
-          <div class="empty__t">${esc(t('rep.notFound'))}</div>
-          <div class="empty__s">${esc(t('rep.notFoundSub'))}</div>
-          <button class="btn btn--ghost mt3" data-a="back">${esc(t('g.back'))}</button>
-        </div>`;
+        <div class="h1">${esc(longDate(bd))}</div>
+        <div class="sum">
+          <div class="sumcol"><div class="micro">${esc(t('rep.kSold'))}</div><div class="mid tnum">${esc(fq(sumBd(S().sales, bd, true)))}</div></div>
+          <div class="sumcol"><div class="micro">${esc(t('rep.kRest'))}</div><div class="mid tnum">${esc(fq(sumBd(S().restocks, bd)))}</div></div>
+          <div class="sumcol"><div class="micro">${esc(t('rep.waste'))}</div><div class="mid tnum">${esc(fq(sumBd(S().waste, bd)))}</div></div>
+        </div>
+        <div class="sub2">${esc(t('rep.notFoundSub'))}</div>
+        ${dayActivityHtml(bd)}`;
       el.addEventListener('click', e => {
         if (e.target.closest('[data-a=back]')) { UI.haptic('light'); UI.go('reports'); }
       });

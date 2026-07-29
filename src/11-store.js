@@ -184,6 +184,8 @@ const SEED = {
 /* ---------- store ---------- */
 /** identifies this deployment's data; bump to force every device back to a clean login */
 const SITE_ID = 'kalinka-1';
+/** reason stamped on removals made with the Stock screen's − button */
+const QUICK_REASON = 'quick-adjust';
 
 const Store = (() => {
   const KEY = 'bartally.v1';
@@ -330,6 +332,15 @@ const Store = (() => {
       this.audit('restock', 'restock', e.id, null, { itemId, qty });
       emit('restocks');
       return e;
+    },
+    /** one-tap stock correction from the Stock screen.
+     *  + writes a delivery, − writes a declared removal (never silent: both are
+     *  real, audited entries, so the variance engine stays honest). */
+    adjustStock(itemId, delta) {
+      if (!this.isOwner || !delta) return null;
+      return delta > 0
+        ? this.logRestock(itemId, delta)
+        : this.logWaste(itemId, -delta, QUICK_REASON);
     },
     logWaste(itemId, qty, reason) {
       if (!this.isOwner) return null;

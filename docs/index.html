@@ -574,6 +574,10 @@ I18N.extend({
     'inv.expected': 'Stock attendu',
     'inv.threshold': 'Seuil d’alerte',
     'inv.low': 'Bas',
+    'inv.quickAdd': 'Ajouté : +{n} {item}',
+    'inv.quickSub': 'Retiré : −{n} {item}',
+    'inv.quickReason': 'Retrait rapide (Stock)',
+    'inv.quickHint': 'Appuyez sur − ou + pour corriger le stock. Maintenez pour aller vite.',
     'inv.addItem': 'Nouvel article',
     'inv.editItem': 'Modifier l’article',
     'inv.name': 'Nom',
@@ -807,6 +811,10 @@ I18N.extend({
     'inv.expected': 'Expected stock',
     'inv.threshold': 'Low-stock threshold',
     'inv.low': 'Low',
+    'inv.quickAdd': 'Added: +{n} {item}',
+    'inv.quickSub': 'Removed: −{n} {item}',
+    'inv.quickReason': 'Quick removal (Stock)',
+    'inv.quickHint': 'Tap − or + to correct stock. Hold to go faster.',
     'inv.addItem': 'New item',
     'inv.editItem': 'Edit item',
     'inv.name': 'Name',
@@ -1135,6 +1143,8 @@ const SEED = {
 /* ---------- store ---------- */
 /** identifies this deployment's data; bump to force every device back to a clean login */
 const SITE_ID = 'kalinka-1';
+/** reason stamped on removals made with the Stock screen's − button */
+const QUICK_REASON = 'quick-adjust';
 
 const Store = (() => {
   const KEY = 'bartally.v1';
@@ -1281,6 +1291,15 @@ const Store = (() => {
       this.audit('restock', 'restock', e.id, null, { itemId, qty });
       emit('restocks');
       return e;
+    },
+    /** one-tap stock correction from the Stock screen.
+     *  + writes a delivery, − writes a declared removal (never silent: both are
+     *  real, audited entries, so the variance engine stays honest). */
+    adjustStock(itemId, delta) {
+      if (!this.isOwner || !delta) return null;
+      return delta > 0
+        ? this.logRestock(itemId, delta)
+        : this.logWaste(itemId, -delta, QUICK_REASON);
     },
     logWaste(itemId, qty, reason) {
       if (!this.isOwner) return null;
@@ -3023,6 +3042,15 @@ const Sync = (() => {
   [data-screen=inventory] .row__s{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase}
   [data-screen=inventory] .row__end{display:flex;flex-direction:column;align-items:flex-end}
   [data-screen=inventory] .inv-n{font-size:16px;line-height:1.2}
+  [data-screen=inventory] .inv-row{padding:0}
+  [data-screen=inventory] .inv-open{flex:1;min-width:0;display:flex;align-items:center;gap:12px;text-align:left;padding:6px 0}
+  [data-screen=inventory] .inv-adj{display:flex;align-items:center;gap:2px;flex:none;margin-left:8px}
+  [data-screen=inventory] .inv-btn{width:38px;height:38px;border-radius:10px;border:1px solid var(--hair);
+    background:var(--surface);color:var(--t2);font:500 19px var(--f-display);line-height:1;
+    display:flex;align-items:center;justify-content:center;touch-action:none;user-select:none;transition:background .1s,color .1s}
+  [data-screen=inventory] .inv-btn:active{background:var(--surface2);color:var(--t1)}
+  [data-screen=inventory] .inv-adj .inv-n{min-width:46px;text-align:center;font-size:17px}
+  [data-screen=inventory] .inv-n.is-pend{color:var(--brass)}
   [data-screen=inventory] .inv-n.is-low{color:var(--bad)}
   [data-screen=inventory] .inv-low{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--bad);margin-top:2px}
   [data-screen=inventory] .feed{margin-top:4px}
@@ -3074,20 +3102,90 @@ const Sync = (() => {
 
   const emptyHtml = (title, sub) => `<div class="empty"><div class="empty__t">${UI.esc(title)}</div>${sub ? `<div class="empty__s">${UI.esc(sub)}</div>` : ''}</div>`;
 
+  /* ---------- quick stock adjust: taps accumulate, one entry per burst ----------
+     The number moves the instant you tap; the ledger entry is written ~1s after you
+     stop, so holding + for a 24-crate delivery records ONE delivery of 24. */
+  const QUICK = {
+    pending: {},   // itemId → delta not yet committed
+    timers: {},    // itemId → commit timer
+    repeat: null,  // press-and-hold interval
+    holdTimer: null,
+  };
+
+  function paintQuick(id) {
+    const it = Store.item(id); if (!it) return;
+    const pend = QUICK.pending[id] || 0;
+    const el = document.querySelector(`[data-n="${CSS.escape(id)}"]`);
+    if (!el) return;
+    el.textContent = UI.fmtQty(Math.round((Store.stock(id) + pend) * 100) / 100);
+    el.classList.toggle('is-pend', !!pend);
+    if (pend) el.classList.remove('is-low');
+  }
+
+  function bump(id, dir) {
+    const it = Store.item(id); if (!it) return;
+    const step = it.allowDecimal ? 0.5 : 1;
+    const next = Math.round(((QUICK.pending[id] || 0) + dir * step) * 100) / 100;
+    // never let a quick removal push the shelf below zero
+    if (Store.stock(id) + next < 0) return;
+    QUICK.pending[id] = next;
+    UI.haptic('light');
+    paintQuick(id);
+    clearTimeout(QUICK.timers[id]);
+    QUICK.timers[id] = setTimeout(() => commit(id), 900);
+  }
+
+  function commit(id) {
+    const delta = QUICK.pending[id];
+    delete QUICK.pending[id];
+    clearTimeout(QUICK.timers[id]);
+    if (!delta) return;
+    const it = Store.item(id);
+    const entry = Store.adjustStock(id, delta);
+    if (!entry) return;
+    const n = UI.fmtQty(Math.abs(delta));
+    UI.toast(t(delta > 0 ? 'inv.quickAdd' : 'inv.quickSub', { n, item: it.name }), {
+      type: delta > 0 ? 'ok' : 'danger',
+      action: { label: t('g.undo'), fn: () => { Store.adjustStock(id, -delta); } },
+    });
+  }
+  function commitAll() { for (const id of Object.keys(QUICK.pending)) commit(id); }
+
+  /* press-and-hold acceleration */
+  function startHold(id, dir) {
+    stopHold();
+    let speed = 320;
+    QUICK.holdTimer = setTimeout(function run() {
+      bump(id, dir);
+      speed = Math.max(70, speed - 45);
+      QUICK.repeat = setTimeout(run, speed);
+    }, 420);
+  }
+  function stopHold() {
+    clearTimeout(QUICK.holdTimer); clearTimeout(QUICK.repeat);
+    QUICK.holdTimer = QUICK.repeat = null;
+  }
+
   function rowHtml(it, off) {
-    const stock = Store.stock(it.id);
-    const low = !off && Store.isLow(it.id);
-    return `<button type="button" class="row" data-edit="${UI.esc(it.id)}">
-      <span class="row__art">${UI.art(it)}</span>
-      <span class="row__body">
-        <span class="row__t">${UI.esc(displayName(it.name))}</span>
-        <span class="row__s">${UI.esc(unitLabel(it.unit))}</span>
-      </span>
-      <span class="row__end">
-        <span class="num inv-n${low ? ' is-low' : ''}">${UI.esc(UI.fmtQty(stock))}</span>
-        ${low ? `<span class="inv-low">${UI.esc(t('inv.low'))}</span>` : ''}
-      </span>
-    </button>`;
+    const pend = QUICK.pending[it.id] || 0;
+    const stock = Math.round((Store.stock(it.id) + pend) * 100) / 100;
+    const low = !off && !pend && Store.isLow(it.id);
+    const step = it.allowDecimal ? '0,5' : '1';
+    return `<div class="row inv-row" data-row="${UI.esc(it.id)}">
+      <button type="button" class="inv-open" data-edit="${UI.esc(it.id)}">
+        <span class="row__art">${UI.art(it)}</span>
+        <span class="row__body">
+          <span class="row__t">${UI.esc(displayName(it.name))}</span>
+          <span class="row__s">${UI.esc(unitLabel(it.unit))}</span>
+        </span>
+      </button>
+      ${off ? `<span class="row__end"><span class="num inv-n">${UI.esc(UI.fmtQty(stock))}</span></span>` : `
+      <span class="inv-adj" aria-label="${UI.esc(step)}">
+        <button type="button" class="inv-btn" data-adj="-1" data-id="${UI.esc(it.id)}" aria-label="−">−</button>
+        <span class="num inv-n${low ? ' is-low' : ''}${pend ? ' is-pend' : ''}" data-n="${UI.esc(it.id)}">${UI.esc(UI.fmtQty(stock))}</span>
+        <button type="button" class="inv-btn" data-adj="1" data-id="${UI.esc(it.id)}" aria-label="+">+</button>
+      </span>`}
+    </div>`;
   }
 
   /* ---------- item sheet (edit when id, new otherwise) ---------- */
@@ -3328,7 +3426,20 @@ const Sync = (() => {
         listEl.innerHTML = html;
       }
 
+      // quick adjust: pointer events so press-and-hold works on phone and desktop
+      el.addEventListener('pointerdown', e => {
+        const b = e.target.closest('[data-adj]');
+        if (!b) return;
+        e.preventDefault();
+        const id = b.dataset.id, dir = Number(b.dataset.adj);
+        bump(id, dir);
+        startHold(id, dir);
+      });
+      for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) el.addEventListener(ev, stopHold);
+      window.addEventListener('pointerup', stopHold, { once: false });
+
       el.addEventListener('click', e => {
+        if (e.target.closest('[data-adj]')) return; // handled on pointerdown
         if (e.target.closest('[data-a=new]')) { UI.haptic('light'); openItemSheet(null); return; }
         if (e.target.closest('[data-a=clear]')) {
           query = ''; input.value = '';
@@ -3967,7 +4078,7 @@ const Sync = (() => {
       'rep.from': 'Du', 'rep.to': 'Au', 'rep.colDate': 'Date',
       'rep.soldLbl': 'unités vendues', 'rep.restocked': 'unités livrées', 'rep.wasted': 'unités perdues',
       'rep.notFound': 'Rapport introuvable',
-      'rep.notFoundSub': 'Aucun comptage clôturé pour cette date.',
+      'rep.notFoundSub': 'Journée en cours — clôturez le comptage pour figer les écarts.',
       'rep.cleanN_one': '{n} article juste', 'rep.cleanN_many': '{n} articles justes',
       'rep.noSales': 'Aucune vente enregistrée ce jour-là.',
       'rep.noRestocks': 'Aucune livraison ce jour-là.',
@@ -3976,11 +4087,15 @@ const Sync = (() => {
       'rep.rangeEmpty': 'Aucune journée clôturée dans cette période.',
       'rep.auto': 'Non compté — valeur attendue conservée',
       'rep.closedBy': 'Clôturé par {name} à {time}',
-      'rep.days': 'Journées',
+      'rep.days': 'Journal',
       'rep.kSold': 'Vendu', 'rep.kRest': 'Livré',
       'rep.voidBtn': 'Annuler',
       'rep.varN_one': '{n} écart', 'rep.varN_many': '{n} écarts',
       'rep.exportRangeBtn': 'Exporter une période',
+      'rep.dayOpen': 'en cours',
+      'rep.jSold': '{n} vendus', 'rep.jIn': '+{n} livrés', 'rep.jOut': '−{n} retirés',
+      'rep.noDaysJ': 'Rien pour l’instant',
+      'rep.noDaysJSub': 'Chaque journée s’enregistre ici automatiquement dès la première vente ou livraison.',
     },
     en: {
       'rep.openHint': 'Count in progress — close it to generate the report.',
@@ -3989,7 +4104,7 @@ const Sync = (() => {
       'rep.from': 'From', 'rep.to': 'To', 'rep.colDate': 'Date',
       'rep.soldLbl': 'units sold', 'rep.restocked': 'units delivered', 'rep.wasted': 'units lost',
       'rep.notFound': 'Report not found',
-      'rep.notFoundSub': 'No closed count for this date.',
+      'rep.notFoundSub': 'Day in progress — close the count to lock in variances.',
       'rep.cleanN_one': '{n} item spot-on', 'rep.cleanN_many': '{n} items spot-on',
       'rep.noSales': 'No sales recorded that day.',
       'rep.noRestocks': 'No deliveries that day.',
@@ -4003,6 +4118,10 @@ const Sync = (() => {
       'rep.voidBtn': 'Void',
       'rep.varN_one': '{n} discrepancy', 'rep.varN_many': '{n} discrepancies',
       'rep.exportRangeBtn': 'Export a date range',
+      'rep.dayOpen': 'open',
+      'rep.jSold': '{n} sold', 'rep.jIn': '+{n} in', 'rep.jOut': '−{n} out',
+      'rep.noDaysJ': 'Nothing yet',
+      'rep.noDaysJSub': 'Every day is recorded here automatically from the first sale or delivery.',
     },
   });
 
@@ -4057,6 +4176,8 @@ const Sync = (() => {
 [data-screen=reports] .rep-th3,[data-screen=reports] .rep-drow{grid-template-columns:1fr 64px 84px}
 [data-screen=reports] .rep-drow{display:grid;min-height:56px;align-items:center;border-bottom:1px solid var(--hair);width:100%;text-align:left;font-size:14px}
 [data-screen=reports] .rep-dd{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:8px}
+[data-screen=reports] .rep-sum{display:block;font-size:11px;font-weight:400;color:var(--t3);margin-top:2px;font-variant-numeric:tabular-nums}
+[data-screen=reports] .rep-drow{padding:8px 0}
 [data-screen=reports] .rep-dvar{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
 [data-screen=reports] .rep-nvar{font-size:10px;font-weight:600;color:var(--bad)}
 [data-screen=reports] .rep-okline{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--hair)}
@@ -4185,24 +4306,47 @@ const Sync = (() => {
   }
 
   /* ---------- list mode (root tab) ---------- */
-  function dayRow(c) {
-    const sold = sumBd(S().sales, c.bd, true);
-    const vt = varTotal(c);
-    const nVar = c.lines.filter(l => l.variance !== 0).length;
-    /* any nonzero line ⇒ danger-colored discrepancy count — a day never looks clean by netting out */
-    const vHtml = nVar === 0
-      ? `<span class="d faint tnum">${esc(sgn(0))}</span>`
-      : `<span class="d ${vt < 0 ? 'bad' : vt > 0 ? 'good' : 'bad'} tnum">${esc(sgn(vt))}</span>
-         <span class="rep-nvar tnum">${esc(I18N.plural('rep.varN', nVar, { n: nVar }))}</span>`;
-    return `<button class="rep-drow" data-day="${esc(c.bd)}">
-      <span class="rep-dd">${esc(longDate(c.bd))}</span>
+  /** every business day that saw activity — the automatic daily journal.
+   *  A day appears the moment anything happens on it; closing a count adds its variance. */
+  function journalDays() {
+    const st = S(), seen = new Set();
+    for (const arr of [st.sales, st.restocks, st.waste]) for (const e of arr) seen.add(e.bd);
+    for (const c of st.counts) if (!c.isOpening) seen.add(c.bd);
+    seen.add(Store.todayBd());
+    return [...seen].sort().reverse();
+  }
+
+  function dayRow(bd) {
+    const c = Store.closedCounts().find(x => x.bd === bd);
+    const sold = sumBd(S().sales, bd, true);
+    const inQ = sumBd(S().restocks, bd);
+    const outQ = sumBd(S().waste, bd);
+    const today = bd === Store.todayBd();
+    let vHtml;
+    if (!c) {
+      vHtml = `<span class="d faint tnum">${today ? esc(t('rep.dayOpen')) : '—'}</span>`;
+    } else {
+      const vt = varTotal(c);
+      const nVar = c.lines.filter(l => l.variance !== 0).length;
+      /* any nonzero line ⇒ danger-colored count — a day never looks clean by netting out */
+      vHtml = nVar === 0
+        ? `<span class="d faint tnum">${esc(sgn(0))}</span>`
+        : `<span class="d ${vt > 0 ? 'good' : 'bad'} tnum">${esc(sgn(vt))}</span>
+           <span class="rep-nvar tnum">${esc(I18N.plural('rep.varN', nVar, { n: nVar }))}</span>`;
+    }
+    const bits = [];
+    if (sold) bits.push(t('rep.jSold', { n: fq(sold) }));
+    if (inQ) bits.push(t('rep.jIn', { n: fq(inQ) }));
+    if (outQ) bits.push(t('rep.jOut', { n: fq(outQ) }));
+    return `<button class="rep-drow" data-day="${esc(bd)}">
+      <span class="rep-dd">${esc(longDate(bd))}${bits.length ? `<span class="rep-sum">${esc(bits.join(' · '))}</span>` : ''}</span>
       <span class="r v2 tnum">${esc(fq(sold))}</span>
       <span class="rep-dvar">${vHtml}</span>
     </button>`;
   }
 
   function renderList(el) {
-    const days = Store.closedCounts();
+    const days = journalDays();
     const open = S().counts.find(c => c.status === 'open');
     let html = `
       <div class="topbar">
@@ -4220,13 +4364,10 @@ const Sync = (() => {
         <span class="row__end"><button class="textbtn rep-cont" data-a="count">${esc(t('g.continue'))}</button></span>
       </div>`;
     }
-    html += `<button class="grouprow${open ? '' : ' mt4'}" data-a="insights">
-      <span class="micro">${esc(t('ins.title'))}</span><span class="chev">›</span>
-    </button>`;
     if (!days.length) {
       html += `<div class="empty grow">
-        <div class="empty__t">${esc(t('rep.noDays'))}</div>
-        <div class="empty__s">${esc(t('rep.noDaysSub'))}</div>
+        <div class="empty__t">${esc(t('rep.noDaysJ'))}</div>
+        <div class="empty__s">${esc(t('rep.noDaysJSub'))}</div>
       </div>`;
     } else {
       html += `<div class="sec"><div class="micro">${esc(t('rep.days'))}</div><div class="micro tnum">${days.length}</div></div>
@@ -4300,6 +4441,21 @@ const Sync = (() => {
     </div>`;
   }
 
+  /** movement lists for a day, used both in a closed-day report and in a still-open day */
+  function dayActivityHtml(bd) {
+    const st = S();
+    const sales = st.sales.filter(s => s.bd === bd).sort((a, b) => a.at < b.at ? -1 : 1);
+    const rest = st.restocks.filter(r => r.bd === bd).sort((a, b) => a.at < b.at ? -1 : 1);
+    const wst = st.waste.filter(w => w.bd === bd).sort((a, b) => a.at < b.at ? -1 : 1);
+    let h = `<div class="sec"><div class="micro">${esc(t('rep.sales'))}</div><div class="micro tnum">${sales.length}</div></div>`;
+    h += sales.length ? `<div class="feed">${sales.map(saleRow).join('')}</div>` : `<div class="sub2">${esc(t('rep.noSales'))}</div>`;
+    h += `<div class="sec"><div class="micro">${esc(t('rep.restocks'))}</div><div class="micro tnum">${rest.length}</div></div>`;
+    h += rest.length ? `<div class="feed">${rest.map(restockRow).join('')}</div>` : `<div class="sub2">${esc(t('rep.noRestocks'))}</div>`;
+    h += `<div class="sec"><div class="micro">${esc(t('rep.waste'))}</div><div class="micro tnum">${wst.length}</div></div>`;
+    h += wst.length ? `<div class="feed">${wst.map(wasteRow).join('')}</div>` : `<div class="sub2">${esc(t('rep.noWaste'))}</div>`;
+    return h;
+  }
+
   function renderDay(el, bd) {
     if (lastDay !== bd) { lastDay = bd; cleanOpen = false; }
     const c = Store.closedCounts().find(x => x.bd === bd);
@@ -4309,11 +4465,14 @@ const Sync = (() => {
           <button class="back" data-a="back">‹ ${esc(t('tab.reports'))}</button>
           <div class="micro tnum">${esc(UI.fmtDate(bd))}</div>
         </div>
-        <div class="empty grow">
-          <div class="empty__t">${esc(t('rep.notFound'))}</div>
-          <div class="empty__s">${esc(t('rep.notFoundSub'))}</div>
-          <button class="btn btn--ghost mt3" data-a="back">${esc(t('g.back'))}</button>
-        </div>`;
+        <div class="h1">${esc(longDate(bd))}</div>
+        <div class="sum">
+          <div class="sumcol"><div class="micro">${esc(t('rep.kSold'))}</div><div class="mid tnum">${esc(fq(sumBd(S().sales, bd, true)))}</div></div>
+          <div class="sumcol"><div class="micro">${esc(t('rep.kRest'))}</div><div class="mid tnum">${esc(fq(sumBd(S().restocks, bd)))}</div></div>
+          <div class="sumcol"><div class="micro">${esc(t('rep.waste'))}</div><div class="mid tnum">${esc(fq(sumBd(S().waste, bd)))}</div></div>
+        </div>
+        <div class="sub2">${esc(t('rep.notFoundSub'))}</div>
+        ${dayActivityHtml(bd)}`;
       el.addEventListener('click', e => {
         if (e.target.closest('[data-a=back]')) { UI.haptic('light'); UI.go('reports'); }
       });

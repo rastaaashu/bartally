@@ -37,6 +37,15 @@
   [data-screen=inventory] .row__s{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase}
   [data-screen=inventory] .row__end{display:flex;flex-direction:column;align-items:flex-end}
   [data-screen=inventory] .inv-n{font-size:16px;line-height:1.2}
+  [data-screen=inventory] .inv-row{padding:0}
+  [data-screen=inventory] .inv-open{flex:1;min-width:0;display:flex;align-items:center;gap:12px;text-align:left;padding:6px 0}
+  [data-screen=inventory] .inv-adj{display:flex;align-items:center;gap:2px;flex:none;margin-left:8px}
+  [data-screen=inventory] .inv-btn{width:38px;height:38px;border-radius:10px;border:1px solid var(--hair);
+    background:var(--surface);color:var(--t2);font:500 19px var(--f-display);line-height:1;
+    display:flex;align-items:center;justify-content:center;touch-action:none;user-select:none;transition:background .1s,color .1s}
+  [data-screen=inventory] .inv-btn:active{background:var(--surface2);color:var(--t1)}
+  [data-screen=inventory] .inv-adj .inv-n{min-width:46px;text-align:center;font-size:17px}
+  [data-screen=inventory] .inv-n.is-pend{color:var(--brass)}
   [data-screen=inventory] .inv-n.is-low{color:var(--bad)}
   [data-screen=inventory] .inv-low{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--bad);margin-top:2px}
   [data-screen=inventory] .feed{margin-top:4px}
@@ -88,20 +97,90 @@
 
   const emptyHtml = (title, sub) => `<div class="empty"><div class="empty__t">${UI.esc(title)}</div>${sub ? `<div class="empty__s">${UI.esc(sub)}</div>` : ''}</div>`;
 
+  /* ---------- quick stock adjust: taps accumulate, one entry per burst ----------
+     The number moves the instant you tap; the ledger entry is written ~1s after you
+     stop, so holding + for a 24-crate delivery records ONE delivery of 24. */
+  const QUICK = {
+    pending: {},   // itemId → delta not yet committed
+    timers: {},    // itemId → commit timer
+    repeat: null,  // press-and-hold interval
+    holdTimer: null,
+  };
+
+  function paintQuick(id) {
+    const it = Store.item(id); if (!it) return;
+    const pend = QUICK.pending[id] || 0;
+    const el = document.querySelector(`[data-n="${CSS.escape(id)}"]`);
+    if (!el) return;
+    el.textContent = UI.fmtQty(Math.round((Store.stock(id) + pend) * 100) / 100);
+    el.classList.toggle('is-pend', !!pend);
+    if (pend) el.classList.remove('is-low');
+  }
+
+  function bump(id, dir) {
+    const it = Store.item(id); if (!it) return;
+    const step = it.allowDecimal ? 0.5 : 1;
+    const next = Math.round(((QUICK.pending[id] || 0) + dir * step) * 100) / 100;
+    // never let a quick removal push the shelf below zero
+    if (Store.stock(id) + next < 0) return;
+    QUICK.pending[id] = next;
+    UI.haptic('light');
+    paintQuick(id);
+    clearTimeout(QUICK.timers[id]);
+    QUICK.timers[id] = setTimeout(() => commit(id), 900);
+  }
+
+  function commit(id) {
+    const delta = QUICK.pending[id];
+    delete QUICK.pending[id];
+    clearTimeout(QUICK.timers[id]);
+    if (!delta) return;
+    const it = Store.item(id);
+    const entry = Store.adjustStock(id, delta);
+    if (!entry) return;
+    const n = UI.fmtQty(Math.abs(delta));
+    UI.toast(t(delta > 0 ? 'inv.quickAdd' : 'inv.quickSub', { n, item: it.name }), {
+      type: delta > 0 ? 'ok' : 'danger',
+      action: { label: t('g.undo'), fn: () => { Store.adjustStock(id, -delta); } },
+    });
+  }
+  function commitAll() { for (const id of Object.keys(QUICK.pending)) commit(id); }
+
+  /* press-and-hold acceleration */
+  function startHold(id, dir) {
+    stopHold();
+    let speed = 320;
+    QUICK.holdTimer = setTimeout(function run() {
+      bump(id, dir);
+      speed = Math.max(70, speed - 45);
+      QUICK.repeat = setTimeout(run, speed);
+    }, 420);
+  }
+  function stopHold() {
+    clearTimeout(QUICK.holdTimer); clearTimeout(QUICK.repeat);
+    QUICK.holdTimer = QUICK.repeat = null;
+  }
+
   function rowHtml(it, off) {
-    const stock = Store.stock(it.id);
-    const low = !off && Store.isLow(it.id);
-    return `<button type="button" class="row" data-edit="${UI.esc(it.id)}">
-      <span class="row__art">${UI.art(it)}</span>
-      <span class="row__body">
-        <span class="row__t">${UI.esc(displayName(it.name))}</span>
-        <span class="row__s">${UI.esc(unitLabel(it.unit))}</span>
-      </span>
-      <span class="row__end">
-        <span class="num inv-n${low ? ' is-low' : ''}">${UI.esc(UI.fmtQty(stock))}</span>
-        ${low ? `<span class="inv-low">${UI.esc(t('inv.low'))}</span>` : ''}
-      </span>
-    </button>`;
+    const pend = QUICK.pending[it.id] || 0;
+    const stock = Math.round((Store.stock(it.id) + pend) * 100) / 100;
+    const low = !off && !pend && Store.isLow(it.id);
+    const step = it.allowDecimal ? '0,5' : '1';
+    return `<div class="row inv-row" data-row="${UI.esc(it.id)}">
+      <button type="button" class="inv-open" data-edit="${UI.esc(it.id)}">
+        <span class="row__art">${UI.art(it)}</span>
+        <span class="row__body">
+          <span class="row__t">${UI.esc(displayName(it.name))}</span>
+          <span class="row__s">${UI.esc(unitLabel(it.unit))}</span>
+        </span>
+      </button>
+      ${off ? `<span class="row__end"><span class="num inv-n">${UI.esc(UI.fmtQty(stock))}</span></span>` : `
+      <span class="inv-adj" aria-label="${UI.esc(step)}">
+        <button type="button" class="inv-btn" data-adj="-1" data-id="${UI.esc(it.id)}" aria-label="−">−</button>
+        <span class="num inv-n${low ? ' is-low' : ''}${pend ? ' is-pend' : ''}" data-n="${UI.esc(it.id)}">${UI.esc(UI.fmtQty(stock))}</span>
+        <button type="button" class="inv-btn" data-adj="1" data-id="${UI.esc(it.id)}" aria-label="+">+</button>
+      </span>`}
+    </div>`;
   }
 
   /* ---------- item sheet (edit when id, new otherwise) ---------- */
@@ -342,7 +421,20 @@
         listEl.innerHTML = html;
       }
 
+      // quick adjust: pointer events so press-and-hold works on phone and desktop
+      el.addEventListener('pointerdown', e => {
+        const b = e.target.closest('[data-adj]');
+        if (!b) return;
+        e.preventDefault();
+        const id = b.dataset.id, dir = Number(b.dataset.adj);
+        bump(id, dir);
+        startHold(id, dir);
+      });
+      for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) el.addEventListener(ev, stopHold);
+      window.addEventListener('pointerup', stopHold, { once: false });
+
       el.addEventListener('click', e => {
+        if (e.target.closest('[data-adj]')) return; // handled on pointerdown
         if (e.target.closest('[data-a=new]')) { UI.haptic('light'); openItemSheet(null); return; }
         if (e.target.closest('[data-a=clear]')) {
           query = ''; input.value = '';
