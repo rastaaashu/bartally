@@ -307,7 +307,22 @@ const UI = (() => {
     render();
     window.scrollTo({ top: 0 });
   }
-  function refresh() { if (current) render(); }
+  /* While a screen is being tapped (a burst of − / + / pours), re-rendering the whole
+     list under the finger makes it feel sluggish and drops taps. Screens hold refresh
+     for the burst; the last release repaints once. */
+  let held = 0, missedRefresh = false;
+  function hold(ms) {
+    held++;
+    setTimeout(() => {
+      held = Math.max(0, held - 1);
+      if (!held && missedRefresh) { missedRefresh = false; refresh(); }
+    }, ms || 1200);
+  }
+  function refresh() {
+    if (!current) return;
+    if (held) { missedRefresh = true; return; }
+    render();
+  }
   function render() {
     const root = document.getElementById('app');
     const def = screens[current];
@@ -347,7 +362,7 @@ const UI = (() => {
     esc, el, t, icon, art, logoMark, toast, sheet, confirm: confirmBox, numpad, ring,
     canScan, scan, pickImage, download, csv, printHTML,
     fmtQty, fmtDate, fmtTime, money, haptic,
-    registerScreen, go, refresh, header, stockText,
+    registerScreen, go, refresh, hold, header, stockText,
     get current() { return current; }, get params() { return currentParams; },
   };
 })();

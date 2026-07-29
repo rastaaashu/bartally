@@ -1961,7 +1961,22 @@ const UI = (() => {
     render();
     window.scrollTo({ top: 0 });
   }
-  function refresh() { if (current) render(); }
+  /* While a screen is being tapped (a burst of − / + / pours), re-rendering the whole
+     list under the finger makes it feel sluggish and drops taps. Screens hold refresh
+     for the burst; the last release repaints once. */
+  let held = 0, missedRefresh = false;
+  function hold(ms) {
+    held++;
+    setTimeout(() => {
+      held = Math.max(0, held - 1);
+      if (!held && missedRefresh) { missedRefresh = false; refresh(); }
+    }, ms || 1200);
+  }
+  function refresh() {
+    if (!current) return;
+    if (held) { missedRefresh = true; return; }
+    render();
+  }
   function render() {
     const root = document.getElementById('app');
     const def = screens[current];
@@ -2001,7 +2016,7 @@ const UI = (() => {
     esc, el, t, icon, art, logoMark, toast, sheet, confirm: confirmBox, numpad, ring,
     canScan, scan, pickImage, download, csv, printHTML,
     fmtQty, fmtDate, fmtTime, money, haptic,
-    registerScreen, go, refresh, header, stockText,
+    registerScreen, go, refresh, hold, header, stockText,
     get current() { return current; }, get params() { return currentParams; },
   };
 })();
@@ -2825,6 +2840,7 @@ const Sync = (() => {
       'sell.glass_many': '{n} verres',
       'sell.doseTag': 'au verre · {ml} ml',
       'sell.soldItem': 'Vendu : {item}',
+      'sell.empty': '{item} : stock épuisé. Enregistrez une livraison.',
       'sell.hint': 'Appuyez sur − à chaque article vendu. Maintenez pour aller vite.',
       'sell.left': 'en stock',
     },
@@ -2839,6 +2855,7 @@ const Sync = (() => {
       'sell.glass_many': '{n} glasses',
       'sell.doseTag': 'by the glass · {ml} ml',
       'sell.soldItem': 'Sold: {item}',
+      'sell.empty': '{item}: out of stock. Record a delivery first.',
       'sell.hint': 'Tap − for each item sold. Hold to go faster.',
       'sell.left': 'in stock',
     },
@@ -2909,14 +2926,16 @@ const Sync = (() => {
 
   function arm(id) {
     UI.haptic('light');
+    UI.hold(1600);          // keep the list still while the finger is working
     paint(id);
     clearTimeout(Q.timers[id]);
-    Q.timers[id] = setTimeout(() => commit(id), 900);
+    Q.timers[id] = setTimeout(() => commit(id), 800);
   }
   /** plain items: −/+ one unit */
   function bump(id, dir) {
     const it = Store.item(id); if (!it) return;
     if (isDose(it)) {
+      if (dir < 0 && wouldOverdraw(it, 1)) return refuse(it);
       const p = (Q.pending[id] = Q.pending[id] || { ml: [], whole: 0 });
       if (dir < 0) p.whole = (p.whole || 0) + 1;            // − = one whole bottle sold
       else if (p.ml.length) p.ml.pop();                      // + undoes the last glass…
@@ -2925,14 +2944,25 @@ const Sync = (() => {
       arm(id);
       return;
     }
+    if (dir < 0 && wouldOverdraw(it, 1)) return refuse(it);
     const next = (Q.pending[id] || 0) + (dir < 0 ? 1 : -1);
     if (next < 0) return;
     Q.pending[id] = next;
     arm(id);
   }
+  /** true when one more unit would take the shelf below empty */
+  function wouldOverdraw(it, extraQty) {
+    const left = Store.stock(it.id) - pendingQty(it, Q.pending[it.id]);
+    return left - extraQty < -1e-6;
+  }
+  function refuse(it) {
+    UI.haptic('warn');
+    UI.toast(t('sell.empty', { item: it.name }), { type: 'danger' });
+  }
   /** dose items: pour one glass of `ml` */
   function pour(id, ml) {
     const it = Store.item(id); if (!it || !isDose(it)) return;
+    if (wouldOverdraw(it, ml / it.bottleMl)) return refuse(it);
     const p = (Q.pending[id] = Q.pending[id] || { ml: [], whole: 0 });
     p.ml.push(ml);
     arm(id);
@@ -2976,6 +3006,7 @@ const Sync = (() => {
     }, 420);
   }
   function stopHold() { clearTimeout(Q.hold); clearTimeout(Q.repeat); Q.hold = Q.repeat = null; }
+  window.addEventListener('pointerup', stopHold);   // once, not per render
 
   function rowHtml(it) {
     const p = Q.pending[it.id];
@@ -3052,7 +3083,6 @@ const Sync = (() => {
         if (!isDose(Store.item(b.dataset.id) || {})) startHold(b.dataset.id, Number(b.dataset.adj));
       });
       for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) el.addEventListener(ev, stopHold);
-      window.addEventListener('pointerup', stopHold);
 
       el.addEventListener('click', e => {
         if (e.target.closest('[data-adj]') || e.target.closest('[data-pour]')) return;
@@ -3381,9 +3411,10 @@ const Sync = (() => {
     if (Store.stock(id) + next < 0) return;
     QUICK.pending[id] = next;
     UI.haptic('light');
+    UI.hold(1600);          // keep the list still while the finger is working
     paintQuick(id);
     clearTimeout(QUICK.timers[id]);
-    QUICK.timers[id] = setTimeout(() => commit(id), 900);
+    QUICK.timers[id] = setTimeout(() => commit(id), 800);
   }
 
   function commit(id) {
@@ -3416,6 +3447,7 @@ const Sync = (() => {
     clearTimeout(QUICK.holdTimer); clearTimeout(QUICK.repeat);
     QUICK.holdTimer = QUICK.repeat = null;
   }
+  window.addEventListener('pointerup', stopHold);   // once, not per render
 
   function rowHtml(it, off) {
     const pend = QUICK.pending[it.id] || 0;
@@ -3698,7 +3730,6 @@ const Sync = (() => {
         startHold(id, dir);
       });
       for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) el.addEventListener(ev, stopHold);
-      window.addEventListener('pointerup', stopHold, { once: false });
 
       el.addEventListener('click', e => {
         if (e.target.closest('[data-adj]')) return; // handled on pointerdown

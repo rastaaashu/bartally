@@ -15,6 +15,7 @@
       'sell.glass_many': '{n} verres',
       'sell.doseTag': 'au verre · {ml} ml',
       'sell.soldItem': 'Vendu : {item}',
+      'sell.empty': '{item} : stock épuisé. Enregistrez une livraison.',
       'sell.hint': 'Appuyez sur − à chaque article vendu. Maintenez pour aller vite.',
       'sell.left': 'en stock',
     },
@@ -29,6 +30,7 @@
       'sell.glass_many': '{n} glasses',
       'sell.doseTag': 'by the glass · {ml} ml',
       'sell.soldItem': 'Sold: {item}',
+      'sell.empty': '{item}: out of stock. Record a delivery first.',
       'sell.hint': 'Tap − for each item sold. Hold to go faster.',
       'sell.left': 'in stock',
     },
@@ -99,14 +101,16 @@
 
   function arm(id) {
     UI.haptic('light');
+    UI.hold(1600);          // keep the list still while the finger is working
     paint(id);
     clearTimeout(Q.timers[id]);
-    Q.timers[id] = setTimeout(() => commit(id), 900);
+    Q.timers[id] = setTimeout(() => commit(id), 800);
   }
   /** plain items: −/+ one unit */
   function bump(id, dir) {
     const it = Store.item(id); if (!it) return;
     if (isDose(it)) {
+      if (dir < 0 && wouldOverdraw(it, 1)) return refuse(it);
       const p = (Q.pending[id] = Q.pending[id] || { ml: [], whole: 0 });
       if (dir < 0) p.whole = (p.whole || 0) + 1;            // − = one whole bottle sold
       else if (p.ml.length) p.ml.pop();                      // + undoes the last glass…
@@ -115,14 +119,25 @@
       arm(id);
       return;
     }
+    if (dir < 0 && wouldOverdraw(it, 1)) return refuse(it);
     const next = (Q.pending[id] || 0) + (dir < 0 ? 1 : -1);
     if (next < 0) return;
     Q.pending[id] = next;
     arm(id);
   }
+  /** true when one more unit would take the shelf below empty */
+  function wouldOverdraw(it, extraQty) {
+    const left = Store.stock(it.id) - pendingQty(it, Q.pending[it.id]);
+    return left - extraQty < -1e-6;
+  }
+  function refuse(it) {
+    UI.haptic('warn');
+    UI.toast(t('sell.empty', { item: it.name }), { type: 'danger' });
+  }
   /** dose items: pour one glass of `ml` */
   function pour(id, ml) {
     const it = Store.item(id); if (!it || !isDose(it)) return;
+    if (wouldOverdraw(it, ml / it.bottleMl)) return refuse(it);
     const p = (Q.pending[id] = Q.pending[id] || { ml: [], whole: 0 });
     p.ml.push(ml);
     arm(id);
@@ -166,6 +181,7 @@
     }, 420);
   }
   function stopHold() { clearTimeout(Q.hold); clearTimeout(Q.repeat); Q.hold = Q.repeat = null; }
+  window.addEventListener('pointerup', stopHold);   // once, not per render
 
   function rowHtml(it) {
     const p = Q.pending[it.id];
@@ -242,7 +258,6 @@
         if (!isDose(Store.item(b.dataset.id) || {})) startHold(b.dataset.id, Number(b.dataset.adj));
       });
       for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) el.addEventListener(ev, stopHold);
-      window.addEventListener('pointerup', stopHold);
 
       el.addEventListener('click', e => {
         if (e.target.closest('[data-adj]') || e.target.closest('[data-pour]')) return;

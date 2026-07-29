@@ -135,9 +135,10 @@
     if (Store.stock(id) + next < 0) return;
     QUICK.pending[id] = next;
     UI.haptic('light');
+    UI.hold(1600);          // keep the list still while the finger is working
     paintQuick(id);
     clearTimeout(QUICK.timers[id]);
-    QUICK.timers[id] = setTimeout(() => commit(id), 900);
+    QUICK.timers[id] = setTimeout(() => commit(id), 800);
   }
 
   function commit(id) {
@@ -170,6 +171,7 @@
     clearTimeout(QUICK.holdTimer); clearTimeout(QUICK.repeat);
     QUICK.holdTimer = QUICK.repeat = null;
   }
+  window.addEventListener('pointerup', stopHold);   // once, not per render
 
   function rowHtml(it, off) {
     const pend = QUICK.pending[it.id] || 0;
@@ -452,7 +454,6 @@
         startHold(id, dir);
       });
       for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) el.addEventListener(ev, stopHold);
-      window.addEventListener('pointerup', stopHold, { once: false });
 
       el.addEventListener('click', e => {
         if (e.target.closest('[data-adj]')) return; // handled on pointerdown
