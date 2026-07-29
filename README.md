@@ -1,4 +1,4 @@
-# BarTally — premium bar inventory PWA
+# Kalinka — bar inventory PWA (live multi-device)
 
 Standalone daily-count inventory app for a single bar. Staff log sales in
 2 taps; the owner runs a guided daily count where the app computes
@@ -6,7 +6,7 @@ Standalone daily-count inventory app for a single bar. Staff log sales in
 variance — so losses have nowhere to hide. French-first, installable on any
 phone, works offline.
 
-**Live:** https://rastaaashu.github.io/bartally/
+**Live:** https://rastaaashu.github.io/kalinka/
 
 ## Run locally
 ```

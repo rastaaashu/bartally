@@ -5,7 +5,7 @@
 Salut ! Voici l'application d'inventaire pour le bar — elle est **en ligne et
 utilisable dès maintenant** :
 
-**https://rastaaashu.github.io/bartally/**
+**https://rastaaashu.github.io/kalinka/**
 
 Ouvre le lien sur ton téléphone, puis « Ajouter à l'écran d'accueil » :
 - **Android** : Chrome → menu ⋮ → « Ajouter à l'écran d'accueil »
@@ -45,7 +45,7 @@ Dis-moi ce que tu en penses !
 ## English version (if needed)
 
 Hi! Here's the bar inventory app — **live and usable right now**:
-https://rastaaashu.github.io/bartally/
+https://rastaaashu.github.io/kalinka/
 
 Open it on your phone and "Add to Home Screen" (Android: Chrome ⋮ menu /
 iPhone: Safari Share button). You get a real full-screen app with its own

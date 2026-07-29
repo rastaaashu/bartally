@@ -36,8 +36,8 @@ Accounts you must create (Claude Code cannot do these for you):
    direct-install link sidesteps this entirely for the bar's own phones.
 
 ## Repo
-- Source: https://github.com/rastaaashu/bartally (public; app contains no
+- Source: https://github.com/rastaaashu/kalinka (public; app contains no
   client data — all data stays on-device)
-- Live site: https://rastaaashu.github.io/bartally/
+- Live site: https://rastaaashu.github.io/kalinka/
 - Custom domain (optional, looks even more pro): buy a domain, point it in
   repo Settings → Pages → Custom domain.

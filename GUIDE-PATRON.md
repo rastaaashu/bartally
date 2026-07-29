@@ -1,15 +1,15 @@
-# BarTally — Guide du patron
+# Kalinka-la-Gaieté — Guide du patron
 
 *(À transmettre au client avec le lien. 5 minutes de lecture.)*
 
 ## Installer l'app sur un téléphone
-1. Ouvrez **https://rastaaashu.github.io/bartally/** dans le navigateur.
+1. Ouvrez **https://rastaaashu.github.io/kalinka/** dans le navigateur.
 2. **Android** (Chrome) : menu ⋮ → « Ajouter à l'écran d'accueil ».
    **iPhone** (Safari) : bouton Partager → « Sur l'écran d'accueil ».
-3. L'icône BarTally apparaît — c'est votre app, plein écran, même sans réseau.
+3. L’icône Kalinka apparaît — c'est votre app, plein écran, même sans réseau.
 
 ## Premier démarrage
-- **Essayer d'abord ?** « Explorer avec des données de démonstration » :
+- **Essayer d'abord ?** « Mode démonstration » (en bas de l’écran de connexion) :
   un bar fictif avec 2 semaines d'activité. Code patron démo : **1234**.
   Effaçable dans Réglages → Données.
 - **Démarrer en vrai** : « Configurer mon bar » → nom du bar, votre code
