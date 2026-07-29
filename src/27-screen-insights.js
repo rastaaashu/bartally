@@ -100,7 +100,7 @@
 
       /* owner-only guard: staff never see analytics */
       if (!Store.isOwner) {
-        el.innerHTML = head + `<div class="empty grow"><div class="empty__t">${esc(t('login.locked'))}</div></div>`;
+        UI.go(Store.state.session ? 'sell' : 'login'); return;
         wire(el);
         return;
       }

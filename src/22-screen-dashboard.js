@@ -29,6 +29,8 @@
   [data-screen=dashboard] .eyebrow{margin-top:16px}
   [data-screen=dashboard] .spark{margin-top:12px;display:block}
   [data-screen=dashboard] .alink{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--bad)}
+  [data-screen=dashboard] .dash-low .row{width:100%;text-align:left}
+  [data-screen=dashboard] .dash-lown{font-size:16px;color:var(--bad)}
   </style>`));
 
   function todaySales() {
@@ -83,8 +85,11 @@
       const last = Store.closedCounts()[0];
       const lastVar = last ? Math.round(last.lines.reduce((a, l) => a + l.variance, 0) * 100) / 100 : null;
       const lastIssues = last ? last.lines.filter(l => l.variance !== 0).length : 0;
-      const low = Store.lowItems().slice(0, 5);
-      const lowTotal = Store.lowItems().length;
+      // every item at or under its threshold, worst shortfall first — the full list, scrollable
+      const lowAll = Store.lowItems()
+        .map(it => ({ it, stock: Store.stock(it.id), gap: Store.stock(it.id) - it.threshold }))
+        .sort((a, b) => a.gap - b.gap || a.it.sort - b.it.sort);
+      const lowTotal = lowAll.length;
       const feed = st.sales.filter(s => s.bd === today).slice(0, 3);
       const unread = st.notifs.filter(n => !n.read).length;
       const sign = v => v > 0 ? '+' : v < 0 ? '−' : '±';
@@ -115,11 +120,14 @@
         </div>
 
         <div class="sec"><div class="micro">${UI.esc(t('dash.lowstock'))}</div><div class="micro tnum">${lowTotal || ''}</div></div>
-        ${low.length ? `<div class="tilerow">${low.map(it => `
-          <button class="tilecol" data-item="${it.id}">
-            <div class="tile t64">${UI.art(it)}</div>
-            <div class="tilecap">${UI.esc(it.name)}</div>
-            <div class="lowqty tnum">${UI.esc(UI.fmtQty(Store.stock(it.id)))}</div>
+        ${lowTotal ? `<div class="feed dash-low">${lowAll.map(({ it, stock }) => `
+          <button class="row" data-item="${it.id}">
+            <span class="row__art">${UI.art(it)}</span>
+            <span class="row__body">
+              <span class="row__t">${UI.esc(it.name)}</span>
+              <span class="row__s">${UI.esc(t('dash.thresh', { n: UI.fmtQty(it.threshold) }))}</span>
+            </span>
+            <span class="row__end"><span class="num dash-lown">${UI.esc(UI.fmtQty(stock))}</span></span>
           </button>`).join('')}</div>`
           : `<div class="sub2">${UI.esc(t('dash.lowNone'))}</div>`}
 

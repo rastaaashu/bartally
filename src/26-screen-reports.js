@@ -512,7 +512,7 @@
     render(el, params) {
       ensureCss();
       if (!Store.isOwner) {
-        el.innerHTML = `<div class="empty grow">${UI.icon('lock')}<div class="empty__t">${esc(t('login.locked'))}</div></div>`;
+        UI.go(Store.state.session ? 'sell' : 'login'); return;
         setTimeout(() => UI.go(S().session ? 'sell' : 'login'), 0);
         return;
       }

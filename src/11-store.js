@@ -292,8 +292,8 @@ const Store = (() => {
       if (type === 'low' && state.notifs.some(n => n.type === 'low' && n.bd === bd && n.payload.itemId === payload.itemId)) return; // debounce: 1/item/day
       state.notifs.unshift({ id: uid(), type, at: new Date().toISOString(), bd, read: false, payload });
       if (state.notifs.length > 120) state.notifs.length = 120;
-      if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && typeof window !== 'undefined' && window.__notifText) {
-        try { new Notification(state.settings.barName || 'BarTally', { body: window.__notifText(type, payload), tag: type + (payload.itemId || '') }); } catch (e) {}
+      if (typeof window !== 'undefined' && window.__notify) {
+        window.__notify(state.settings.barName || 'Kalinka', window.__notifText(type, payload), type + (payload.itemId || ''));
       }
     },
     checkLow(itemId) {

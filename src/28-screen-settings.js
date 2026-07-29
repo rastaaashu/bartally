@@ -325,7 +325,12 @@
         <div style="flex:1;min-width:0"><div class="switchrow__t">${esc(t('set.notifOn'))}</div>
           <div class="switchrow__s"${perm === 'denied' ? ' style="color:var(--warn)"' : ''}>${esc(sub)}</div></div>
         <button class="sw ${on ? 'on' : ''}" data-a="notif" role="switch" aria-checked="${on}" aria-label="${esc(t('set.notifOn'))}"></button>
-      </div>`;
+      </div>
+      ${on ? `<div class="row">
+        <span class="row__body"><span class="row__t">${esc(t('set.notifTest'))}</span>
+          <span class="row__s">${esc(t('set.notifTestHint'))}</span></span>
+        <button class="textbtn" data-a="notif-test">${esc(t('set.notifTestBtn'))}</button>
+      </div>` : ''}`;
   }
 
   function costsSec(s) {
@@ -434,6 +439,11 @@
       return;
     }
     if (a === 'logout') { UI.haptic('light'); Store.logout(); return; }
+    if (a === 'notif-test') {
+      const ok = window.__notify(Store.state.settings.barName || 'Kalinka', t('set.notifTestBody'), 'test');
+      UI.toast(t(ok ? 'set.notifTestSent' : 'set.notifDenied'), { type: ok ? 'ok' : 'danger' });
+      return;
+    }
     if (a === 'restore') { restoreFlow(); return; }
     if (a === 'demo-clear') {
       if (await UI.confirm(t('set.demoClearWarn'), { danger: true, title: t('set.demoClear'), yes: t('set.demoClear') })) Store.resetAll();
@@ -482,10 +492,8 @@
   UI.registerScreen({
     id: 'settings',
     render(el) {
-      if (!Store.isOwner) {
-        el.innerHTML = `<div class="empty grow">${UI.icon('lock')}<div class="empty__t">${esc(t('login.locked'))}</div></div>`;
-        return;
-      }
+      // staff never see an owner screen at all, not even a locked shell
+      if (!Store.isOwner) { UI.go(Store.state.session ? 'sell' : 'login'); return; }
       const s = S();
       el.innerHTML = `
         <div class="topbar">

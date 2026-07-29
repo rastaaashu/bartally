@@ -49,7 +49,9 @@ const App = {
     this.countReminder();
     if (typeof Sync !== 'undefined') Sync.start();
     // PWA service worker (no-op where sw.js doesn't exist, e.g. artifact preview)
-    if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    // localhost counts as a secure context, so the SW (and therefore phone
+    // notifications) can be exercised in testing exactly as in production
+    if ('serviceWorker' in navigator && (location.protocol === 'https:' || ['localhost', '127.0.0.1'].includes(location.hostname))) {
       navigator.serviceWorker.register('sw.js').catch(() => {});
     }
     // owner's first login on this phone: offer low-stock alerts (needs a user gesture)

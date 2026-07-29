@@ -338,6 +338,25 @@ const UI = (() => {
   };
 })();
 
+/**
+ * Show a phone notification. Uses the service worker when there is one — that is the
+ * path Android actually honours for an installed PWA; falls back to the page API.
+ */
+window.__notify = (title, body, tag) => {
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted' || !body) return false;
+  const opts = { body, tag, icon: 'icons/icon-192.png', badge: 'icons/icon-192.png', renotify: false };
+  try {
+    if (navigator.serviceWorker && navigator.serviceWorker.getRegistration) {
+      navigator.serviceWorker.getRegistration()
+        .then(reg => { if (reg && reg.showNotification) reg.showNotification(title, opts); else new Notification(title, opts); })
+        .catch(() => { try { new Notification(title, opts); } catch (e) {} });
+      return true;
+    }
+    new Notification(title, opts);
+    return true;
+  } catch (e) { return false; }
+};
+
 /* notification body text for system notifications */
 window.__notifText = (type, p) => {
   if (type === 'low') { const it = Store.item(p.itemId); return t('ntf.low', { item: it?.name || '?', qty: UI.fmtQty(p.qty), unit: t('u.' + (p.unit || 'bouteille')) }); }
