@@ -171,17 +171,29 @@ const SEED = {
     ['cuisine', 'Cervelle', 'portion', false, 10, 'CER'],
     ['cuisine', 'Pizza V/H', 'portion', false, 10, 'PIZ'],
   ],
+  /* the sizes a bar actually buys, by category — the owner can change any of them */
+  SIZES: [250, 275, 330, 375, 500, 700, 750, 1000, 1500],
+  defaultSize(catId, name) {
+    const byName = {
+      'Red Bull': 250, 'Smirnoff Ice': 275, 'Soda': 330,
+      'Ricard': 1000,                    // pastis is stocked by the litre
+      'Champagne': 750,
+    };
+    if (byName[name]) return byName[name];
+    return { biere: 330, rouge: 750, blanc: 750, rose: 750, demi: 375, champ: 750, spirit: 700, cuisine: null }[catId] ?? null;
+  },
+  defaultPours(catId) {
+    if (catId === 'spirit') return [30, 60];
+    if (['rouge', 'blanc', 'rose', 'champ', 'demi'].includes(catId)) return [150];
+    return null;
+  },
   build() {
     return this.items.map(([catId, name, unit, allowDecimal, threshold, mono], i) => ({
       id: 'it' + (i + 1).toString(36).padStart(2, '0'),
       catId, name, unit, allowDecimal, threshold, mono, isDemi: name.startsWith('1/2 '),
-      // real bottle sizes, and glass pours where a bar serves by the glass (owner-editable)
-      pours: catId === 'spirit' ? [30, 60] : (catId === 'rouge' || catId === 'blanc' || catId === 'rose' || catId === 'champ') ? [150] : null,
-      bottleMl: catId === 'spirit' ? 700
-        : (catId === 'rouge' || catId === 'blanc' || catId === 'rose') ? 750
-        : catId === 'demi' ? 375
-        : catId === 'champ' ? 750
-        : null,
+      // real formats sold in the trade, and glass pours where a bar serves by the glass
+      pours: SEED.defaultPours(catId),
+      bottleMl: SEED.defaultSize(catId, name),
       photo: null, barcode: null, pinned: ['Heineken', 'Spécial', 'Black Label', 'Casablanca', 'Red Bull', 'Ricard'].includes(name),
       cost: null, active: true, sort: i,
     }));
@@ -240,9 +252,9 @@ const Store = (() => {
         for (const it of state.items) {
           if (!it.mono && seedByName.has(it.name)) it.mono = seedByName.get(it.name);
           if (it.isDemi === undefined) it.isDemi = String(it.name || '').startsWith('1/2 ');
-          if (it.bottleMl === undefined || it.bottleMl === null) {
-            const seeded = SEED.build().find(x => x.name === it.name);
-            if (seeded) { it.bottleMl = seeded.bottleMl; if (it.pours == null) it.pours = seeded.pours; }
+          if (it.bottleMl === undefined || it.bottleMl === null || it.bottleMl === 700 && it.catId !== 'spirit') {
+            it.bottleMl = SEED.defaultSize(it.catId, it.name);
+            if (it.pours == null) it.pours = SEED.defaultPours(it.catId);
           }
           if (it.doseMl !== undefined) { if (!it.pours) it.pours = [it.doseMl || 30, 60]; delete it.doseMl; }
         }

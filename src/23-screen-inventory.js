@@ -17,7 +17,11 @@
       'inv.bottleMl': 'Bouteille (ml)',
       'inv.pourA': 'Verre A (ml)',
       'inv.pourB': 'Verre B (ml)',
-      'inv.pourHint': 'Renseignez les ml pour vendre au verre : chaque verre déduit sa fraction de bouteille automatiquement.',
+      'inv.pourHint': 'Choisissez jusqu’à 2 tailles de verre : chaque verre servi déduit sa fraction de bouteille.',
+      'inv.noSize': 'Sans format',
+      'inv.otherMl': 'Autre taille en ml',
+      'inv.addFormat': 'Ajouter un autre format (ex. 1 L)',
+      'inv.formatAdded': '{name} ajouté',
     },
     en: {
       'inv.nameRequired': 'Enter the item name',
@@ -33,7 +37,11 @@
       'inv.bottleMl': 'Bottle (ml)',
       'inv.pourA': 'Glass A (ml)',
       'inv.pourB': 'Glass B (ml)',
-      'inv.pourHint': 'Set the ml to sell by the glass: each glass deducts its bottle fraction automatically.',
+      'inv.pourHint': 'Pick up to 2 glass sizes: each glass served deducts its bottle fraction.',
+      'inv.noSize': 'No format',
+      'inv.otherMl': 'Other size in ml',
+      'inv.addFormat': 'Add another format (e.g. 1 L)',
+      'inv.formatAdded': '{name} added',
     },
   });
 
@@ -66,6 +74,8 @@
   [data-sheet=inv] .sheetrow{margin-bottom:16px}
   [data-sheet=inv] .inv2col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   [data-sheet=inv] .inv3col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  [data-sheet=inv] .inv-sizes,[data-sheet=inv] .inv-pours{margin-top:0;flex-wrap:wrap;overflow:visible}
+  [data-sheet=inv] .inv-sizes .chip,[data-sheet=inv] .inv-pours .chip{height:34px}
   [data-sheet=inv] .inv-hint{font-size:11px;color:var(--t3);margin:-8px 0 16px}
   [data-sheet=inv] .inv-swgroup{border-top:1px solid var(--hair);border-bottom:1px solid var(--hair);margin-bottom:16px}
   [data-sheet=inv] .inv-photo{display:flex;align-items:center;gap:16px}
@@ -225,12 +235,22 @@
         <div class="field"><label>${UI.esc(t('inv.cost', { cur }))}</label><input data-f="cost" type="number" min="0" step="any" inputmode="decimal" value="${d.cost ?? ''}"></div>
       </div>
       <div class="inv-hint">${UI.esc(t('inv.costHint'))}</div>
-      <div class="inv3col">
-        <div class="field"><label>${UI.esc(t('inv.bottleMl'))}</label><input data-f="bml" type="number" min="0" step="any" inputmode="numeric" value="${d.bottleMl ?? ''}"></div>
-        <div class="field"><label>${UI.esc(t('inv.pourA'))}</label><input data-f="p1" type="number" min="0" step="any" inputmode="numeric" value="${d.pours && d.pours[0] ? d.pours[0] : ''}"></div>
-        <div class="field"><label>${UI.esc(t('inv.pourB'))}</label><input data-f="p2" type="number" min="0" step="any" inputmode="numeric" value="${d.pours && d.pours[1] ? d.pours[1] : ''}"></div>
+      <div class="field"><label>${UI.esc(t('inv.bottleMl'))}</label>
+        <div class="chips inv-sizes">
+          ${Store.SEED.SIZES.map(ml => `<button type="button" class="chip${d.bottleMl === ml ? ' is-on' : ''}" data-size="${ml}"><span class="dot"></span>${UI.esc(Store.sizeLabel(ml))}</button>`).join('')}
+          <button type="button" class="chip${!d.bottleMl ? ' is-on' : ''}" data-size="0"><span class="dot"></span>${UI.esc(t('inv.noSize'))}</button>
+        </div>
+        <input data-f="bml" type="number" min="0" step="any" inputmode="numeric" placeholder="${UI.esc(t('inv.otherMl'))}" value="${d.bottleMl ?? ''}" style="margin-top:8px">
+      </div>
+      <div class="field"><label>${UI.esc(t('inv.pourA'))}</label>
+        <div class="chips inv-pours">
+          ${[25, 30, 40, 50, 60, 100, 125, 150, 200].map(ml => `<button type="button" class="chip${(d.pours || []).includes(ml) ? ' is-on' : ''}" data-pour="${ml}"><span class="dot"></span>${ml} ml</button>`).join('')}
+        </div>
+        <input data-f="p1" type="hidden" value="${d.pours && d.pours[0] ? d.pours[0] : ''}">
+        <input data-f="p2" type="hidden" value="${d.pours && d.pours[1] ? d.pours[1] : ''}">
       </div>
       <div class="inv-hint">${UI.esc(t('inv.pourHint'))}</div>
+      ${isNew ? '' : `<button type="button" class="textbtn" data-a="dup" style="width:100%">${UI.esc(t('inv.addFormat'))}</button>`}
       <div class="inv-swgroup">
         <div class="switchrow">
           <div><div class="switchrow__t">${UI.esc(t('inv.decimal'))}</div><div class="switchrow__s">${UI.esc(t('inv.decimalHint'))}</div></div>
@@ -287,6 +307,42 @@
     if (!isNew) { updPrev(); updCode(); }
 
     c.addEventListener('click', async e => {
+      const sz = e.target.closest('.inv-sizes [data-size]');
+      if (sz) {
+        const ml = Number(sz.dataset.size) || null;
+        d.bottleMl = ml;
+        c.querySelector('[data-f=bml]').value = ml || '';
+        c.querySelectorAll('.inv-sizes [data-size]').forEach(x => x.classList.toggle('is-on', Number(x.dataset.size) === (ml || 0)));
+        UI.haptic('light');
+        return;
+      }
+      const pr = e.target.closest('.inv-pours [data-pour]');
+      if (pr) {
+        const ml = Number(pr.dataset.pour);
+        let cur = (d.pours || []).filter(Boolean);
+        if (cur.includes(ml)) cur = cur.filter(x => x !== ml);
+        else { cur.push(ml); if (cur.length > 2) cur.shift(); }   // a third pick replaces the oldest
+        d.pours = cur.slice().sort((a, b) => a - b);
+        c.querySelector('[data-f=p1]').value = d.pours[0] || '';
+        c.querySelector('[data-f=p2]').value = d.pours[1] || '';
+        c.querySelectorAll('.inv-pours [data-pour]').forEach(x => x.classList.toggle('is-on', d.pours.includes(Number(x.dataset.pour))));
+        UI.haptic('light');
+        return;
+      }
+      if (e.target.closest('[data-a=dup]')) {
+        const live = Store.item(id);
+        if (!live) return;
+        const other = live.bottleMl === 1000 ? 700 : 1000;   // the other format a bar usually stocks
+        const copy = Store.saveItem({
+          name: `${live.name} ${Store.sizeLabel(other)}`, catId: live.catId, unit: live.unit,
+          allowDecimal: live.allowDecimal, threshold: live.threshold, cost: live.cost,
+          bottleMl: other, pours: live.pours ? [...live.pours] : null,
+        });
+        s.close();
+        UI.haptic('success');
+        UI.toast(t('inv.formatAdded', { name: copy ? copy.name : '' }), { type: 'ok' });
+        return;
+      }
       const sw = e.target.closest('[data-f=dec],[data-f=pin]');
       if (sw) {
         const k = sw.dataset.f === 'dec' ? 'allowDecimal' : 'pinned';
