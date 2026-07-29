@@ -1,7 +1,7 @@
 {
-  "name": "BarTally — Inventaire de bar",
-  "short_name": "BarTally",
-  "description": "Comptage quotidien, ventes en 2 gestes, écarts détectés.",
+  "name": "Kalinka — Inventaire",
+  "short_name": "Kalinka",
+  "description": "Inventaire du bar Kalinka-la-Gaieté.",
   "lang": "fr",
   "start_url": ".",
   "scope": ".",

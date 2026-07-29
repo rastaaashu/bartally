@@ -499,6 +499,23 @@ const Store = (() => {
       const emp = { id: uid(), name, active: true, pinHash: null, pinSalt: null };
       state.employees.push(emp); return emp;
     },
+    /** single-site production boot: no wizard — bar preconfigured, owner PIN preset,
+     *  catalog live at zero stock (load real stock via Livraison or the first count) */
+    async setupProd() {
+      state = blank();
+      state.categories = JSON.parse(JSON.stringify(SEED.categories));
+      state.items = SEED.build();
+      state.settings.barName = 'Kalinka-la-Gaieté';
+      state.settings.ownerName = 'Patron';
+      await this.setOwnerPin('2580');
+      const bd = Engine.addDays(this.todayBd(), -1);
+      const c = { id: uid(), bd, status: 'closed', isOpening: true, startedAt: new Date().toISOString(), closedAt: new Date().toISOString(), closedBy: 'Patron', lines: state.items.map(it => ({ itemId: it.id, expected: 0, counted: 0, variance: 0, note: '' })) };
+      state.counts.push(c);
+      state.settings.setupDone = true; state.settings.demoMode = false;
+      state.session = null; // straight to the login screen
+      this.audit('setup', 'settings', 'app', null, { mode: 'prod', items: state.items.length });
+      emit('all');
+    },
     async setupDemo() {
       state = blank();
       state.categories = JSON.parse(JSON.stringify(SEED.categories));

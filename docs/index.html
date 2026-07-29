@@ -6,8 +6,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="description" content="BarTally — inventaire de bar premium. Comptage quotidien, ventes en 2 gestes, écarts détectés.">
-<title>BarTally — Inventaire de bar</title>
+<meta name="description" content="Kalinka-la-Gaieté — inventaire du bar. Comptage quotidien, ventes en 2 gestes, écarts détectés.">
+<title>Kalinka — Inventaire</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -481,6 +481,14 @@ I18N.extend({
     'login.switchUser': 'Changer d’utilisateur',
     'login.locked': 'Verrouillé',
     'login.demoPin': 'Code démo : 1234',
+    'login.noStaff': 'Le patron ajoute l’équipe dans Réglages → Équipe.',
+    'login.demoBtn': 'Mode démonstration',
+    'login.demoWarn': 'Remplace les données actuelles par un bar fictif de démonstration. Les données réelles seront perdues. Continuer ?',
+    'ntf.enableTitle': 'Alertes sur ce téléphone',
+    'ntf.enableSub': 'Recevez une alerte quand un article passe sous son seuil de stock.',
+    'ntf.enableBtn': 'Activer les alertes',
+    'ntf.later': 'Plus tard',
+    'ntf.enabled': 'Alertes activées',
     'login.forgot': 'Code oublié ?',
     'login.forgotHint': 'Sans le code patron, il faut restaurer une sauvegarde ou tout effacer et reconfigurer le bar. Effacer maintenant ?',
     // wizard
@@ -708,6 +716,14 @@ I18N.extend({
     'login.switchUser': 'Switch user',
     'login.locked': 'Locked',
     'login.demoPin': 'Demo PIN: 1234',
+    'login.noStaff': 'The owner adds the team in Settings → Team.',
+    'login.demoBtn': 'Demo mode',
+    'login.demoWarn': 'Replaces current data with a fictional demo bar. Real data will be lost. Continue?',
+    'ntf.enableTitle': 'Alerts on this phone',
+    'ntf.enableSub': 'Get an alert when an item drops below its stock threshold.',
+    'ntf.enableBtn': 'Enable alerts',
+    'ntf.later': 'Later',
+    'ntf.enabled': 'Alerts enabled',
     'login.forgot': 'Forgot PIN?',
     'login.forgotHint': 'Without the owner PIN you must restore a backup, or erase everything and set the bar up again. Erase now?',
     'wiz.welcome': 'Welcome',
@@ -1408,6 +1424,23 @@ const Store = (() => {
     async addEmployeeRaw(name) {
       const emp = { id: uid(), name, active: true, pinHash: null, pinSalt: null };
       state.employees.push(emp); return emp;
+    },
+    /** single-site production boot: no wizard — bar preconfigured, owner PIN preset,
+     *  catalog live at zero stock (load real stock via Livraison or the first count) */
+    async setupProd() {
+      state = blank();
+      state.categories = JSON.parse(JSON.stringify(SEED.categories));
+      state.items = SEED.build();
+      state.settings.barName = 'Kalinka-la-Gaieté';
+      state.settings.ownerName = 'Patron';
+      await this.setOwnerPin('2580');
+      const bd = Engine.addDays(this.todayBd(), -1);
+      const c = { id: uid(), bd, status: 'closed', isOpening: true, startedAt: new Date().toISOString(), closedAt: new Date().toISOString(), closedBy: 'Patron', lines: state.items.map(it => ({ itemId: it.id, expected: 0, counted: 0, variance: 0, note: '' })) };
+      state.counts.push(c);
+      state.settings.setupDone = true; state.settings.demoMode = false;
+      state.session = null; // straight to the login screen
+      this.audit('setup', 'settings', 'app', null, { mode: 'prod', items: state.items.length });
+      emit('all');
     },
     async setupDemo() {
       state = blank();
@@ -2301,8 +2334,15 @@ window.__notifText = (type, p) => {
             <span class="row__body"><span class="row__t">${esc(e2.name)}</span></span>
             <span class="chev">›</span>
           </button>`).join('')}
-      </div>`;
+      </div>
+      ${emps.length ? '' : `<div class="sub2 mt2">${esc(t('login.noStaff'))}</div>`}
+      <div class="grow"></div>
+      <button class="textbtn" data-a="demo2">${esc(t('login.demoBtn'))}</button>`;
     view.addEventListener('click', async e => {
+      if (e.target.closest('[data-a=demo2]')) {
+        if (await UI.confirm(t('login.demoWarn'), { danger: true, yes: t('login.demoBtn') })) Store.setupDemo();
+        return;
+      }
       if (e.target.closest('[data-owner]')) {
         UI.haptic('light');
         L.view = 'pin'; L.target = { type: 'owner', name: Store.state.settings.ownerName || t('g.owner') }; L.pin = ''; L.busy = false;
@@ -2667,7 +2707,7 @@ window.__notifText = (type, p) => {
       const lastIssues = last ? last.lines.filter(l => l.variance !== 0).length : 0;
       const low = Store.lowItems().slice(0, 5);
       const lowTotal = Store.lowItems().length;
-      const feed = st.sales.filter(s => s.bd === today).slice(0, 4);
+      const feed = st.sales.filter(s => s.bd === today).slice(0, 3);
       const unread = st.notifs.filter(n => !n.read).length;
       const sign = v => v > 0 ? '+' : v < 0 ? '−' : '±';
       const fmtSigned = v => v === 0 ? '±0' : (v > 0 ? '+' : '−') + UI.fmtQty(Math.abs(v));
@@ -2686,8 +2726,6 @@ window.__notifText = (type, p) => {
           <div class="stat">
             <div class="micro">${UI.esc(t('dash.sales'))}</div>
             <div class="big tnum">${UI.esc(UI.fmtQty(units))}</div>
-            ${sparkline()}
-            ${pct !== null ? `<div><span class="chipstat ${pct >= 0 ? 'ok' : 'bad'} tnum">${UI.esc(t('dash.vsYest', { sign: sign(pct), pct: Math.abs(pct) }))}</span></div>` : ''}
           </div>
           <div class="stat">
             <div class="micro">${UI.esc(t('dash.lastCount'))}</div>
@@ -5026,6 +5064,28 @@ const App = {
     if ('serviceWorker' in navigator && location.protocol === 'https:') {
       navigator.serviceWorker.register('sw.js').catch(() => {});
     }
+    // owner's first login on this phone: offer low-stock alerts (needs a user gesture)
+    Store.on(what => {
+      if (what !== 'session' || !Store.isOwner) return;
+      if (typeof Notification === 'undefined' || Notification.permission !== 'default') return;
+      try { if (sessionStorage.getItem('kalinka.notifAsked')) return; sessionStorage.setItem('kalinka.notifAsked', '1'); } catch (e) {}
+      setTimeout(() => {
+        const c = UI.el(`<div>
+          <div class="micro" style="margin-bottom:8px">${UI.esc(t('ntf.enableTitle'))}</div>
+          <div class="sub2" style="margin:0 0 16px">${UI.esc(t('ntf.enableSub'))}</div>
+          <button class="btn btn--gold btn--full" data-a="on">${UI.esc(t('ntf.enableBtn'))}</button>
+          <button class="textbtn btn--full" data-a="later" style="width:100%;margin-top:6px">${UI.esc(t('ntf.later'))}</button>
+        </div>`);
+        const sh = UI.sheet(c);
+        c.addEventListener('click', async e => {
+          if (e.target.closest('[data-a=on]')) {
+            const p = await Notification.requestPermission();
+            if (p === 'granted') { Store.setSettings({ notifGranted: true }); UI.toast(t('ntf.enabled'), { type: 'ok' }); }
+            sh.close();
+          } else if (e.target.closest('[data-a=later]')) sh.close();
+        });
+      }, 700);
+    });
     // the fixed tab bar must never ride on top of the software keyboard
     if (window.visualViewport) {
       const vv = window.visualViewport;
@@ -5036,7 +5096,11 @@ const App = {
   },
   route() {
     const st = Store.state;
-    if (!st.settings.setupDone) return UI.go('welcome');
+    if (!st.settings.setupDone) {
+      // single-site production: no wizard — seed the bar and land on login
+      if (!App._booting) { App._booting = true; Store.setupProd().finally(() => { App._booting = false; }); }
+      return;
+    }
     if (!st.session) return UI.go('login');
     UI.go(Store.isOwner ? 'dashboard' : 'sell');
   },

@@ -51,6 +51,28 @@ const App = {
     if ('serviceWorker' in navigator && location.protocol === 'https:') {
       navigator.serviceWorker.register('sw.js').catch(() => {});
     }
+    // owner's first login on this phone: offer low-stock alerts (needs a user gesture)
+    Store.on(what => {
+      if (what !== 'session' || !Store.isOwner) return;
+      if (typeof Notification === 'undefined' || Notification.permission !== 'default') return;
+      try { if (sessionStorage.getItem('kalinka.notifAsked')) return; sessionStorage.setItem('kalinka.notifAsked', '1'); } catch (e) {}
+      setTimeout(() => {
+        const c = UI.el(`<div>
+          <div class="micro" style="margin-bottom:8px">${UI.esc(t('ntf.enableTitle'))}</div>
+          <div class="sub2" style="margin:0 0 16px">${UI.esc(t('ntf.enableSub'))}</div>
+          <button class="btn btn--gold btn--full" data-a="on">${UI.esc(t('ntf.enableBtn'))}</button>
+          <button class="textbtn btn--full" data-a="later" style="width:100%;margin-top:6px">${UI.esc(t('ntf.later'))}</button>
+        </div>`);
+        const sh = UI.sheet(c);
+        c.addEventListener('click', async e => {
+          if (e.target.closest('[data-a=on]')) {
+            const p = await Notification.requestPermission();
+            if (p === 'granted') { Store.setSettings({ notifGranted: true }); UI.toast(t('ntf.enabled'), { type: 'ok' }); }
+            sh.close();
+          } else if (e.target.closest('[data-a=later]')) sh.close();
+        });
+      }, 700);
+    });
     // the fixed tab bar must never ride on top of the software keyboard
     if (window.visualViewport) {
       const vv = window.visualViewport;
@@ -61,7 +83,11 @@ const App = {
   },
   route() {
     const st = Store.state;
-    if (!st.settings.setupDone) return UI.go('welcome');
+    if (!st.settings.setupDone) {
+      // single-site production: no wizard — seed the bar and land on login
+      if (!App._booting) { App._booting = true; Store.setupProd().finally(() => { App._booting = false; }); }
+      return;
+    }
     if (!st.session) return UI.go('login');
     UI.go(Store.isOwner ? 'dashboard' : 'sell');
   },

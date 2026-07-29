@@ -431,8 +431,15 @@
             <span class="row__body"><span class="row__t">${esc(e2.name)}</span></span>
             <span class="chev">›</span>
           </button>`).join('')}
-      </div>`;
+      </div>
+      ${emps.length ? '' : `<div class="sub2 mt2">${esc(t('login.noStaff'))}</div>`}
+      <div class="grow"></div>
+      <button class="textbtn" data-a="demo2">${esc(t('login.demoBtn'))}</button>`;
     view.addEventListener('click', async e => {
+      if (e.target.closest('[data-a=demo2]')) {
+        if (await UI.confirm(t('login.demoWarn'), { danger: true, yes: t('login.demoBtn') })) Store.setupDemo();
+        return;
+      }
       if (e.target.closest('[data-owner]')) {
         UI.haptic('light');
         L.view = 'pin'; L.target = { type: 'owner', name: Store.state.settings.ownerName || t('g.owner') }; L.pin = ''; L.busy = false;

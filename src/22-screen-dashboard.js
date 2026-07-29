@@ -85,7 +85,7 @@
       const lastIssues = last ? last.lines.filter(l => l.variance !== 0).length : 0;
       const low = Store.lowItems().slice(0, 5);
       const lowTotal = Store.lowItems().length;
-      const feed = st.sales.filter(s => s.bd === today).slice(0, 4);
+      const feed = st.sales.filter(s => s.bd === today).slice(0, 3);
       const unread = st.notifs.filter(n => !n.read).length;
       const sign = v => v > 0 ? '+' : v < 0 ? '−' : '±';
       const fmtSigned = v => v === 0 ? '±0' : (v > 0 ? '+' : '−') + UI.fmtQty(Math.abs(v));
@@ -104,8 +104,6 @@
           <div class="stat">
             <div class="micro">${UI.esc(t('dash.sales'))}</div>
             <div class="big tnum">${UI.esc(UI.fmtQty(units))}</div>
-            ${sparkline()}
-            ${pct !== null ? `<div><span class="chipstat ${pct >= 0 ? 'ok' : 'bad'} tnum">${UI.esc(t('dash.vsYest', { sign: sign(pct), pct: Math.abs(pct) }))}</span></div>` : ''}
           </div>
           <div class="stat">
             <div class="micro">${UI.esc(t('dash.lastCount'))}</div>

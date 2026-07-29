@@ -19,8 +19,8 @@ const html = `<meta charset="utf-8">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="description" content="BarTally — inventaire de bar premium. Comptage quotidien, ventes en 2 gestes, écarts détectés.">
-<title>BarTally — Inventaire de bar</title>
+<meta name="description" content="Kalinka-la-Gaieté — inventaire du bar. Comptage quotidien, ventes en 2 gestes, écarts détectés.">
+<title>Kalinka — Inventaire</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
