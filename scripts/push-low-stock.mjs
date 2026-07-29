@@ -11,8 +11,9 @@ const api = async (path, opts = {}) => {
     ...opts,
     headers: { apikey: SUPABASE_KEY, authorization: `Bearer ${SUPABASE_KEY}`, 'content-type': 'application/json', ...(opts.headers || {}) },
   });
-  if (!r.ok) throw new Error(`${path} ${r.status} ${(await r.text()).slice(0, 160)}`);
-  return r.status === 204 ? null : r.json();
+  const text = await r.text();
+  if (!r.ok) throw new Error(`${path} ${r.status} ${text.slice(0, 160)}`);
+  return text ? JSON.parse(text) : null;   // inserts answer with an empty body
 };
 const rows = async t => (await api(`${t}?select=*`)).map(r => r.data ?? r);
 
@@ -107,7 +108,7 @@ console.log(`pushed to ${sent}/${subs.length} device(s)${gone.length ? `, ${gone
 
 await api('push_log', {
   method: 'POST',
-  headers: { prefer: 'resolution=ignore-duplicates' },
+  headers: { prefer: 'resolution=ignore-duplicates,return=minimal' },
   body: JSON.stringify(fresh.map(({ it }) => ({ id: `${bd}:${it.id}` }))),
 });
 console.log('logged', fresh.map(f => f.it.name).join(', '));
