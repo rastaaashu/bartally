@@ -9,11 +9,16 @@ const Sync = (() => {
   let client = null, started = false, flushing = false, timer = null;
 
   const enabled = () => typeof SYNC_CONFIG !== 'undefined' && SYNC_CONFIG.url && SYNC_CONFIG.anon && typeof supabase !== 'undefined';
+  // a device can switch to demo AFTER sync booted (demo button on the login screen):
+  // every sync path re-checks, so a demo bar never pushes to — or absorbs — the live site
+  const demo = () => !!Store.state.settings.demoMode;
+  const PURGED = (table, d) => ['sales', 'restocks', 'waste', 'counts'].includes(table) && d && d.bd && d.bd < Heal.PURGE_BD;
 
   /* ---------- outbox (persisted; survives offline) ---------- */
   function loadBox() { try { return JSON.parse(localStorage.getItem(OUTBOX_KEY)) || []; } catch (e) { return []; } }
   function saveBox(b) { try { localStorage.setItem(OUTBOX_KEY, JSON.stringify(b.slice(-500))); } catch (e) {} }
   function enqueue(table, id) {
+    if (demo()) return;
     const box = loadBox();
     if (!box.some(x => x.t === table && x.id === id)) box.push({ t: table, id });
     saveBox(box);
@@ -26,12 +31,13 @@ const Sync = (() => {
     if (table === 'kv_settings') return { id: 1, data: st.settings, updated_at: new Date().toISOString() };
     const arr = st[table]; if (!arr) return null;
     const item = arr.find(x => x.id === id);
+    if (item && PURGED(table, item)) return null; // purged test rows never travel again
     return item ? { id, data: item, updated_at: new Date().toISOString() } : null;
   }
 
   function scheduleFlush() { clearTimeout(timer); timer = setTimeout(flush, 400); }
   async function flush() {
-    if (!client || flushing) return;
+    if (!client || flushing || demo()) return;
     const box = loadBox();
     if (!box.length) return;
     flushing = true;
@@ -56,6 +62,8 @@ const Sync = (() => {
   /* ---------- merge remote → local ---------- */
   function mergeRow(table, row) {
     if (!row) return false;
+    if (demo()) return false;
+    if (PURGED(table, row.data)) return false;
     const st = Store.state;
     if (table === 'kv_settings') {
       if (!row.data || row.data.siteId !== SITE_ID) return false; // other site / legacy unstamped row
@@ -89,7 +97,7 @@ const Sync = (() => {
   function queueRefresh() {
     if (refreshQueued) return;
     refreshQueued = true;
-    requestAnimationFrame(() => { refreshQueued = false; Store.persistNow(); UI.refresh(); });
+    requestAnimationFrame(() => { refreshQueued = false; Store._heal(); Store.persistNow(); UI.refresh(); });
   }
 
   /* ---------- initial pull + reconcile ---------- */
@@ -103,13 +111,22 @@ const Sync = (() => {
       // 2. push local rows the server doesn't have (first device migrates its data up)
       if (table !== 'kv_settings') {
         const remoteIds = new Set((data || []).map(r => String(r.id)));
+        // identity guard: a same-name row already on the server IS this row under
+        // another id — pushing it up is what kept duplicating staff on every stale device
+        const idKey = table === 'employees' ? (d => Heal.normName(d?.name))
+          : table === 'items' ? (d => d && `${Heal.normName(d.name)}|${d.bottleMl ?? ''}|${d.catId}`)
+          : null;
+        const remoteKeys = idKey ? new Set((data || []).map(r => idKey(r.data)).filter(Boolean)) : null;
         for (const item of Store.state[table] || []) {
-          if (!remoteIds.has(String(item.id))) enqueue(table, item.id);
+          if (remoteIds.has(String(item.id))) continue;
+          if (remoteKeys && remoteKeys.has(idKey(item))) continue;
+          enqueue(table, item.id);
         }
       }
     }
     enqueueSettings();
-    if (changed) queueRefresh();
+    const healed = Store._heal(); // merged rows may need dedupe/purge before anyone sees them
+    if (changed || healed) queueRefresh();
   }
 
   /* ---------- realtime ---------- */
@@ -137,6 +154,8 @@ const Sync = (() => {
     wrap('closeCount', (o, cid) => { const c = o(cid); if (c) enqueue('counts', cid); return c; });
     wrap('reopenCount', (o, cid) => { const r = o(cid); if (r) enqueue('counts', cid); return r; });
     wrap('saveItem', (o, ...a) => { const it = o(...a); if (it) enqueue('items', it.id); return it; });
+    wrap('attachCode', (o, ...a) => { const it = o(...a); if (it) enqueue('items', it.id); return it; });
+    wrap('removeCode', (o, ...a) => { const it = o(...a); if (it) enqueue('items', it.id); return it; });
     wrap('setEmployeeActive', (o, id, ...a) => { const r = o(id, ...a); enqueue('employees', id); return r; });
     const wrapAsync = (name, after) => { const orig = Store[name].bind(Store); Store[name] = async (...a) => { const r = await orig(...a); after(r, ...a); return r; }; };
     wrapAsync('addEmployee', emp => { if (emp) enqueue('employees', emp.id); });

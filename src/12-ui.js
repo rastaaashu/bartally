@@ -202,41 +202,191 @@ const UI = (() => {
   }
 
   /* ---------- barcode scanning ---------- */
-  const canScan = 'BarcodeDetector' in window && !!navigator.mediaDevices?.getUserMedia;
-  async function scan({ onCode }) {
-    const c = el(`<div><h2 style="font-size:18px;margin-bottom:12px">${esc(t('sell.scan'))}</h2>
+  /* Pure-JS EAN-13 / EAN-8 / UPC-A decoder — the camera fallback for browsers
+     without BarcodeDetector (iPhone Safari). Scanline run-length matching with
+     checksum + double-read confirmation, so a misread never reaches the store. */
+  const EAN = (() => {
+    const Lp = ['0001101', '0011001', '0010011', '0111101', '0100011', '0110001', '0101111', '0111011', '0110111', '0001011'];
+    const runsOf = p => { const r = []; let c = 1; for (let i = 1; i < p.length; i++) { if (p[i] === p[i - 1]) c++; else { r.push(c); c = 1; } } r.push(c); return r; };
+    const L = Lp.map(runsOf);                       // space-first, odd parity
+    const G = L.map(r => [...r].reverse());         // space-first, even parity
+    const FIRST = ['LLLLLL', 'LLGLGG', 'LLGGLG', 'LLGGGL', 'LGLLGG', 'LGGLLG', 'LGGGLL', 'LGLGLG', 'LGLGGL', 'LGGLGL'];
+    const dist = (m, p) => Math.abs(m[0] - p[0]) + Math.abs(m[1] - p[1]) + Math.abs(m[2] - p[2]) + Math.abs(m[3] - p[3]);
+    const mods = g => { const tot = g[0] + g[1] + g[2] + g[3]; return g.map(v => v * 7 / tot); };
+    function digit(g, sets) {
+      const m = mods(g);
+      let best = -1, bs = 9, second = 9;
+      for (let s = 0; s < sets.length; s++) for (let d = 0; d < 10; d++) {
+        const dd = dist(m, sets[s][d]);
+        if (dd < bs) { second = bs; bs = dd; best = s * 10 + d; } else if (dd < second) second = dd;
+      }
+      return bs <= 1.8 && (second - bs) > 0.35 ? best : -1; // ambiguous read → reject
+    }
+    function checksum(ds) {
+      let sum = 0;
+      for (let i = 0; i < ds.length - 1; i++) sum += ds[i] * ((ds.length - 1 - i) % 2 ? 3 : 1);
+      return (10 - sum % 10) % 10 === ds[ds.length - 1];
+    }
+    function tryDecode(runs, first) {
+      // runs: widths; first: index of a bar run candidate for the start guard
+      const need = n => first + n <= runs.length;
+      const guardOk = i => { const a = runs[i], b = runs[i + 1], c = runs[i + 2], w = (a + b + c) / 3; return [a, b, c].every(v => v > w * .4 && v < w * 1.9); };
+      if (!need(59) || !guardOk(first)) return null;
+      const w = (runs[first] + runs[first + 1] + runs[first + 2]) / 3;
+      const digits = [], parity = [];
+      let i = first + 3;
+      for (let d = 0; d < 6; d++, i += 4) {
+        const g = runs.slice(i, i + 4); if ((g[0] + g[1] + g[2] + g[3]) / 7 > w * 2.2) return null;
+        const r = digit(g, [L, G]); if (r < 0) return null;
+        digits.push(r % 10); parity.push(r < 10 ? 'L' : 'G');
+      }
+      if (!guardOk(i + 1)) return null; // middle guard s,b,s,b,s
+      i += 5;
+      for (let d = 0; d < 6; d++, i += 4) {
+        const g = runs.slice(i, i + 4); if ((g[0] + g[1] + g[2] + g[3]) / 7 > w * 2.2) return null;
+        const r = digit(g, [L]); if (r < 0) return null; // right half widths match the L table (bar-first phase)
+        digits.push(r);
+      }
+      const lead = FIRST.indexOf(parity.join(''));
+      if (lead < 0) return null;
+      const full = [lead, ...digits];
+      return checksum(full) ? full.join('') : null;
+    }
+    function tryDecode8(runs, first) {
+      if (first + 43 > runs.length) return null;
+      const guardOk = i => { const a = runs[i], b = runs[i + 1], c = runs[i + 2], w = (a + b + c) / 3; return [a, b, c].every(v => v > w * .4 && v < w * 1.9); };
+      if (!guardOk(first)) return null;
+      const digits = [];
+      let i = first + 3;
+      for (let d = 0; d < 4; d++, i += 4) { const r = digit(runs.slice(i, i + 4), [L]); if (r < 0) return null; digits.push(r); }
+      i += 5;
+      for (let d = 0; d < 4; d++, i += 4) { const r = digit(runs.slice(i, i + 4), [L]); if (r < 0) return null; digits.push(r); }
+      return checksum(digits) ? digits.join('') : null;
+    }
+    function decodeLine(lum) {
+      let mn = 255, mx = 0;
+      for (const v of lum) { if (v < mn) mn = v; if (v > mx) mx = v; }
+      if (mx - mn < 40) return null;
+      const th = (mn + mx) / 2;
+      const runs = []; const colors = [];
+      let cur = lum[0] < th ? 1 : 0, len = 1;
+      for (let i = 1; i < lum.length; i++) {
+        const c = lum[i] < th ? 1 : 0;
+        if (c === cur) len++; else { runs.push(len); colors.push(cur); cur = c; len = 1; }
+      }
+      runs.push(len); colors.push(cur);
+      for (let i = 1; i < runs.length; i++) {
+        if (colors[i] !== 1) continue; // start guard begins on a bar
+        const hit = tryDecode(runs, i) || tryDecode8(runs, i);
+        if (hit) return hit;
+      }
+      return null;
+    }
+    function fromVideo(video, cv) {
+      const vw = video.videoWidth, vh = video.videoHeight;
+      if (!vw || !vh) return null;
+      const W = 640, H = Math.round(vh * W / vw);
+      cv.width = W; cv.height = H;
+      const ctx = cv.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(video, 0, 0, W, H);
+      for (const fy of [.5, .42, .58, .34, .66]) {
+        const y = Math.round(H * fy);
+        const px = ctx.getImageData(0, y, W, 1).data;
+        const lum = new Array(W);
+        for (let x = 0; x < W; x++) lum[x] = (px[x * 4] * 2 + px[x * 4 + 1] * 3 + px[x * 4 + 2]) / 6;
+        const hit = decodeLine(lum) || decodeLine([...lum].reverse());
+        if (hit) return hit;
+      }
+      return null;
+    }
+    return { fromVideo, decodeLine };
+  })();
+
+  const canScan = !!navigator.mediaDevices?.getUserMedia;
+  /** Scanner sheet. onCode(code, mode) contract:
+   *    return {msg, type}   → flash feedback, keep scanning (continuous mode)
+   *    return {close:true}  → close the sheet
+   *    return nothing       → close after this code (legacy one-shot behaviour) */
+  async function scan({ onCode, modes = null, mode = null, title } = {}) {
+    let cur = mode || (modes && modes[0] ? modes[0].id : null);
+    const c = el(`<div><h2 style="font-size:18px;margin-bottom:12px">${esc(title || t('sell.scan'))}</h2>
+      ${modes ? `<div class="chips" style="margin-bottom:12px">${modes.map(m =>
+        `<button type="button" class="chip${m.id === cur ? ' is-on' : ''}" data-mode="${esc(m.id)}">${esc(m.label)}</button>`).join('')}</div>` : ''}
       <div style="position:relative;border-radius:16px;overflow:hidden;background:#000;aspect-ratio:3/4">
         <video autoplay playsinline muted style="width:100%;height:100%;object-fit:cover"></video>
         <div style="position:absolute;inset:0;border:2px solid rgba(201,154,75,.6);border-radius:16px;margin:14%;pointer-events:none"></div>
+        <div data-r="fb" style="position:absolute;left:0;right:0;bottom:0;padding:10px 14px;font-weight:700;text-align:center;background:rgba(0,0,0,.55);color:#fff;opacity:0;transition:opacity .25s"></div>
       </div>
       <div class="field mt4"><label>${esc(t('inv.barcode'))}</label><input type="text" inputmode="numeric" placeholder="0000000000000"></div>
       <button class="btn btn--gold btn--full" data-a="manual">${esc(t('g.confirm'))}</button></div>`);
     const s = sheet(c, { onClose: stop });
     const video = c.querySelector('video');
-    let stream = null, timer = null;
+    const fb = c.querySelector('[data-r=fb]');
+    let stream = null, timer = null, fbTimer = null;
+    let lastCode = '', lastAt = 0, anyAt = 0, candidate = '', candAt = 0;
     function stop() { clearInterval(timer); stream?.getTracks().forEach(tk => tk.stop()); }
+    function flash(msg, type) {
+      clearTimeout(fbTimer);
+      fb.textContent = msg;
+      fb.style.color = type === 'danger' ? '#ff9d9d' : type === 'warn' ? '#ffd28a' : '#9dffb3';
+      fb.style.opacity = '1';
+      fbTimer = setTimeout(() => { fb.style.opacity = '0'; }, 1700);
+    }
+    function handle(code) {
+      const now = Date.now();
+      if (code === lastCode && now - lastAt < 2000) return;  // same bottle still in frame
+      if (now - anyAt < 500) return;
+      lastCode = code; lastAt = now; anyAt = now;
+      const r = onCode(code, cur);
+      if (r && r.close) { stop(); s.close(); return; }
+      if (r && (r.msg || r.type)) { haptic(r.type === 'danger' ? 'warn' : 'success'); if (r.msg) flash(r.msg, r.type); return; }
+      if (r === undefined || r === null) { stop(); s.close(); }
+    }
+    c.addEventListener('click', e => {
+      const m = e.target.closest('[data-mode]');
+      if (m) {
+        cur = m.dataset.mode;
+        c.querySelectorAll('[data-mode]').forEach(x => x.classList.toggle('is-on', x === m));
+        haptic('light');
+      }
+    });
     c.querySelector('[data-a=manual]').addEventListener('click', () => {
-      const v = c.querySelector('input').value.trim();
-      if (v) { onCode(v); s.close(); }
+      const inp = c.querySelector('input');
+      const v = inp.value.trim();
+      if (v) { lastCode = ''; anyAt = 0; handle(v); inp.value = ''; }
     });
     if (canScan) {
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 } } });
         video.srcObject = stream;
-        const det = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'qr_code'] });
-        timer = setInterval(async () => {
-          try {
-            const codes = await det.detect(video);
-            if (codes.length) { haptic('success'); onCode(codes[0].rawValue); stop(); s.close(); }
-          } catch (e) {}
-        }, 300);
+        if ('BarcodeDetector' in window) {
+          const det = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'qr_code'] });
+          timer = setInterval(async () => {
+            try {
+              const codes = await det.detect(video);
+              if (codes.length) handle(codes[0].rawValue);
+            } catch (e) {}
+          }, 300);
+        } else {
+          // iPhone path: JS decoder; accept only after two matching reads
+          const cv = document.createElement('canvas');
+          timer = setInterval(() => {
+            try {
+              const code = EAN.fromVideo(video, cv);
+              if (!code) return;
+              const now = Date.now();
+              if (code === candidate && now - candAt < 1500) { candidate = ''; handle(code); }
+              else { candidate = code; candAt = now; }
+            } catch (e) {}
+          }, 260);
+        }
       } catch (e) { video.parentElement.style.display = 'none'; }
     } else { video.parentElement.style.display = 'none'; }
     return s;
   }
 
   /* ---------- image pick + compress ---------- */
-  function pickImage({ capture } = {}) {
+  function pickImage({ capture, max = 512, quality = .72 } = {}) {
     return new Promise(res => {
       const inp = document.createElement('input');
       inp.type = 'file'; inp.accept = 'image/*';
@@ -245,11 +395,11 @@ const UI = (() => {
         const f = inp.files[0]; if (!f) return res(null);
         const img = new Image();
         img.onload = () => {
-          const max = 512, k = Math.min(1, max / Math.max(img.width, img.height));
+          const k = Math.min(1, max / Math.max(img.width, img.height));
           const cv = document.createElement('canvas');
           cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
           cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
-          res(cv.toDataURL('image/jpeg', .72));
+          res(cv.toDataURL('image/jpeg', quality));
         };
         img.src = URL.createObjectURL(f);
       });
@@ -361,7 +511,7 @@ const UI = (() => {
 
   return {
     esc, el, t, icon, art, logoMark, toast, sheet, confirm: confirmBox, numpad, ring,
-    canScan, scan, pickImage, download, csv, printHTML,
+    canScan, scan, EAN, pickImage, download, csv, printHTML,
     fmtQty, fmtDate, fmtTime, money, haptic,
     registerScreen, go, refresh, hold, header, stockText,
     get current() { return current; }, get params() { return currentParams; },

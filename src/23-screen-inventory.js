@@ -204,11 +204,12 @@
       ? {
           name: '',
           catId: (catFilter !== 'all' && Store.cat(catFilter)) ? catFilter : (cats[0] ? cats[0].id : 'biere'),
-          unit: 'bouteille', allowDecimal: false, threshold: 6, pinned: false, cost: null, photo: null, barcode: null, pours: null, bottleMl: null,
+          unit: 'bouteille', allowDecimal: false, threshold: 6, pinned: false, cost: null, photo: null, barcode: null, codes: [], pours: null, bottleMl: null,
         }
       : {
           name: src.name, catId: src.catId, unit: src.unit, allowDecimal: !!src.allowDecimal,
           threshold: src.threshold, pinned: !!src.pinned, cost: src.cost, photo: src.photo, barcode: src.barcode, pours: src.pours ? [...src.pours] : null, bottleMl: src.bottleMl ?? null,
+          codes: src.barcodes ? src.barcodes.map(b => ({ code: String(b.code), qty: Math.max(1, Math.round(+b.qty) || 1) })) : (src.barcode ? [{ code: String(src.barcode), qty: 1 }] : []),
         };
     if (isNew) {
       if (d.catId === 'cuisine') d.unit = 'portion';
@@ -272,10 +273,11 @@
           </div>
         </div>
       </div>
-      <div class="field"><label>${UI.esc(t('inv.barcode'))}</label>
+      <div class="field"><label>${UI.esc(t('inv.codes'))}</label>
+        <div data-r="codes"></div>
         <div class="inv-code">
-          <span class="sub2 num" data-r="code"></span>
           <button type="button" class="textbtn" data-a="scan">${UI.esc(t('inv.barcodeScan'))}</button>
+          <button type="button" class="textbtn" data-a="codeman">${UI.esc(t('inv.codeManual'))}</button>
         </div>
       </div>`}
       <div class="inv-foot">
@@ -298,15 +300,46 @@
       const rm = c.querySelector('[data-a=prm]');
       if (rm) rm.classList.toggle('hidden', !d.photo);
     };
-    const updCode = () => {
-      const n = c.querySelector('[data-r=code]');
+    const updCodes = () => {
+      const n = c.querySelector('[data-r=codes]');
       if (!n) return;
-      n.textContent = d.barcode || t('inv.noBarcode');
-      n.classList.toggle('is-none', !d.barcode);
+      n.innerHTML = d.codes.length
+        ? d.codes.map(b => `<div class="inv-code"><span class="sub2 num">${UI.esc(b.code)} ×${b.qty}</span><button type="button" class="textbtn inv-mut" data-rmc="${UI.esc(b.code)}">×</button></div>`).join('')
+        : `<span class="sub2 is-none">${UI.esc(t('inv.noBarcode'))}</span>`;
     };
-    if (!isNew) { updPrev(); updCode(); }
+    /** attach a code: qty says what one scan of it moves (1 = bottle, 24 = case) */
+    const askCodeQty = (code) => {
+      let qty = 1;
+      const cc = UI.el(`<div>
+        <h2 style="font-size:18px;margin-bottom:12px">${UI.esc(t('scan.attachTitle'))}</h2>
+        ${code ? `<div class="sub2 num" style="margin-bottom:12px">${UI.esc(code)}</div>`
+          : `<div class="field"><label>${UI.esc(t('inv.barcode'))}</label><input data-f="code" type="text" inputmode="numeric" placeholder="0000000000000"></div>`}
+        <div class="field"><label>${UI.esc(t('scan.attachQty'))}</label>
+          <div class="chips">
+            ${[1, 6, 12, 24].map(v => `<button type="button" class="chip${v === 1 ? ' is-on' : ''}" data-q="${v}">×${v}</button>`).join('')}
+            <input data-f="qty" type="number" min="1" inputmode="numeric" style="width:76px" placeholder="…">
+          </div>
+        </div>
+        <button type="button" class="btn btn--gold btn--full" data-a="okc">${UI.esc(t('scan.attachBtn'))}</button>
+      </div>`);
+      const sh = UI.sheet(cc);
+      cc.addEventListener('click', ev => {
+        const qc = ev.target.closest('[data-q]');
+        if (qc) { qty = +qc.dataset.q; cc.querySelector('[data-f=qty]').value = ''; cc.querySelectorAll('[data-q]').forEach(x => x.classList.toggle('is-on', x === qc)); UI.haptic('light'); return; }
+        if (!ev.target.closest('[data-a=okc]')) return;
+        const manual = cc.querySelector('[data-f=qty]').value;
+        if (Math.round(+manual) >= 1) qty = Math.round(+manual);
+        const cd = code || String(cc.querySelector('[data-f=code]')?.value || '').trim();
+        if (!cd) return;
+        d.codes = d.codes.filter(x => x.code !== cd).concat({ code: cd, qty });
+        updCodes(); UI.haptic('success'); sh.close();
+      });
+    };
+    if (!isNew) { updPrev(); updCodes(); }
 
     c.addEventListener('click', async e => {
+      const rmc = e.target.closest('[data-rmc]');
+      if (rmc) { d.codes = d.codes.filter(x => x.code !== rmc.dataset.rmc); updCodes(); UI.haptic('light'); return; }
       const sz = e.target.closest('.inv-sizes [data-size]');
       if (sz) {
         const ml = Number(sz.dataset.size) || null;
@@ -361,14 +394,9 @@
       } else if (a === 'prm') {
         d.photo = null; updPrev(); UI.haptic('light');
       } else if (a === 'scan') {
-        UI.scan({
-          onCode: code => {
-            d.barcode = String(code);
-            updCode();
-            UI.haptic('success');
-            UI.toast(t('inv.barcodeSet', { code: d.barcode }), { type: 'ok' });
-          },
-        });
+        UI.scan({ onCode: code => { askCodeQty(String(code)); } });
+      } else if (a === 'codeman') {
+        askCodeQty(null);
       } else if (a === 'save') {
         const nameEl = c.querySelector('[data-f=name]');
         const name = nameEl.value.trim();
@@ -389,7 +417,11 @@
           const live = Store.item(id); // live data at action time
           if (!live) { s.close(); return; }
           if (thr == null) patch.threshold = live.threshold;
-          Store.saveItem({ id, ...patch, photo: d.photo, barcode: d.barcode });
+          Store.saveItem({
+            id, ...patch, photo: d.photo,
+            barcodes: d.codes.map(b => ({ code: b.code, qty: Math.max(1, Math.round(+b.qty) || 1) })),
+            barcode: d.codes.find(b => (Math.round(+b.qty) || 1) === 1)?.code || null, // legacy mirror
+          });
         }
         UI.haptic('success');
         UI.toast(t('inv.saved'), { type: 'ok' });

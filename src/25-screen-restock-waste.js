@@ -200,6 +200,7 @@
       </div>
       <div class="h1">${UI.esc(t(mode + '.title'))}</div>
       <div class="sub2">${UI.esc(t(mode + '.hint'))}</div>
+      ${mode === 'restock' ? `<button type="button" class="textbtn" data-a="invoice" style="margin:4px 0 8px">📷 ${UI.esc(t('rw.invoice'))}</button>` : ''}
       <div class="search">
         ${UI.icon('search')}
         <input type="text" data-el="q" placeholder="${UI.esc(t('g.search'))}" value="${UI.esc(st.q)}" autocomplete="off" enterkeyhint="search" aria-label="${UI.esc(t('g.search'))}">
@@ -247,8 +248,68 @@
     });
     el.addEventListener('click', e => {
       if (e.target.closest('[data-a=back]')) { UI.haptic('light'); UI.go(FROM[mode] || 'dashboard'); return; }
+      if (e.target.closest('[data-a=invoice]')) { invoiceFlow(); return; }
       const card = e.target.closest('[data-item]');
       if (card) openQtySheet(mode, card.dataset.item);
+    });
+  }
+
+  /* ---- invoice photo → AI line extraction → confirmed Livraison entries ----
+     Needs the invoice-scan Edge Function deployed on the Supabase project;
+     until then the button reports "unavailable" and changes nothing. */
+  async function invoiceFlow() {
+    const img = await UI.pickImage({ capture: true, max: 1600, quality: .8 });
+    if (!img) return;
+    UI.toast(t('rw.invoiceBusy'), { type: 'ok' });
+    let lines;
+    try {
+      const r = await fetch(`${SYNC_CONFIG.url}/functions/v1/invoice-scan`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', apikey: SYNC_CONFIG.anon, authorization: `Bearer ${SYNC_CONFIG.anon}` },
+        body: JSON.stringify({
+          image: img,
+          items: Store.activeItems().map(i => ({ id: i.id, name: i.name })),
+        }),
+      });
+      if (!r.ok) throw new Error(String(r.status));
+      lines = (await r.json()).lines;
+    } catch (e) {
+      UI.toast(t('rw.invoiceFail'), { type: 'danger' });
+      return;
+    }
+    if (!Array.isArray(lines) || !lines.length) { UI.toast(t('rw.invoiceNone'), { type: 'warn' }); return; }
+    const sel = lines.map(l => ({ ...l, on: !!l.itemId && l.qty > 0 }));
+    const c = UI.el(`<div>
+      <h2 style="font-size:18px;margin-bottom:12px">${UI.esc(t('rw.invoiceTitle'))}</h2>
+      <div data-r="lines" style="max-height:46vh;overflow:auto;margin-bottom:14px"></div>
+      <button type="button" class="btn btn--gold btn--full" data-a="apply">${UI.esc(t('rw.invoiceApply'))}</button>
+    </div>`);
+    const s = UI.sheet(c);
+    const paint = () => {
+      c.querySelector('[data-r=lines]').innerHTML = sel.map((l, i) => {
+        const it = l.itemId ? Store.item(l.itemId) : null;
+        return `<button type="button" data-l="${i}" style="display:flex;gap:10px;align-items:center;width:100%;padding:11px 6px;border:0;background:none;text-align:left;opacity:${it ? 1 : .45}">
+          <span style="width:22px;font-size:17px">${l.on ? '☑' : '☐'}</span>
+          <span style="flex:1"><b>+${UI.esc(String(l.qty))}</b> × ${UI.esc(it ? it.name : l.label)}</span>
+          ${it ? '' : `<span class="sub2">${UI.esc(t('rw.invoiceUnmatched'))}</span>`}
+        </button>`;
+      }).join('');
+    };
+    paint();
+    c.addEventListener('click', e => {
+      const row = e.target.closest('[data-l]');
+      if (row) {
+        const l = sel[+row.dataset.l];
+        if (l.itemId && l.qty > 0) { l.on = !l.on; UI.haptic('light'); paint(); }
+        return;
+      }
+      if (!e.target.closest('[data-a=apply]')) return;
+      let n = 0;
+      for (const l of sel) if (l.on && l.itemId && Store.item(l.itemId)) { Store.logRestock(l.itemId, Math.round(l.qty * 1000) / 1000); n++; }
+      UI.haptic('success');
+      UI.toast(`+${n} Livraison`, { type: 'ok' });
+      s.close();
+      UI.refresh();
     });
   }
 

@@ -194,7 +194,7 @@ const SEED = {
       // real formats sold in the trade, and glass pours where a bar serves by the glass
       pours: SEED.defaultPours(catId),
       bottleMl: SEED.defaultSize(catId, name),
-      photo: null, barcode: null, pinned: ['Heineken', 'Spécial', 'Black Label', 'Casablanca', 'Red Bull', 'Ricard'].includes(name),
+      photo: null, barcode: null, barcodes: [], pinned: ['Heineken', 'Spécial', 'Black Label', 'Casablanca', 'Red Bull', 'Ricard'].includes(name),
       cost: null, active: true, sort: i,
     }));
   },
@@ -205,6 +205,92 @@ const SEED = {
 const SITE_ID = 'kalinka-1';
 /** reason stamped on removals made with the Stock screen's − button */
 const QUICK_REASON = 'quick-adjust';
+
+/* ============ Heal — self-repairing state hygiene, applied on load and after sync merges.
+   Pure functions over a plain state object so every device converges on the same result.
+   - purge: pre-handover test rows are dropped for good (they used to resurrect via sync push-up)
+   - dedupeEmployees: one identity per staff name; sync used to duplicate them on every stale device
+   - dedupeItems: one identity per name+format+category (safety net for cloned formats)
+   - migrateBarcodes: legacy single `barcode` string → `barcodes: [{code, qty}]` ============ */
+const Heal = {
+  PURGE_BD: '2026-07-30', // everything transactional before this business day is test noise
+  normName(s) { return String(s || '').trim().toLowerCase(); },
+  purge(st) {
+    if (st.settings?.demoMode) return false; // demo seeds legitimate old history
+    let ch = false;
+    for (const k of ['sales', 'restocks', 'waste', 'counts']) {
+      const keep = (st[k] || []).filter(e => !e.bd || e.bd >= this.PURGE_BD);
+      if (keep.length !== (st[k] || []).length) { st[k] = keep; ch = true; }
+    }
+    return ch;
+  },
+  migrateBarcodes(st) {
+    let ch = false;
+    for (const it of st.items || []) {
+      if (it.barcodes === undefined) { it.barcodes = it.barcode ? [{ code: String(it.barcode), qty: 1 }] : []; ch = true; }
+    }
+    return ch;
+  },
+  dedupeEmployees(st) {
+    // same visible name ⇒ one identity; canonical = the row with a PIN, tie → smallest id
+    // (deterministic on every device, so a server cleanup finally sticks)
+    const groups = new Map();
+    for (const e of st.employees || []) {
+      if (!e.active) continue;
+      const k = this.normName(e.name);
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(e);
+    }
+    const remap = new Map();
+    for (const g of groups.values()) {
+      if (g.length < 2) continue;
+      g.sort((a, b) => ((b.pinHash ? 1 : 0) - (a.pinHash ? 1 : 0)) || (a.id < b.id ? -1 : 1));
+      for (const loser of g.slice(1)) remap.set(loser.id, g[0].id);
+    }
+    if (!remap.size) return false;
+    st.employees = st.employees.filter(e => !remap.has(e.id));
+    for (const k of ['sales', 'restocks', 'waste']) for (const e of st[k] || []) if (remap.has(e.byId)) e.byId = remap.get(e.byId);
+    if (st.session && remap.has(st.session.userId)) st.session.userId = remap.get(st.session.userId);
+    return true;
+  },
+  dedupeItems(st) {
+    // identity = name + format + category: two sizes legitimately share a name
+    const keyOf = i => `${this.normName(i.name)}|${i.bottleMl ?? ''}|${i.catId}`;
+    const groups = new Map();
+    for (const it of st.items || []) {
+      if (!it.active) continue;
+      const k = keyOf(it);
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(it);
+    }
+    const remap = new Map();
+    for (const g of groups.values()) {
+      if (g.length < 2) continue;
+      // canonical = the copy the site already knows (synced), else smallest id
+      g.sort((a, b) => ((b._syncTs ? 1 : 0) - (a._syncTs ? 1 : 0)) || (a.id < b.id ? -1 : 1));
+      const win = g[0];
+      for (const loser of g.slice(1)) {
+        remap.set(loser.id, win.id);
+        if (!win.photo && loser.photo) win.photo = loser.photo;
+        if (!(win.barcodes || []).length && (loser.barcodes || []).length) win.barcodes = loser.barcodes;
+        if (!win.barcode && loser.barcode) win.barcode = loser.barcode;
+      }
+    }
+    if (!remap.size) return false;
+    st.items = st.items.filter(i => !remap.has(i.id));
+    for (const k of ['sales', 'restocks', 'waste']) for (const e of st[k] || []) if (remap.has(e.itemId)) e.itemId = remap.get(e.itemId);
+    for (const c of st.counts || []) for (const l of (c.lines || [])) if (remap.has(l.itemId)) l.itemId = remap.get(l.itemId);
+    if (st.recents) st.recents = [...new Set(st.recents.map(id => remap.get(id) || id))];
+    return true;
+  },
+  all(st) {
+    const a = this.purge(st);
+    const b = this.migrateBarcodes(st);
+    const c = this.dedupeEmployees(st);
+    const d = this.dedupeItems(st);
+    return a || b || c || d;
+  },
+};
 
 const Store = (() => {
   const KEY = 'bartally.v1';
@@ -258,6 +344,7 @@ const Store = (() => {
           }
           if (it.doseMl !== undefined) { if (!it.pours) it.pours = [it.doseMl || 30, 60]; delete it.doseMl; }
         }
+        Heal.all(state);
       }
     }
   } catch (e) { state = blank(); console.info('store:', e.message); }
@@ -471,12 +558,43 @@ const Store = (() => {
         if (words.length >= 2) return (words[0][0] + '.' + words[1][0]).toUpperCase();
         return clean.replace(/[^A-Za-zÀ-ÿ]/g, '').slice(0, 3).toUpperCase();
       })();
-      const it = { id: uid(), catId: data.catId, name: data.name, unit: data.unit || 'bouteille', allowDecimal: !!data.allowDecimal, threshold: data.threshold ?? 6, mono, isDemi: String(data.name || '').startsWith('1/2 '), pours: data.pours ?? (data.allowDecimal ? [30, 60] : null), bottleMl: data.bottleMl ?? (data.allowDecimal ? 700 : null), photo: data.photo || null, barcode: data.barcode || null, pinned: !!data.pinned, cost: data.cost ?? null, active: true, sort: state.items.length };
+      const it = { id: uid(), catId: data.catId, name: data.name, unit: data.unit || 'bouteille', allowDecimal: !!data.allowDecimal, threshold: data.threshold ?? 6, mono, isDemi: String(data.name || '').startsWith('1/2 '), pours: data.pours ?? (data.allowDecimal ? [30, 60] : null), bottleMl: data.bottleMl ?? (data.allowDecimal ? 700 : null), photo: data.photo || null, barcode: data.barcode || null, barcodes: data.barcodes || (data.barcode ? [{ code: String(data.barcode), qty: 1 }] : []), pinned: !!data.pinned, cost: data.cost ?? null, active: true, sort: state.items.length };
       state.items.push(it);
       this.audit('add_item', 'item', it.id, null, { name: it.name });
       emit('items'); return it;
     },
-    findByBarcode(code) { return state.items.find(i => i.barcode === code && i.active); },
+    /** code → { item, qty } where qty is what one scan of that code moves (1 = bottle, 24 = case) */
+    findByCode(code) {
+      code = String(code);
+      for (const i of state.items) {
+        if (!i.active) continue;
+        const m = (i.barcodes || []).find(b => String(b.code) === code);
+        if (m) return { item: i, qty: Math.max(1, Math.round(+m.qty) || 1) };
+        if (i.barcode && String(i.barcode) === code) return { item: i, qty: 1 };
+      }
+      return null;
+    },
+    findByBarcode(code) { const m = this.findByCode(code); return m ? m.item : null; },
+    /** attach a code to an item (any logged-in user: staff receive deliveries too — audited) */
+    attachCode(itemId, code, qty) {
+      if (!state.session) return null;
+      const it = this.item(itemId); if (!it || !code) return null;
+      it.barcodes = (it.barcodes || []).filter(b => String(b.code) !== String(code));
+      it.barcodes.push({ code: String(code), qty: Math.max(1, Math.round(+qty) || 1) });
+      if (!it.barcode && (Math.round(+qty) || 1) === 1) it.barcode = String(code); // legacy mirror for not-yet-updated devices
+      this.audit('attach_code', 'item', it.id, null, { name: it.name, code: String(code), qty: Math.max(1, Math.round(+qty) || 1) });
+      emit('items'); return it;
+    },
+    removeCode(itemId, code) {
+      if (!this.isOwner) return null;
+      const it = this.item(itemId); if (!it) return null;
+      it.barcodes = (it.barcodes || []).filter(b => String(b.code) !== String(code));
+      if (String(it.barcode) === String(code)) it.barcode = it.barcodes.find(b => b.qty === 1)?.code || null;
+      this.audit('remove_code', 'item', it.id, null, { name: it.name, code: String(code) });
+      emit('items'); return it;
+    },
+    /** re-run hygiene after sync merges; quiet — callers refresh the UI themselves */
+    _heal() { const ch = Heal.all(state); if (ch) this.persistNow(); return ch; },
 
     /* ---- employees (owner) ---- */
     async addEmployee(name, pin) {
@@ -690,4 +808,4 @@ const Store = (() => {
   return S;
 })();
 
-if (typeof module !== 'undefined' && module.exports) module.exports = { Engine, SEED, Store };
+if (typeof module !== 'undefined' && module.exports) module.exports = { Engine, SEED, Store, Heal };

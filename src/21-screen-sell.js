@@ -128,6 +128,86 @@
     Q.pending[id] = next;
     arm(id);
   }
+  /** scan path: move n units in one go (a case code carries its own quantity) */
+  function bumpN(id, n) {
+    const it = Store.item(id); if (!it) return false;
+    if (wouldOverdraw(it, n)) return false;
+    if (isDose(it)) {
+      const p = (Q.pending[id] = Q.pending[id] || { ml: [], whole: 0 });
+      p.whole = (p.whole || 0) + n;
+    } else {
+      Q.pending[id] = (Q.pending[id] || 0) + n;
+    }
+    arm(id);
+    return true;
+  }
+  /** shared by the scanner and the attach flow: one scan hit → stock movement */
+  function applyScan(item, qty, mode) {
+    if (mode === 'add') {
+      const e = Store.logRestock(item.id, qty);
+      if (!e) return { msg: t('sell.noresults'), type: 'danger' };
+      return { msg: t('scan.added', { n: qty, item: item.name }), type: 'ok' };
+    }
+    if (!bumpN(item.id, qty)) {
+      const left = Math.max(0, Math.floor(Store.stock(item.id) - pendingQty(item, Q.pending[item.id]) + 1e-6));
+      return { msg: t('scan.notEnough', { n: left }), type: 'danger' };
+    }
+    return { msg: t('scan.sold', { n: qty, item: item.name }), type: 'ok' };
+  }
+  /** unknown code: pick the item + what one scan of this code means, then apply */
+  function attachSheet(code, mode) {
+    let sel = null, qty = 1;
+    const rows = () => Store.activeItems()
+      .filter(it => !q || norm(it.name).includes(norm(q)))
+      .slice(0, 30)
+      .map(it => `<button type="button" class="attach-row${sel === it.id ? ' is-on' : ''}" data-pick="${UI.esc(it.id)}"
+        style="display:flex;justify-content:space-between;width:100%;padding:12px 8px;border:0;background:${sel === it.id ? 'rgba(201,154,75,.18)' : 'none'};border-radius:10px;font-size:16px">
+        <span>${UI.esc(it.name)}</span><span class="sub2">${UI.esc(it.bottleMl ? Store.sizeLabel(it.bottleMl) : '')}</span></button>`).join('');
+    let q = '';
+    const c = UI.el(`<div>
+      <h2 style="font-size:18px;margin-bottom:4px">${UI.esc(t('scan.attachTitle'))}</h2>
+      <div class="sub2 num" style="margin-bottom:12px">${UI.esc(code)}</div>
+      <div class="search" style="margin-bottom:8px">${UI.icon('search')}<input type="text" placeholder="${UI.esc(t('g.search'))}"></div>
+      <div data-r="list" style="max-height:34vh;overflow:auto;margin-bottom:12px"></div>
+      <div class="field"><label>${UI.esc(t('scan.attachQty'))}</label>
+        <div class="chips" data-r="qtys">
+          ${[1, 6, 12, 24].map(v => `<button type="button" class="chip${v === 1 ? ' is-on' : ''}" data-q="${v}">×${v}</button>`).join('')}
+          <input type="number" min="1" inputmode="numeric" style="width:76px" placeholder="…">
+        </div>
+      </div>
+      <button type="button" class="btn btn--gold btn--full" data-a="ok" disabled>${UI.esc(t('scan.attachBtn'))}</button>
+    </div>`);
+    const s = UI.sheet(c);
+    const list = c.querySelector('[data-r=list]');
+    const ok = c.querySelector('[data-a=ok]');
+    const paintList = () => { list.innerHTML = rows() || `<div class="sub2" style="padding:8px">${UI.esc(t('sell.noresults'))}</div>`; };
+    paintList();
+    c.querySelector('.search input').addEventListener('input', e => { q = e.target.value; paintList(); });
+    c.querySelector('[data-r=qtys] input').addEventListener('input', e => {
+      const v = Math.round(+e.target.value);
+      if (v >= 1) { qty = v; c.querySelectorAll('[data-q]').forEach(x => x.classList.remove('is-on')); }
+    });
+    c.addEventListener('click', e => {
+      const pick = e.target.closest('[data-pick]');
+      if (pick) { sel = pick.dataset.pick; ok.disabled = false; UI.haptic('light'); paintList(); return; }
+      const qc = e.target.closest('[data-q]');
+      if (qc) {
+        qty = +qc.dataset.q;
+        c.querySelector('[data-r=qtys] input').value = '';
+        c.querySelectorAll('[data-q]').forEach(x => x.classList.toggle('is-on', x === qc));
+        UI.haptic('light');
+        return;
+      }
+      if (e.target.closest('[data-a=ok]') && sel) {
+        const it = Store.attachCode(sel, code, qty);
+        if (!it) return;
+        const r = applyScan(it, Math.max(1, qty), mode);
+        UI.haptic('success');
+        UI.toast(`${t('scan.attached', { item: it.name, qty })} · ${r.msg}`, { type: r.type });
+        s.close();
+      }
+    });
+  }
   /** true when one more unit would take the shelf below empty */
   function wouldOverdraw(it, extraQty) {
     const left = Store.stock(it.id) - pendingQty(it, Q.pending[it.id]);
@@ -260,11 +340,15 @@
         else if (a.dataset.a === 'lock') Store.logout();
         else if (a.dataset.a === 'clear') { V.q = ''; UI.refresh(); }
         else if (a.dataset.a === 'scan') {
-          UI.scan({ onCode: code => {
-            const item = Store.findByBarcode(code);
-            if (item) { bump(item.id, -1); UI.haptic('success'); }
-            else UI.toast(t('sell.noresults'), { type: 'danger' });
-          } });
+          UI.scan({
+            modes: [{ id: 'sell', label: t('scan.modeSell') }, { id: 'add', label: t('scan.modeAdd') }],
+            mode: 'sell',
+            onCode: (code, mode) => {
+              const hit = Store.findByCode(code);
+              if (!hit) { attachSheet(code, mode); return { msg: t('scan.unknown'), type: 'warn' }; }
+              return applyScan(hit.item, hit.qty, mode);
+            },
+          });
         }
       });
     },

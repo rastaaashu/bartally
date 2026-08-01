@@ -1,6 +1,6 @@
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
-const { Engine } = require('../src/11-store.js');
+const { Engine, Heal } = require('../src/11-store.js');
 
 let fails = 0;
 const eq = (got, want, name) => {
@@ -92,6 +92,39 @@ const st3 = {
   ],
 };
 eq(Engine.velocity(st3, 'A', '2026-07-28', 14), 3, 'young bar: 6 units / 2 traded days, today excluded');
+
+
+/* ---- Heal: state hygiene (purge / dedupe / barcode migration) ---- */
+{
+  const st = { settings: { demoMode: false }, items: [], employees: [], sales: [{ id: 'a', bd: '2026-07-28' }, { id: 'b', bd: '2026-08-01' }], restocks: [], waste: [], counts: [{ id: 'c', bd: '2026-07-27' }] };
+  Heal.purge(st);
+  eq(st.sales.map(x => x.id), ['b'], 'purge drops pre-handover sales, keeps real ones');
+  eq(st.counts.length, 0, 'purge drops pre-handover counts');
+  const dst = { settings: { demoMode: true }, items: [], employees: [], sales: [{ id: 'x', bd: '2026-07-20' }], restocks: [], waste: [], counts: [] };
+  Heal.purge(dst);
+  eq(dst.sales.length, 1, 'purge never touches a demo bar');
+}
+{
+  const st = { settings: {}, items: [], sales: [{ id: 's1', byId: 'zz' }], restocks: [], waste: [], counts: [],
+    employees: [{ id: 'zz', name: 'Serveur 1', active: true, pinHash: null }, { id: 'aa', name: 'serveur 1 ', active: true, pinHash: 'H' }, { id: 'bb', name: 'Serveur 2', active: true, pinHash: null }],
+    session: { userId: 'zz' } };
+  Heal.dedupeEmployees(st);
+  eq(st.employees.map(e => e.id).sort(), ['aa', 'bb'], 'employee dupes collapse to the PIN-holder');
+  eq(st.sales[0].byId, 'aa', 'sale attribution remapped to canonical employee');
+  eq(st.session.userId, 'aa', 'live session follows the canonical employee');
+}
+{
+  const st = { settings: {}, employees: [], sales: [{ id: 's', itemId: 'it99' }], restocks: [], waste: [], counts: [{ lines: [{ itemId: 'it99' }] }], recents: ['it99'],
+    items: [{ id: 'it01', name: 'Heineken', catId: 'biere', bottleMl: 330, active: true, _syncTs: 'x' }, { id: 'it99', name: 'Heineken', catId: 'biere', bottleMl: 330, active: true }, { id: 'it02', name: 'Heineken', catId: 'biere', bottleMl: 650, active: true }] };
+  Heal.dedupeItems(st);
+  eq(st.items.map(i => i.id).sort(), ['it01', 'it02'], 'same name+size merges; other format survives');
+  eq([st.sales[0].itemId, st.counts[0].lines[0].itemId, st.recents[0]], ['it01', 'it01', 'it01'], 'item references remapped to canonical');
+}
+{
+  const st = { settings: {}, employees: [], sales: [], restocks: [], waste: [], counts: [], items: [{ id: 'i', barcode: '123', active: true }] };
+  Heal.migrateBarcodes(st);
+  eq(st.items[0].barcodes, [{ code: '123', qty: 1 }], 'legacy barcode migrates to barcodes[]');
+}
 
 console.log(fails ? `\n${fails} FAILURES` : '\nALL ENGINE TESTS PASS');
 process.exit(fails ? 1 : 0);
